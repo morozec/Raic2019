@@ -184,6 +184,111 @@ bool isVisibleEnemy(const Unit& me, const Unit& enemy, const Game& game) {
 	return wall == squares.end();
 }
 
+bool isShootingMe(const Unit& me, const Bullet& bullet, const Game& game) {
+	auto x1 = me.position.x - me.size.x / 2;
+	auto x2 = me.position.x + me.size.x / 2;
+	auto y1 = me.position.y;
+	auto y2 = me.position.y + me.size.y;
+
+
+	if (bullet.velocity.x > 0 && bullet.position.x > x2) return false;
+	if (bullet.velocity.x < 0 && bullet.position.x < x1) return false;
+	if (bullet.velocity.y > 0 && bullet.position.y > y2) return false;
+	if (bullet.velocity.y < 0 && bullet.position.y < y1) return false;
+
+	auto bulletX1 = bullet.position.x;
+	auto bulletY1 = bullet.position.y;
+	auto bulletX2 = bullet.position.x + bullet.velocity.x;
+	auto bulletY2 = bullet.position.y + bullet.velocity.y;
+
+	auto cross1 = MathHelper::getLinesCross(bulletX1, bulletY1, bulletX2, bulletY2,
+		x1, y1, x1, y2);
+	auto cross2 = MathHelper::getLinesCross(bulletX1, bulletY1, bulletX2, bulletY2,
+		x1, y2, x2, y2);
+	auto cross3 = MathHelper::getLinesCross(bulletX1, bulletY1, bulletX2, bulletY2,
+		x2, y2, x2, y1);
+	auto cross4 = MathHelper::getLinesCross(bulletX1, bulletY1, bulletX2, bulletY2,
+		x2, y1, x1, y1);
+
+	if (cross1.y >= y1 && cross1.y <= y2) {
+		const auto bulletTiles = MathHelper::getLineSquares(bullet.position, cross1, 1);
+		const pair<int, int> *firstWallTile = nullptr;
+		for (const auto& bt : bulletTiles) {
+			if (bt.first == 0 || bt.second == 0 || bt.first == game.level.tiles.size() - 1 || bt.second == game.level.tiles[0].size() - 1) {
+				break; //игнор крайних стен
+			}
+
+			if (game.level.tiles[bt.first][bt.second] == Tile::WALL) {
+				firstWallTile = &bt;
+				break;
+			}
+		}
+
+		if (firstWallTile == nullptr) { //TODO: брать нормальное пересечение со стеной
+			return true;
+		}
+	}
+
+	if (cross2.x >= x1 && cross2.x <= x2) {
+		const auto bulletTiles = MathHelper::getLineSquares(bullet.position, cross2, 1);
+		const pair<int, int> *firstWallTile = nullptr;
+		for (const auto& bt : bulletTiles) {
+			if (bt.first == 0 || bt.second == 0 || bt.first == game.level.tiles.size() - 1 || bt.second == game.level.tiles[0].size() - 1) {
+				break; //игнор крайних стен
+			}
+
+			if (game.level.tiles[bt.first][bt.second] == Tile::WALL) {
+				firstWallTile = &bt;
+				break;
+			}
+		}
+
+		if (firstWallTile == nullptr) { //TODO: брать нормальное пересечение со стеной
+			return true;
+		}
+	}
+
+	if (cross3.y >= y1 && cross3.y <= y2) {
+		const auto bulletTiles = MathHelper::getLineSquares(bullet.position, cross3, 1);
+		const pair<int, int> *firstWallTile = nullptr;
+		for (const auto& bt : bulletTiles) {
+			if (bt.first == 0 || bt.second == 0 || bt.first == game.level.tiles.size() - 1 || bt.second == game.level.tiles[0].size() - 1) {
+				break; //игнор крайних стен
+			}
+
+			if (game.level.tiles[bt.first][bt.second] == Tile::WALL) {
+				firstWallTile = &bt;
+				break;
+			}
+		}
+
+		if (firstWallTile == nullptr) { //TODO: брать нормальное пересечение со стеной
+			return true;
+		}
+	}
+
+	if (cross4.x >= x1 && cross4.x <= x2) {
+		const auto bulletTiles = MathHelper::getLineSquares(bullet.position, cross4, 1);
+		const pair<int, int> *firstWallTile = nullptr;
+		for (const auto& bt : bulletTiles) {
+			if (bt.first == 0 || bt.second == 0 || bt.first == game.level.tiles.size() - 1 || bt.second == game.level.tiles[0].size() - 1) {
+				break; //игнор крайних стен
+			}
+
+			if (game.level.tiles[bt.first][bt.second] == Tile::WALL) {
+				firstWallTile = &bt;
+				break;
+			}
+		}
+
+		if (firstWallTile == nullptr) { //TODO: брать нормальное пересечение со стеной
+			return true;
+		}
+	}
+	
+	return false;
+}
+
 UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
                                  Debug &debug) {
   const Unit *nearestEnemy = nullptr;
@@ -228,7 +333,22 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
 			nearestEnemy->position.y - unit.position.y);
 	}
   }
-  bool jump = unit.weapon == nullptr && targetPos.y > unit.position.y;
+
+  bool isBulletShootingMe = false;
+  for (const auto& bullet : game.bullets) {
+	  if (isShootingMe(unit, bullet, game)) {
+		  isBulletShootingMe = true;
+		  break;
+	  }
+  }
+
+  if (isBulletShootingMe) {
+	  debug.draw(CustomData::Log(
+		  std::string("IS SHOOTING ME")));
+  }
+
+
+  bool jump = unit.weapon == nullptr && targetPos.y > unit.position.y || isBulletShootingMe;
   if (targetPos.x > unit.position.x &&
       game.level.tiles[size_t(unit.position.x + 1)][size_t(unit.position.y)] ==
           Tile::WALL) {
@@ -240,7 +360,7 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
     jump = true;
   }
 
-  
+ 
 
   UnitAction action;
   action.velocity = isVisible && unit.weapon != nullptr ? 0 : targetPos.x - unit.position.x;
