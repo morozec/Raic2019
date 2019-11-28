@@ -1,5 +1,7 @@
 #include "MathHelper.h"
 #include "Helper.h"
+#include <math.h>
+#include <algorithm>
 
 using namespace std;
 

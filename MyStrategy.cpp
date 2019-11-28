@@ -2,6 +2,7 @@
 #include "MathHelper.h"
 #include "Helper.h"
 #include <utility>
+#include <algorithm>
 
 using namespace std;
 
@@ -68,8 +69,14 @@ void drawBullets(Debug& debug, const Game& game) {
 
 		const auto debugBullet = vec2DoubleToVec2Float(bullet.position);
 		const auto debugCrossPoint = vec2DoubleToVec2Float(crossPoint);
-		debug.draw(CustomData::Line(debugBullet, debugCrossPoint, 0.5, ColorFloat(0, 255, 0, 1)));
+		debug.draw(CustomData::Line(debugBullet, debugCrossPoint, 0.1, ColorFloat(0, 255, 0, 1)));
 	}
+}
+
+bool isVisibleEnemy(const Unit& me, const Unit& enemy, const Game& game) {
+	auto squares = MathHelper::getLineSquares(me.position, enemy.position, 1);
+	const auto wall = find_if(squares.begin(), squares.end(), [game](const auto& p) {return game.level.tiles[p.first][p.second] == Tile::WALL; });
+	return wall == squares.end();
 }
 
 UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
@@ -107,11 +114,14 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
 
   //debug.draw(CustomData::Line(Vec2Float(10, 10), Vec2Float(500, 500), 10, ColorFloat(255, 0, 0, 1)));
   Vec2Double aim = Vec2Double(0, 0);
+  auto isVisible = false;
   if (nearestEnemy != nullptr) {
     aim = Vec2Double(nearestEnemy->position.x - unit.position.x,
                      nearestEnemy->position.y - unit.position.y);
+
+	isVisible = isVisibleEnemy(unit, *nearestEnemy, game);
   }
-  bool jump = targetPos.y > unit.position.y;
+  bool jump = false;
   if (targetPos.x > unit.position.x &&
       game.level.tiles[size_t(unit.position.x + 1)][size_t(unit.position.y)] ==
           Tile::WALL) {
@@ -122,8 +132,11 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
           Tile::WALL) {
     jump = true;
   }
+
+  
+
   UnitAction action;
-  action.velocity = targetPos.x - unit.position.x;
+  action.velocity = isVisible && unit.weapon != nullptr ? 0 : targetPos.x - unit.position.x;
   action.jump = jump;
   action.jumpDown = !action.jump;
   action.aim = aim;
