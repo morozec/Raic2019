@@ -1,9 +1,60 @@
 #include "MyStrategy.hpp"
+#include "MathHelper.h"
+#include "Helper.h"
+
+constexpr auto TOLERACNE = 0.001;
+constexpr auto TILE_SIZE = 1;
 
 MyStrategy::MyStrategy() {}
 
 double distanceSqr(Vec2Double a, Vec2Double b) {
   return (a.x - b.x) * (a.x - b.x) + (a.y - b.x) * (a.y - b.y);
+}
+
+
+Vec2Double getBulletCrossBorderPoint(const Bullet& bullet, double maxX, double maxY) {	
+
+	if (abs(bullet.velocity.y) < TOLERACNE) {
+		return Vec2Double(bullet.velocity.x > 0 ? maxX : 0, bullet.position.y);
+	}
+
+	if (abs(bullet.velocity.x) < TOLERACNE) {
+		return Vec2Double(bullet.position.x, bullet.velocity.y > 0 ? maxY : 0);
+	}	
+
+	const auto x1 = bullet.position.x;
+	const auto y1 = bullet.position.y;
+	const auto x2 = bullet.position.x + bullet.velocity.x;
+	const auto y2 = bullet.position.y + bullet.velocity.y;
+
+	if (bullet.velocity.x > 0) {
+	
+		const auto vertCross = MathHelper::getLinesCross(x1, y1, x2, y2, maxX, 0, maxX, maxY);
+		if (vertCross.y >= 0 && vertCross.y < maxY) {
+			return vertCross;
+		}
+
+		return bullet.velocity.y < 0 ? MathHelper::getLinesCross(x1, y1, x2, y2, 0, 0, maxX, 0) : MathHelper::getLinesCross(x1, y1, x2, y2, 0, maxY, maxX, maxY);
+	}
+	else {
+		const auto vertCross = MathHelper::getLinesCross(x1, y1, x2, y2, 0, 0, 0, maxY);
+		if (vertCross.y >= 0 && vertCross.y < maxY) {
+			return vertCross;
+		}
+
+		return bullet.velocity.y < 0 ? MathHelper::getLinesCross(x1, y1, x2, y2, 0, 0, maxX, 0) : MathHelper::getLinesCross(x1, y1, x2, y2, 0, maxY, maxX, maxY);
+	}
+}
+
+void drawBullets(Debug& debug, const Game& game) {
+	const auto maxX = game.level.tiles.size() * TILE_SIZE;
+	const auto maxY = game.level.tiles[0].size() * TILE_SIZE;
+	for (const auto& bullet : game.bullets) {		
+		const auto crossPoint = getBulletCrossBorderPoint(bullet, maxX, maxY);
+		const auto debugBullet = vec2DoubleToVec2Float(bullet.position);
+		const auto debugCrossPoint = vec2DoubleToVec2Float(crossPoint);
+		debug.draw(CustomData::Line(debugBullet, debugCrossPoint, 0.5, ColorFloat(0, 255, 0, 1)));
+	}
 }
 
 UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
@@ -36,6 +87,8 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
   }
   debug.draw(CustomData::Log(
       std::string("Target pos: ") + targetPos.toString()));
+
+  drawBullets(debug, game);
 
   //debug.draw(CustomData::Line(Vec2Float(10, 10), Vec2Float(500, 500), 10, ColorFloat(255, 0, 0, 1)));
   Vec2Double aim = Vec2Double(0, 0);
