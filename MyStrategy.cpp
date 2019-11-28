@@ -128,22 +128,15 @@ void drawBullets(Debug& debug, const Game& game) {
 
 		const auto debugBullet = vec2DoubleToVec2Float(bullet.position);
 		const auto debugCrossPoint = vec2DoubleToVec2Float(crossPoint);
-		debug.draw(CustomData::Line(debugBullet, debugCrossPoint, 0.1, ColorFloat(0, 255, 0, 1)));
+		debug.draw(CustomData::Line(debugBullet, debugCrossPoint, 0.1, ColorFloat(0, 255, 0, 0.5)));
 	}
 }
 
-void drawPossibleShoot(Debug& debug, const Unit& unit, const Game& game) {
-	if (unit.weapon == nullptr || (*unit.weapon).lastAngle == nullptr) return;
-	
-	const auto maxX = game.level.tiles.size() * TILE_SIZE;
-	const auto maxY = game.level.tiles[0].size() * TILE_SIZE;
-
-
-	const auto weaponPoistion = Vec2Double(unit.position.x, unit.position.y + unit.size.y / 2);
-
+void drawShootingLine(
+	Debug& debug, const Game& game, const Vec2Double& weaponPoistion, double angle, double maxX, double maxY, ColorFloat color) {
 	auto crossPoint = getShootingCrossBorderPoint(
 		weaponPoistion,
-		*(*unit.weapon).lastAngle, maxX, maxY);
+		angle, maxX, maxY);
 
 	const auto bulletTiles = MathHelper::getLineSquares(weaponPoistion, crossPoint, 1);
 	const pair<int, int> *firstWallTile = nullptr;
@@ -164,13 +157,29 @@ void drawPossibleShoot(Debug& debug, const Unit& unit, const Game& game) {
 
 	const auto debugUnit = vec2DoubleToVec2Float(weaponPoistion);
 	const auto debugCrossPoint = vec2DoubleToVec2Float(crossPoint);
-	debug.draw(CustomData::Line(debugUnit, debugCrossPoint, 0.1, ColorFloat(0, 0, 255, 1)));
+	debug.draw(CustomData::Line(debugUnit, debugCrossPoint, 0.1, color));
+}
+
+
+void drawShootingSector(Debug& debug, const Unit& unit, const Game& game) {
+	if (unit.weapon == nullptr || (*unit.weapon).lastAngle == nullptr) return;
+	
+	const auto maxX = game.level.tiles.size() * TILE_SIZE;
+	const auto maxY = game.level.tiles[0].size() * TILE_SIZE;
+
+
+	const auto weaponPoistion = Vec2Double(unit.position.x, unit.position.y + unit.size.y / 2);
+	drawShootingLine(debug, game, weaponPoistion, *(*unit.weapon).lastAngle, maxX, maxY, ColorFloat(0, 0, 255, 0.5));
+	drawShootingLine(debug, game, weaponPoistion, *(*unit.weapon).lastAngle - (*unit.weapon).spread, maxX, maxY, ColorFloat(100, 100, 255, 0.5));
+	drawShootingLine(debug, game, weaponPoistion, *(*unit.weapon).lastAngle + (*unit.weapon).spread, maxX, maxY, ColorFloat(100, 100, 255, 0.5));
+	
 
 }
 
 bool isVisibleEnemy(const Unit& me, const Unit& enemy, const Game& game) {
 	const auto weaponPoistion = Vec2Double(me.position.x, me.position.y + me.size.y / 2);
-	auto squares = MathHelper::getLineSquares(weaponPoistion, enemy.position, 1);
+	const auto enemyCenterPosition = Vec2Double(enemy.position.x, enemy.position.y + enemy.size.y / 2);
+	auto squares = MathHelper::getLineSquares(weaponPoistion, enemyCenterPosition, 1);
 	const auto wall = find_if(squares.begin(), squares.end(), [game](const auto& p) {return game.level.tiles[p.first][p.second] == Tile::WALL; });
 	return wall == squares.end();
 }
@@ -207,16 +216,17 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
       std::string("Target pos: ") + targetPos.toString()));
 
   drawBullets(debug, game);
-  drawPossibleShoot(debug, unit, game);
+  drawShootingSector(debug, unit, game);
 
   //debug.draw(CustomData::Line(Vec2Float(10, 10), Vec2Float(500, 500), 10, ColorFloat(255, 0, 0, 1)));
   Vec2Double aim = Vec2Double(0, 0);
   auto isVisible = false;
-  if (nearestEnemy != nullptr) {
-    aim = Vec2Double(nearestEnemy->position.x - unit.position.x,
-                     nearestEnemy->position.y - unit.position.y);
-
+  if (nearestEnemy != nullptr) {  
 	isVisible = isVisibleEnemy(unit, *nearestEnemy, game);
+	if (isVisible) {
+		aim = Vec2Double(nearestEnemy->position.x - unit.position.x,
+			nearestEnemy->position.y - unit.position.y);
+	}
   }
   bool jump = false;
   if (targetPos.x > unit.position.x &&
