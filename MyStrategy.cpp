@@ -1,9 +1,10 @@
 #include "MyStrategy.hpp"
 #include "MathHelper.h"
 #include "Helper.h"
+#include <utility>
 
-constexpr auto TOLERACNE = 0.001;
-constexpr auto TILE_SIZE = 1;
+using namespace std;
+
 
 MyStrategy::MyStrategy() {}
 
@@ -50,7 +51,21 @@ void drawBullets(Debug& debug, const Game& game) {
 	const auto maxX = game.level.tiles.size() * TILE_SIZE;
 	const auto maxY = game.level.tiles[0].size() * TILE_SIZE;
 	for (const auto& bullet : game.bullets) {		
-		const auto crossPoint = getBulletCrossBorderPoint(bullet, maxX, maxY);
+		auto crossPoint = getBulletCrossBorderPoint(bullet, maxX, maxY);
+
+		const auto bulletTiles = MathHelper::getLineSquares(bullet.position, crossPoint, 1);
+		const pair<int, int> *firstWallTile = nullptr;
+		for (const auto& bt : bulletTiles) {
+			if (game.level.tiles[bt.first][bt.second] == Tile::WALL) {
+				firstWallTile = &bt;
+				break;
+			}
+		}
+
+		if (firstWallTile != nullptr) {
+			crossPoint = Vec2Double(firstWallTile->first + TILE_SIZE/2, firstWallTile->second + TILE_SIZE/2);
+		}
+
 		const auto debugBullet = vec2DoubleToVec2Float(bullet.position);
 		const auto debugCrossPoint = vec2DoubleToVec2Float(crossPoint);
 		debug.draw(CustomData::Line(debugBullet, debugCrossPoint, 0.5, ColorFloat(0, 255, 0, 1)));
