@@ -247,7 +247,7 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
   action.jump = jump;
   action.jumpDown = !action.jump;
   action.aim = aim;
-  action.shoot = true;
+  action.shoot = isVisible;
   action.swapWeapon = false;
   action.plantMine = false;
   return action;
