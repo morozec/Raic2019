@@ -228,7 +228,7 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
 			nearestEnemy->position.y - unit.position.y);
 	}
   }
-  bool jump = false;
+  bool jump = unit.weapon == nullptr && targetPos.y > unit.position.y;
   if (targetPos.x > unit.position.x &&
       game.level.tiles[size_t(unit.position.x + 1)][size_t(unit.position.y)] ==
           Tile::WALL) {
