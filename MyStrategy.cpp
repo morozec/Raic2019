@@ -8,6 +8,7 @@
 #include <math.h>
 #include <climits>
 #include "ShootMeBullet.h"
+#include "ShootMeBulletCrossPoint.h"
 
 using namespace std;
 
@@ -247,28 +248,20 @@ bool isVisibleEnemy(const Unit& me, const Unit& enemy, const Game& game) {//TODO
 	return wall == squares.end();
 }
 
-//TODO: учесть размер пули
-pair<int, int> getShootMeBulletTick(const Unit& me, const Bullet& bullet, const Game& game) {
 
+ShootMeBulletCrossPoint get_shoot_me_bullet_cross_point(
+	double x1, double y1, double x2, double y2, 
+	const Vec2Double& bulletPosition, const Vec2Double& bulletVelocity,
+	const Game& game)
+{
 	const auto maxX = game.level.tiles.size() * TILE_SIZE;
 	const auto maxY = game.level.tiles[0].size() * TILE_SIZE;
-
-	auto x1 = me.position.x - me.size.x / 2;
-	auto x2 = me.position.x + me.size.x / 2;
-	auto y1 = me.position.y;
-	auto y2 = me.position.y + me.size.y;
-
-
-	if (bullet.velocity.x > 0 && bullet.position.x > x2) return make_pair(-1,-1);
-	if (bullet.velocity.x < 0 && bullet.position.x < x1) return make_pair(-1, -1);
-	if (bullet.velocity.y > 0 && bullet.position.y > y2) return make_pair(-1, -1);
-	if (bullet.velocity.y < 0 && bullet.position.y < y1) return make_pair(-1, -1);
-
-	auto bulletX1 = bullet.position.x;
-	auto bulletY1 = bullet.position.y;
-	auto bulletX2 = bullet.position.x + bullet.velocity.x;
-	auto bulletY2 = bullet.position.y + bullet.velocity.y;
-
+	
+	const auto bulletX1 = bulletPosition.x;
+	const auto bulletY1 = bulletPosition.y;
+	const auto bulletX2 = bulletPosition.x + bulletVelocity.x;
+	const auto bulletY2 = bulletPosition.y + bulletVelocity.y;
+	
 	auto cross1 = MathHelper::getLinesCross(bulletX1, bulletY1, bulletX2, bulletY2,
 		x1, y1, x1, y2);
 	auto cross2 = MathHelper::getLinesCross(bulletX1, bulletY1, bulletX2, bulletY2,
@@ -278,77 +271,51 @@ pair<int, int> getShootMeBulletTick(const Unit& me, const Bullet& bullet, const 
 	auto cross4 = MathHelper::getLinesCross(bulletX1, bulletY1, bulletX2, bulletY2,
 		x2, y1, x1, y1);
 
-	const auto crossWallPoint = getBulletCrossWallPoint(bullet, maxX, maxY, game);
-	auto wallDist = MathHelper::getVectorLength(Vec2Double(bullet.position.x - crossWallPoint.x, bullet.position.y - crossWallPoint.y));
-	auto bulletVelocity = MathHelper::getVectorLength(bullet.velocity);
-	int shootWallTick = (int)(ceil(wallDist / bulletVelocity * game.properties.ticksPerSecond));
+	double minCrossDist2 = INT_MAX;
+	Vec2Double* minCrossDist2Point = nullptr;	
 
-	if (cross1.y >= y1 && cross1.y <= y2) {
-		const auto bulletTiles = MathHelper::getLineSquares(bullet.position, cross1, 1);
-		const pair<int, int> *firstWallTile = nullptr;
-		for (const auto& bt : bulletTiles) {
-			if (bt.first == 0 || bt.second == 0 || bt.first == game.level.tiles.size() - 1 || bt.second == game.level.tiles[0].size() - 1) {
-				break; //игнор крайних стен
-			}
-
-			if (game.level.tiles[bt.first][bt.second] == Tile::WALL) {
-				firstWallTile = &bt;
-				break;
-			}
-		}
-
-		if (firstWallTile == nullptr) {
-			auto dist = MathHelper::getVectorLength(Vec2Double(bullet.position.x - cross1.x, bullet.position.y - cross1.y));		
-			int shootMeTick = (int)(ceil(dist / bulletVelocity * game.properties.ticksPerSecond));
-			return make_pair(shootMeTick, shootWallTick);
+	if (cross1.y >= y1 && cross1.y <= y2)
+	{
+		auto dist2 = MathHelper::getVectorLength2(Vec2Double(cross1.x - bulletX1, cross1.y - bulletY1));
+		if (dist2 < minCrossDist2)
+		{
+			minCrossDist2 = dist2;
+			minCrossDist2Point = &cross1;
 		}
 	}
 
 	if (cross2.x >= x1 && cross2.x <= x2) {
-		const auto bulletTiles = MathHelper::getLineSquares(bullet.position, cross2, 1);
-		const pair<int, int> *firstWallTile = nullptr;
-		for (const auto& bt : bulletTiles) {
-			if (bt.first == 0 || bt.second == 0 || bt.first == game.level.tiles.size() - 1 || bt.second == game.level.tiles[0].size() - 1) {
-				break; //игнор крайних стен
-			}
-
-			if (game.level.tiles[bt.first][bt.second] == Tile::WALL) {
-				firstWallTile = &bt;
-				break;
-			}
-		}
-
-		if (firstWallTile == nullptr) { 
-			auto dist = MathHelper::getVectorLength(Vec2Double(bullet.position.x - cross2.x, bullet.position.y - cross2.y));
-			int shootMeTick = (int)(ceil(dist / bulletVelocity * game.properties.ticksPerSecond));
-			return make_pair(shootMeTick, shootWallTick);
+		auto dist2 = MathHelper::getVectorLength2(Vec2Double(cross2.x - bulletX1, cross2.y - bulletY1));
+		if (dist2 < minCrossDist2)
+		{
+			minCrossDist2 = dist2;
+			minCrossDist2Point = &cross2;
 		}
 	}
 
 	if (cross3.y >= y1 && cross3.y <= y2) {
-		const auto bulletTiles = MathHelper::getLineSquares(bullet.position, cross3, 1);
-		const pair<int, int> *firstWallTile = nullptr;
-		for (const auto& bt : bulletTiles) {
-			if (bt.first == 0 || bt.second == 0 || bt.first == game.level.tiles.size() - 1 || bt.second == game.level.tiles[0].size() - 1) {
-				break; //игнор крайних стен
-			}
-
-			if (game.level.tiles[bt.first][bt.second] == Tile::WALL) {
-				firstWallTile = &bt;
-				break;
-			}
-		}
-
-		if (firstWallTile == nullptr) { 
-			auto dist = MathHelper::getVectorLength(Vec2Double(bullet.position.x - cross3.x, bullet.position.y - cross3.y));
-			int shootMeTick = (int)(ceil(dist / bulletVelocity * game.properties.ticksPerSecond));
-			return make_pair(shootMeTick, shootWallTick);
+		auto dist2 = MathHelper::getVectorLength2(Vec2Double(cross3.x - bulletX1, cross3.y - bulletY1));
+		if (dist2 < minCrossDist2)
+		{
+			minCrossDist2 = dist2;
+			minCrossDist2Point = &cross3;
 		}
 	}
 
 	if (cross4.x >= x1 && cross4.x <= x2) {
-		const auto bulletTiles = MathHelper::getLineSquares(bullet.position, cross4, 1);
-		const pair<int, int> *firstWallTile = nullptr;
+		auto dist2 = MathHelper::getVectorLength2(Vec2Double(cross4.x - bulletX1, cross4.y - bulletY1));
+		if (dist2 < minCrossDist2)
+		{
+			minCrossDist2 = dist2;
+			minCrossDist2Point = &cross4;
+		}
+	}
+
+
+	if (minCrossDist2Point != nullptr)
+	{
+		const auto bulletTiles = MathHelper::getLineSquares(bulletPosition, *minCrossDist2Point, 1);
+		const pair<int, int>* firstWallTile = nullptr;
 		for (const auto& bt : bulletTiles) {
 			if (bt.first == 0 || bt.second == 0 || bt.first == game.level.tiles.size() - 1 || bt.second == game.level.tiles[0].size() - 1) {
 				break; //игнор крайних стен
@@ -360,12 +327,205 @@ pair<int, int> getShootMeBulletTick(const Unit& me, const Bullet& bullet, const 
 			}
 		}
 
-		if (firstWallTile == nullptr) {
-			auto dist = MathHelper::getVectorLength(Vec2Double(bullet.position.x - cross4.x, bullet.position.y - cross4.y));
-			int shootMeTick = (int)(ceil(dist / bulletVelocity * game.properties.ticksPerSecond));
-			return make_pair(shootMeTick, shootWallTick);
+		if (firstWallTile != nullptr)
+		{
+			return {Vec2Double(0, 0), true, true, 0};
 		}
 	}
+
+	return {
+		minCrossDist2Point != nullptr ? *minCrossDist2Point : Vec2Double(0,0),
+		minCrossDist2Point != nullptr,
+		false,
+		minCrossDist2
+	};
+
+	//const auto crossWallPoint = getBulletCrossWallPoint(bullet, maxX, maxY, game);
+	//auto wallDist = MathHelper::getVectorLength(Vec2Double(bullet.position.x - crossWallPoint.x, bullet.position.y - crossWallPoint.y));
+	//auto bulletVelocity = MathHelper::getVectorLength(bullet.velocity);
+	//int shootWallTick = (int)(ceil(wallDist / bulletVelocity * game.properties.ticksPerSecond));
+
+	//if (cross1.y >= y1 && cross1.y <= y2) {
+	//	const auto bulletTiles = MathHelper::getLineSquares(bullet.position, cross1, 1);
+	//	const pair<int, int>* firstWallTile = nullptr;
+	//	for (const auto& bt : bulletTiles) {
+	//		if (bt.first == 0 || bt.second == 0 || bt.first == game.level.tiles.size() - 1 || bt.second == game.level.tiles[0].size() - 1) {
+	//			break; //игнор крайних стен
+	//		}
+
+	//		if (game.level.tiles[bt.first][bt.second] == Tile::WALL) {
+	//			firstWallTile = &bt;
+	//			break;
+	//		}
+	//	}
+
+	//	if (firstWallTile == nullptr) {
+	//		auto dist = MathHelper::getVectorLength(Vec2Double(bullet.position.x - cross1.x, bullet.position.y - cross1.y));
+	//		int shootMeTick = (int)(ceil(dist / bulletVelocity * game.properties.ticksPerSecond));
+	//		return make_pair(shootMeTick, shootWallTick);
+	//	}
+	//}
+
+	//if (cross2.x >= x1 && cross2.x <= x2) {
+	//	const auto bulletTiles = MathHelper::getLineSquares(bullet.position, cross2, 1);
+	//	const pair<int, int>* firstWallTile = nullptr;
+	//	for (const auto& bt : bulletTiles) {
+	//		if (bt.first == 0 || bt.second == 0 || bt.first == game.level.tiles.size() - 1 || bt.second == game.level.tiles[0].size() - 1) {
+	//			break; //игнор крайних стен
+	//		}
+
+	//		if (game.level.tiles[bt.first][bt.second] == Tile::WALL) {
+	//			firstWallTile = &bt;
+	//			break;
+	//		}
+	//	}
+
+	//	if (firstWallTile == nullptr) {
+	//		auto dist = MathHelper::getVectorLength(Vec2Double(bullet.position.x - cross2.x, bullet.position.y - cross2.y));
+	//		int shootMeTick = (int)(ceil(dist / bulletVelocity * game.properties.ticksPerSecond));
+	//		return make_pair(shootMeTick, shootWallTick);
+	//	}
+	//}
+
+	//if (cross3.y >= y1 && cross3.y <= y2) {
+	//	const auto bulletTiles = MathHelper::getLineSquares(bullet.position, cross3, 1);
+	//	const pair<int, int>* firstWallTile = nullptr;
+	//	for (const auto& bt : bulletTiles) {
+	//		if (bt.first == 0 || bt.second == 0 || bt.first == game.level.tiles.size() - 1 || bt.second == game.level.tiles[0].size() - 1) {
+	//			break; //игнор крайних стен
+	//		}
+
+	//		if (game.level.tiles[bt.first][bt.second] == Tile::WALL) {
+	//			firstWallTile = &bt;
+	//			break;
+	//		}
+	//	}
+
+	//	if (firstWallTile == nullptr) {
+	//		auto dist = MathHelper::getVectorLength(Vec2Double(bullet.position.x - cross3.x, bullet.position.y - cross3.y));
+	//		int shootMeTick = (int)(ceil(dist / bulletVelocity * game.properties.ticksPerSecond));
+	//		return make_pair(shootMeTick, shootWallTick);
+	//	}
+	//}
+
+	//if (cross4.x >= x1 && cross4.x <= x2) {
+	//	const auto bulletTiles = MathHelper::getLineSquares(bullet.position, cross4, 1);
+	//	const pair<int, int>* firstWallTile = nullptr;
+	//	for (const auto& bt : bulletTiles) {
+	//		if (bt.first == 0 || bt.second == 0 || bt.first == game.level.tiles.size() - 1 || bt.second == game.level.tiles[0].size() - 1) {
+	//			break; //игнор крайних стен
+	//		}
+
+	//		if (game.level.tiles[bt.first][bt.second] == Tile::WALL) {
+	//			firstWallTile = &bt;
+	//			break;
+	//		}
+	//	}
+
+	//	if (firstWallTile == nullptr) {
+	//		auto dist = MathHelper::getVectorLength(Vec2Double(bullet.position.x - cross4.x, bullet.position.y - cross4.y));
+	//		int shootMeTick = (int)(ceil(dist / bulletVelocity * game.properties.ticksPerSecond));
+	//		return make_pair(shootMeTick, shootWallTick);
+	//	}
+	//}
+}
+
+
+//TODO: учесть размер пули
+pair<int, int> getShootMeBulletTick(const Unit& me, const Bullet& bullet, const Game& game) {	
+
+	auto x1 = me.position.x - me.size.x / 2;
+	auto x2 = me.position.x + me.size.x / 2;
+	auto y1 = me.position.y;
+	auto y2 = me.position.y + me.size.y;
+
+	if (bullet.velocity.x > 0 && bullet.position.x > x2) return make_pair(-1,-1);
+	if (bullet.velocity.x < 0 && bullet.position.x < x1) return make_pair(-1, -1);
+	if (bullet.velocity.y > 0 && bullet.position.y > y2) return make_pair(-1, -1);
+	if (bullet.velocity.y < 0 && bullet.position.y < y1) return make_pair(-1, -1);
+
+	
+	double minCrossDist2 = INT_MAX;
+	const Vec2Double* minCrossDist2Point = nullptr;
+	
+	const auto bulletPosition1 = Vec2Double(bullet.position.x - bullet.size / 2, bullet.position.y - bullet.size / 2);
+	const auto smbcp1 = get_shoot_me_bullet_cross_point(x1, y1, x2, y2, bulletPosition1, bullet.velocity, game);
+	if (smbcp1.hasWallBefore)
+	{
+		return make_pair(-1, -1);
+	}
+	if (smbcp1.hasCrossPoint)
+	{
+		if (smbcp1.crossPointDist2 < minCrossDist2)
+		{
+			minCrossDist2 = smbcp1.crossPointDist2;
+			minCrossDist2Point = &smbcp1.crossPoint;
+		}
+	}
+
+	const auto bulletPosition2 = Vec2Double(bullet.position.x + bullet.size / 2, bullet.position.y - bullet.size / 2);
+	const auto smbcp2 = get_shoot_me_bullet_cross_point(x1, y1, x2, y2, bulletPosition2, bullet.velocity, game);
+	if (smbcp2.hasWallBefore)
+	{
+		return make_pair(-1, -1);
+	}
+	if (smbcp2.hasCrossPoint)
+	{
+		if (smbcp2.crossPointDist2 < minCrossDist2)
+		{
+			minCrossDist2 = smbcp2.crossPointDist2;
+			minCrossDist2Point = &smbcp2.crossPoint;
+		}
+	}
+	
+	const auto bulletPosition3 = Vec2Double(bullet.position.x + bullet.size / 2, bullet.position.y + bullet.size / 2);
+	const auto smbcp3 = get_shoot_me_bullet_cross_point(x1, y1, x2, y2, bulletPosition3, bullet.velocity, game);
+	if (smbcp3.hasWallBefore)
+	{
+		return make_pair(-1, -1);
+	}
+	if (smbcp3.hasCrossPoint)
+	{
+		if (smbcp3.crossPointDist2 < minCrossDist2)
+		{
+			minCrossDist2 = smbcp3.crossPointDist2;
+			minCrossDist2Point = &smbcp3.crossPoint;
+		}
+	}
+	
+	
+	const auto bulletPosition4 = Vec2Double(bullet.position.x + bullet.size / 2, bullet.position.y + bullet.size / 2);
+	const auto smbcp4 = get_shoot_me_bullet_cross_point(x1, y1, x2, y2, bulletPosition4, bullet.velocity, game);
+	if (smbcp4.hasWallBefore)
+	{
+		return make_pair(-1, -1);
+	}
+	if (smbcp4.hasCrossPoint)
+	{
+		if (smbcp4.crossPointDist2 < minCrossDist2)
+		{
+			minCrossDist2 = smbcp4.crossPointDist2;
+			minCrossDist2Point = &smbcp4.crossPoint;
+		}
+	}
+
+	if (minCrossDist2Point != nullptr)
+	{
+		auto bulletVelocity = MathHelper::getVectorLength(bullet.velocity);
+		
+		auto minCrossDist = sqrt(minCrossDist2);
+		int shootMeTick = static_cast<int>(ceil(minCrossDist / bulletVelocity * game.properties.ticksPerSecond));
+
+		const auto maxX = game.level.tiles.size() * TILE_SIZE;
+		const auto maxY = game.level.tiles[0].size() * TILE_SIZE;
+		const auto crossWallPoint = getBulletCrossWallPoint(bullet, maxX, maxY, game);
+		auto wallDist = MathHelper::getVectorLength(
+			Vec2Double(bullet.position.x - crossWallPoint.x, bullet.position.y - crossWallPoint.y));
+		
+		int shootWallTick = static_cast<int>(ceil(wallDist / bulletVelocity * game.properties.ticksPerSecond));
+		return make_pair(shootMeTick, shootWallTick);
+	}
+	
 	
 	return make_pair(-1,-1);
 }
