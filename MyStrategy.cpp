@@ -475,12 +475,12 @@ ShootMeBulletCrossPoint get_shoot_me_bullet_cross_point(
 	//}
 }
 
-double getShootEnemyProbability(const Unit& me, const Unit& enemy, const Game& game) {
+double getShootEnemyProbability(const Unit& me, const Unit& enemy, const Game& game, double spread) {
 	if (me.weapon == nullptr) return 0;
 	if (me.weapon->lastAngle == nullptr) return 1;
 
 	const auto bulletCenterPos = Vec2Double(me.position.x, me.position.y + me.size.y / 2);
-	const auto deltaAngle = me.weapon->spread / ANGLE_SPLIT_COUNT;
+	const auto deltaAngle = spread / ANGLE_SPLIT_COUNT;
 
 	const auto x1 = enemy.position.x - enemy.size.x / 2;
 	const auto x2 = enemy.position.x + enemy.size.x / 2;
@@ -825,14 +825,20 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
 
   //debug.draw(CustomData::Line(Vec2Float(10, 10), Vec2Float(500, 500), 10, ColorFloat(255, 0, 0, 1)));
   Vec2Double aim = Vec2Double(0, 0);
-  auto isVisible = false;
-  if (nearestEnemy != nullptr) {  
-	isVisible = getShootEnemyProbability(unit, *nearestEnemy, game) >= SHOOTING_PROBABILITY;
-	if (isVisible) {
-		aim = Vec2Double(nearestEnemy->position.x - unit.position.x,
-			nearestEnemy->position.y - unit.position.y);
-	}
+  auto needGo = false;
+  auto needShoot = false;
+	
+  if (nearestEnemy != nullptr) {
+	  if (unit.weapon != nullptr) {
+		  needGo = getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->params.minSpread) < 
+			  SHOOTING_PROBABILITY;
+		  needShoot = getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->spread) >=
+			  SHOOTING_PROBABILITY;	  	
+	  }	
   }
+
+  aim = Vec2Double(nearestEnemy->position.x - unit.position.x,
+	  nearestEnemy->position.y - unit.position.y);
 
   //bool isBulletShootingMe = false;
   //for (const auto& bullet : game.bullets) {
@@ -849,7 +855,7 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
   bool jump = false;
 
   double velocity;
-  if (isVisible && unit.weapon != nullptr) {
+  if (unit.weapon != nullptr && !needGo) {
 	  velocity = 0;
   }
   else {
@@ -890,13 +896,13 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
   }
   
   
-  if ((unit.weapon == nullptr || unit.weapon != nullptr && !isVisible) &&
+  if ((unit.weapon == nullptr || unit.weapon != nullptr && needGo) &&
 	  targetPos.x > unit.position.x &&
       game.level.tiles[size_t(unit.position.x + 1)][size_t(unit.position.y)] ==
           Tile::WALL) {
     jump = true;
   }
-  if ((unit.weapon == nullptr || unit.weapon != nullptr && !isVisible) &&
+  if ((unit.weapon == nullptr || unit.weapon != nullptr && needGo) &&
 	  targetPos.x < unit.position.x &&
       game.level.tiles[size_t(unit.position.x - 1)][size_t(unit.position.y)] ==
           Tile::WALL) {
@@ -905,7 +911,7 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
 
   auto jumpDown = unit.weapon != nullptr ? false : !jump;
 
-  debug.draw(CustomData::Log("SHOOT: " + to_string(isVisible)));
+  debug.draw(CustomData::Log("SHOOT: " + to_string(needShoot)));
  
 
   UnitAction action;
@@ -913,7 +919,7 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
   action.jump = jump;
   action.jumpDown = jumpDown;
   action.aim = aim;
-  action.shoot = isVisible;
+  action.shoot = needShoot;
   action.swapWeapon = false;
   action.plantMine = false;
   return action;
