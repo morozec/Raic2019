@@ -233,7 +233,7 @@ void drawShootingSector(Debug& debug, const Unit& unit, const Game& game) {
 
 
 	const auto weaponPoistion = Vec2Double(unit.position.x, unit.position.y + unit.size.y / 2);
-	drawShootingLine(debug, game, weaponPoistion, *(*unit.weapon).lastAngle, maxX, maxY, ColorFloat(0, 0, 255, 0.5));
+	//drawShootingLine(debug, game, weaponPoistion, *(*unit.weapon).lastAngle, maxX, maxY, ColorFloat(0, 0, 255, 0.5));
 	drawShootingLine(debug, game, weaponPoistion, *(*unit.weapon).lastAngle - (*unit.weapon).spread, maxX, maxY, ColorFloat(100, 100, 255, 0.5));
 	drawShootingLine(debug, game, weaponPoistion, *(*unit.weapon).lastAngle + (*unit.weapon).spread, maxX, maxY, ColorFloat(100, 100, 255, 0.5));
 	
