@@ -322,7 +322,7 @@ vector<ShootMeBullet> getShootMeBullets(const Unit& unit, const Game& game) {
 	
 	vector<ShootMeBullet> result;
 	for (const auto& bullet : game.bullets) {
-		//if (bullet.playerId == unit.playerId) continue;
+		if (bullet.playerId == unit.playerId) continue;
 		const auto smbt = getShootMeBulletTick(unit, bullet, game);
 		if (smbt.first == -1) continue;
 		result.emplace_back(ShootMeBullet(bullet, smbt.first, smbt.second));
