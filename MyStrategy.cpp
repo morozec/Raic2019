@@ -293,14 +293,6 @@ void drawShootingSector(Debug& debug, const Unit& unit, const Game& game) {
 
 }
 
-bool isVisibleEnemy(const Unit& me, const Unit& enemy, const Game& game) {//TODO: учесть размер пули и (в идеале) разброс
-	const auto weaponPoistion = Vec2Double(me.position.x, me.position.y + me.size.y / 2);
-	const auto enemyCenterPosition = Vec2Double(enemy.position.x, enemy.position.y + enemy.size.y / 2);
-	auto squares = MathHelper::getLineSquares(weaponPoistion, enemyCenterPosition, 1);
-	const auto wall = find_if(squares.begin(), squares.end(), [game](const auto& p) {return game.level.tiles[p.first][p.second] == Tile::WALL; });
-	return wall == squares.end();
-}
-
 
 ShootMeBulletCrossPoint get_shoot_me_bullet_cross_point(
 	double x1, double y1, double x2, double y2, 
@@ -482,6 +474,74 @@ ShootMeBulletCrossPoint get_shoot_me_bullet_cross_point(
 	//	}
 	//}
 }
+
+double getShootEnemyProbability(const Unit& me, const Unit& enemy, const Game& game) {
+	if (me.weapon == nullptr) return 0;
+	if (me.weapon->lastAngle == nullptr) return 1;
+
+	const auto bulletCenterPos = Vec2Double(me.position.x, me.position.y + me.size.y / 2);
+	const auto deltaAngle = me.weapon->spread / ANGLE_SPLIT_COUNT;
+
+	const auto x1 = enemy.position.x - enemy.size.x / 2;
+	const auto x2 = enemy.position.x + enemy.size.x / 2;
+	const auto y1 = enemy.position.y;
+	const auto y2 = enemy.position.y + enemy.size.y;
+
+	auto shootingCount = 0;
+
+	for (auto i = -ANGLE_SPLIT_COUNT; i <= ANGLE_SPLIT_COUNT; ++i)
+	{
+		auto isShooting = false;
+		
+		const auto angle = *me.weapon->lastAngle + deltaAngle * i;
+		auto bulletPos = Vec2Double(
+			bulletCenterPos.x - me.weapon->params.bullet.size / 2,
+			bulletCenterPos.y - me.weapon->params.bullet.size / 2);
+		auto bulletVelocity = Vec2Double(cos(angle), sin(angle));
+		auto shootEnemyCrossPoint = get_shoot_me_bullet_cross_point(
+			x1, y1, x2, y2, bulletPos, bulletVelocity, game);
+
+		if (shootEnemyCrossPoint.hasWallBefore) continue;
+		if (shootEnemyCrossPoint.hasCrossPoint) isShooting = true;
+
+
+		bulletPos = Vec2Double(
+			bulletCenterPos.x - me.weapon->params.bullet.size / 2,
+			bulletCenterPos.y + me.weapon->params.bullet.size / 2);
+		bulletVelocity = Vec2Double(cos(angle), sin(angle));
+		shootEnemyCrossPoint = get_shoot_me_bullet_cross_point(
+			x1, y1, x2, y2, bulletPos, bulletVelocity, game);
+
+		if (shootEnemyCrossPoint.hasWallBefore) continue;
+		if (shootEnemyCrossPoint.hasCrossPoint) isShooting = true;
+
+
+		bulletPos = Vec2Double(
+			bulletCenterPos.x + me.weapon->params.bullet.size / 2,
+			bulletCenterPos.y - me.weapon->params.bullet.size / 2);
+		bulletVelocity = Vec2Double(cos(angle), sin(angle));
+		shootEnemyCrossPoint = get_shoot_me_bullet_cross_point(
+			x1, y1, x2, y2, bulletPos, bulletVelocity, game);
+
+		if (shootEnemyCrossPoint.hasWallBefore) continue;
+		if (shootEnemyCrossPoint.hasCrossPoint) isShooting = true;
+
+		bulletPos = Vec2Double(
+			bulletCenterPos.x + me.weapon->params.bullet.size / 2,
+			bulletCenterPos.y + me.weapon->params.bullet.size / 2);
+		bulletVelocity = Vec2Double(cos(angle), sin(angle));
+		shootEnemyCrossPoint = get_shoot_me_bullet_cross_point(
+			x1, y1, x2, y2, bulletPos, bulletVelocity, game);
+
+		if (shootEnemyCrossPoint.hasWallBefore) continue;
+		if (shootEnemyCrossPoint.hasCrossPoint) isShooting = true;
+
+		if (isShooting) shootingCount++;
+	}
+
+	return shootingCount * 1.0 / (2 * ANGLE_SPLIT_COUNT + 1.0);
+}
+
 
 
 map<Bullet, double> getEnemyBulletsShootWallTimes(const Game& game, int meId)
@@ -767,7 +827,7 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
   Vec2Double aim = Vec2Double(0, 0);
   auto isVisible = false;
   if (nearestEnemy != nullptr) {  
-	isVisible = isVisibleEnemy(unit, *nearestEnemy, game);
+	isVisible = getShootEnemyProbability(unit, *nearestEnemy, game) >= SHOOTING_PROBABILITY;
 	if (isVisible) {
 		aim = Vec2Double(nearestEnemy->position.x - unit.position.x,
 			nearestEnemy->position.y - unit.position.y);
