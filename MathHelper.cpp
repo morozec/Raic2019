@@ -98,3 +98,8 @@ vector<pair<int, int>> MathHelper::getLineSquares(const Vec2Double& start, const
 
 	return result;
 }
+
+double MathHelper::getVectorLength(const Vec2Double & v)
+{
+	return sqrt(v.x * v.x + v.y * v.y);
+}

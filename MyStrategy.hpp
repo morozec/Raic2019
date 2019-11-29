@@ -11,6 +11,11 @@ class MyStrategy {
 public:
   MyStrategy();
   UnitAction getAction(const Unit &unit, const Game &game, Debug &debug);
+  int getStopJumpTick();
+  void setStopJumpTick(int sjt);
+  void decreaseStopJumpTick();
+private:
+	int stopJumpTick = -1;
 };
 
 #endif
