@@ -5,6 +5,5 @@ struct ShootMeBullet {
 public:
 	Bullet bullet;
 	int shootMeTick;
-	int shootWallTick;
-	ShootMeBullet(Bullet b, int smt, int swt) :bullet(b), shootMeTick(smt), shootWallTick(swt) {}
+	ShootMeBullet(Bullet b, int smt) :bullet(b), shootMeTick(smt) {}
 };

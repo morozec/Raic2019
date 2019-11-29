@@ -9,11 +9,17 @@
 #include <climits>
 #include "ShootMeBullet.h"
 #include "ShootMeBulletCrossPoint.h"
+#include <map>
 
 using namespace std;
 
 
 MyStrategy::MyStrategy() {}
+
+inline bool operator< (const Bullet& lhs, const Bullet& rhs)
+{
+	return lhs.position.x < rhs.position.x;
+}
 
 double distanceSqr(Vec2Double a, Vec2Double b) {
   return (a.x - b.x) * (a.x - b.x) + (a.y - b.x) * (a.y - b.y);
@@ -431,18 +437,41 @@ ShootMeBulletCrossPoint get_shoot_me_bullet_cross_point(
 }
 
 
+map<Bullet, double> getEnemyBulletsShootWallTimes(const Game& game, int meId)
+{
+	const auto maxX = game.level.tiles.size() * TILE_SIZE;
+	const auto maxY = game.level.tiles[0].size() * TILE_SIZE;
+	
+	map<Bullet, double> result;
+	for (const auto& bullet : game.bullets)
+	{
+		if (bullet.playerId == meId) continue;
+
+		const auto crossWallPoint = getBulletCrossWallPoint(bullet, maxX, maxY, game);
+		const auto wallDist = MathHelper::getVectorLength(
+			Vec2Double(bullet.position.x - crossWallPoint.x, bullet.position.y - crossWallPoint.y));
+
+		const auto bulletVelocity = MathHelper::getVectorLength(bullet.velocity);
+
+		const double shootWallTime = wallDist / bulletVelocity;
+		result[bullet] = shootWallTime;
+	}
+
+	return result;
+}
+
 //TODO: учесть размер пули
-pair<int, int> getShootMeBulletTick(const Unit& me, const Bullet& bullet, const Game& game) {	
+int getShootMeBulletTick(const Unit& me, const Bullet& bullet, const Game& game) {	
 
 	auto x1 = me.position.x - me.size.x / 2;
 	auto x2 = me.position.x + me.size.x / 2;
 	auto y1 = me.position.y;
 	auto y2 = me.position.y + me.size.y;
 
-	if (bullet.velocity.x > 0 && bullet.position.x > x2) return make_pair(-1,-1);
-	if (bullet.velocity.x < 0 && bullet.position.x < x1) return make_pair(-1, -1);
-	if (bullet.velocity.y > 0 && bullet.position.y > y2) return make_pair(-1, -1);
-	if (bullet.velocity.y < 0 && bullet.position.y < y1) return make_pair(-1, -1);
+	if (bullet.velocity.x > 0 && bullet.position.x > x2) return -1;
+	if (bullet.velocity.x < 0 && bullet.position.x < x1) return -1;
+	if (bullet.velocity.y > 0 && bullet.position.y > y2) return -1;
+	if (bullet.velocity.y < 0 && bullet.position.y < y1) return -1;
 
 	
 	double minCrossDist2 = INT_MAX;
@@ -452,7 +481,7 @@ pair<int, int> getShootMeBulletTick(const Unit& me, const Bullet& bullet, const 
 	const auto smbcp1 = get_shoot_me_bullet_cross_point(x1, y1, x2, y2, bulletPosition1, bullet.velocity, game);
 	if (smbcp1.hasWallBefore)
 	{
-		return make_pair(-1, -1);
+		return -1;
 	}
 	if (smbcp1.hasCrossPoint)
 	{
@@ -467,7 +496,7 @@ pair<int, int> getShootMeBulletTick(const Unit& me, const Bullet& bullet, const 
 	const auto smbcp2 = get_shoot_me_bullet_cross_point(x1, y1, x2, y2, bulletPosition2, bullet.velocity, game);
 	if (smbcp2.hasWallBefore)
 	{
-		return make_pair(-1, -1);
+		return -1;
 	}
 	if (smbcp2.hasCrossPoint)
 	{
@@ -482,7 +511,7 @@ pair<int, int> getShootMeBulletTick(const Unit& me, const Bullet& bullet, const 
 	const auto smbcp3 = get_shoot_me_bullet_cross_point(x1, y1, x2, y2, bulletPosition3, bullet.velocity, game);
 	if (smbcp3.hasWallBefore)
 	{
-		return make_pair(-1, -1);
+		return -1;
 	}
 	if (smbcp3.hasCrossPoint)
 	{
@@ -498,7 +527,7 @@ pair<int, int> getShootMeBulletTick(const Unit& me, const Bullet& bullet, const 
 	const auto smbcp4 = get_shoot_me_bullet_cross_point(x1, y1, x2, y2, bulletPosition4, bullet.velocity, game);
 	if (smbcp4.hasWallBefore)
 	{
-		return make_pair(-1, -1);
+		return -1;
 	}
 	if (smbcp4.hasCrossPoint)
 	{
@@ -516,18 +545,18 @@ pair<int, int> getShootMeBulletTick(const Unit& me, const Bullet& bullet, const 
 		auto minCrossDist = sqrt(minCrossDist2);
 		int shootMeTick = static_cast<int>(ceil(minCrossDist / bulletVelocity * game.properties.ticksPerSecond));
 
-		const auto maxX = game.level.tiles.size() * TILE_SIZE;
+		/*const auto maxX = game.level.tiles.size() * TILE_SIZE;
 		const auto maxY = game.level.tiles[0].size() * TILE_SIZE;
 		const auto crossWallPoint = getBulletCrossWallPoint(bullet, maxX, maxY, game);
 		auto wallDist = MathHelper::getVectorLength(
-			Vec2Double(bullet.position.x - crossWallPoint.x, bullet.position.y - crossWallPoint.y));
+			Vec2Double(bullet.position.x - crossWallPoint.x, bullet.position.y - crossWallPoint.y));		
+		int shootWallTick = static_cast<int>(ceil(wallDist / bulletVelocity * game.properties.ticksPerSecond));*/
 		
-		int shootWallTick = static_cast<int>(ceil(wallDist / bulletVelocity * game.properties.ticksPerSecond));
-		return make_pair(shootMeTick, shootWallTick);
+		return shootMeTick;
 	}
 	
 	
-	return make_pair(-1,-1);
+	return -1;
 }
 
 Vec2Double getBulletPosition(const Bullet& bullet, int tick, const Game& game) {
@@ -541,8 +570,8 @@ vector<ShootMeBullet> getShootMeBullets(const Unit& unit, const Game& game) {
 	for (const auto& bullet : game.bullets) {
 		if (bullet.playerId == unit.playerId) continue;
 		const auto smbt = getShootMeBulletTick(unit, bullet, game);
-		if (smbt.first == -1) continue;
-		result.emplace_back(ShootMeBullet(bullet, smbt.first, smbt.second));
+		if (smbt == -1) continue;
+		result.emplace_back(ShootMeBullet(bullet, smbt));
 	}
 
 	return result;
@@ -597,24 +626,29 @@ bool isBulletInUnit(const Vec2Double& unitPosition, const Vec2Double& unitSize, 
 
 
 
-pair<int, int> getJumpAndStopTicks(const Unit& me, const vector<ShootMeBullet>& shootingMeBullets, const Game& game) {
+pair<int, int> getJumpAndStopTicks(
+	const Unit& me, const vector<ShootMeBullet>& shootingMeBullets, const map<Bullet, double>& enemyBulletsShootWallTimes,
+	const Game& game) {
 
 	if (shootingMeBullets.empty()) {
 		return make_pair(-1, -1);
 	}
 	int minShootMeTick = INT_MAX;
-	int maxShootWallTick = 0;
-
 	for (const auto& smb : shootingMeBullets) {
 		if (smb.shootMeTick < minShootMeTick) {
 			minShootMeTick = smb.shootMeTick;
-		}
-
-		if (smb.shootWallTick > maxShootWallTick) {
-			maxShootWallTick = smb.shootWallTick;
-		}
+		}		
 	}
 
+	double maxShootWallTime = 0;
+	for (const auto& item:enemyBulletsShootWallTimes)
+	{
+		if (item.second > maxShootWallTime)
+		{
+			maxShootWallTime = item.second;
+		}
+	}
+	const int maxShootWallTick = static_cast<int>(ceil(maxShootWallTime * game.properties.ticksPerSecond));
 	
 	for (int startJumpTick = minShootMeTick - 1; startJumpTick >= 0; startJumpTick--) {
 		for (int stopJumpTick = startJumpTick + 1; stopJumpTick < maxShootWallTick; ++stopJumpTick) {
@@ -623,7 +657,8 @@ pair<int, int> getJumpAndStopTicks(const Unit& me, const vector<ShootMeBullet>& 
 			for (auto tick = 1; tick < maxShootWallTick; ++tick) {
 				const auto mePosition = getJumpUnitPosition(me, startJumpTick, stopJumpTick, tick, game);
 				for (const auto& smb : shootingMeBullets) {
-					if (smb.shootWallTick <= tick) continue;
+					if (enemyBulletsShootWallTimes.at(smb.bullet) * game.properties.ticksPerSecond <= tick) continue;				
+					
 
 					const auto bulletPosition0 = getBulletPosition(smb.bullet, tick, game);
 					//считаем пулю на 1 тик вперед, чтобы не анализовать коллизии по микротикам
@@ -737,7 +772,9 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
 
 	  if (unit.jumpState.canJump) {
 		  const auto shootMeBullet = getShootMeBullets(unit, game);
-		  const auto jumpAndStopTicks = getJumpAndStopTicks(unit, shootMeBullet, game);
+		  const auto enemyBulletsShootWallTimes = getEnemyBulletsShootWallTimes(game, unit.playerId);
+	  	
+		  const auto jumpAndStopTicks = getJumpAndStopTicks(unit, shootMeBullet, enemyBulletsShootWallTimes, game);
 		  debug.draw(CustomData::Log(to_string(jumpAndStopTicks.first) + " " + to_string(jumpAndStopTicks.second)));
 
 		  if (jumpAndStopTicks.first == 0) {
