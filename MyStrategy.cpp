@@ -6,6 +6,7 @@
 #include <utility>
 #include <algorithm>
 #include <math.h>
+#include <climits>
 #include "ShootMeBullet.h"
 
 using namespace std;
@@ -180,7 +181,7 @@ Vec2Double getShootingCrossBorderPoint(const Vec2Double& position, double lastAn
 	}
 }
 
-void drawBullets(Debug& debug, const Game& game) {
+void drawBullets(Debug& debug, const Game& game, int meId) {
 	
 	const auto maxX = game.level.tiles.size() * TILE_SIZE;
 	const auto maxY = game.level.tiles[0].size() * TILE_SIZE;
@@ -189,7 +190,8 @@ void drawBullets(Debug& debug, const Game& game) {
 
 		const auto debugBullet = vec2DoubleToVec2Float(bullet.position);
 		const auto debugCrossPoint = vec2DoubleToVec2Float(crossPoint);
-		debug.draw(CustomData::Line(debugBullet, debugCrossPoint, 0.1, ColorFloat(0, 255, 0, 0.5)));
+		debug.draw(CustomData::Line(debugBullet, debugCrossPoint, 0.1, 
+			ColorFloat(bullet.playerId == meId ? 0 : 255, bullet.playerId == meId ? 255 : 0, 0, 0.25)));
 	}
 }
 
@@ -519,7 +521,7 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
   debug.draw(CustomData::Log(
       std::string("Target pos: ") + targetPos.toString() + "\n"));
 
-  drawBullets(debug, game);
+  drawBullets(debug, game, unit.playerId);
   drawShootingSector(debug, unit, game);
 
   //debug.draw(CustomData::Line(Vec2Float(10, 10), Vec2Float(500, 500), 10, ColorFloat(255, 0, 0, 1)));
