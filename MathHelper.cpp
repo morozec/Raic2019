@@ -101,5 +101,10 @@ vector<pair<int, int>> MathHelper::getLineSquares(const Vec2Double& start, const
 
 double MathHelper::getVectorLength(const Vec2Double & v)
 {
-	return sqrt(v.x * v.x + v.y * v.y);
+	return sqrt(MathHelper::getVectorLength2(v));
+}
+
+double MathHelper::getVectorLength2(const Vec2Double & v)
+{
+	return v.x * v.x + v.y * v.y;
 }

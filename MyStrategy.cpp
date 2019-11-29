@@ -73,8 +73,61 @@ Vec2Double getBulletCrossWallPoint(const Bullet& bullet, double maxX, double max
 		}
 	}
 
-	if (firstWallTile != nullptr) { //TODO: брать нормальное пересечение со стеной
-		crossPoint = Vec2Double(firstWallTile->first + 0.5, firstWallTile->second + 0.5);
+	if (firstWallTile != nullptr) { 
+
+		const auto x1 = bullet.position.x;
+		const auto y1 = bullet.position.y;
+		const auto x2 = bullet.position.x + bullet.velocity.x;
+		const auto y2 = bullet.position.y + bullet.velocity.y;
+
+		int minDist = INT_MAX;
+		const Vec2Double* minDistCp = nullptr;
+		
+		auto cp1 = MathHelper::getLinesCross(
+			x1, y1, x2, y2, firstWallTile->first, firstWallTile->second, firstWallTile->first + TILE_SIZE, firstWallTile->second);
+		if (cp1.x >= firstWallTile->first && cp1.x <= firstWallTile->first + TILE_SIZE) {
+			const auto dist2 = MathHelper::getVectorLength2(Vec2Double(x1 - cp1.x, y1 - cp1.y));
+			if (minDistCp == nullptr || dist2 < minDist) {
+				minDist = dist2;
+				minDistCp = &cp1;
+			}
+		}
+
+		auto cp2 = MathHelper::getLinesCross(
+			x1, y1, x2, y2, firstWallTile->first, firstWallTile->second + TILE_SIZE, firstWallTile->first + TILE_SIZE, firstWallTile->second + TILE_SIZE);
+		if (cp2.x >= firstWallTile->first && cp2.x <= firstWallTile->first + TILE_SIZE) {
+			const auto dist2 = MathHelper::getVectorLength2(Vec2Double(x1 - cp2.x, y1 - cp2.y));
+			if (minDistCp == nullptr || dist2 < minDist) {
+				minDist = dist2;
+				minDistCp = &cp2;
+			}
+		}
+
+		auto cp3 = MathHelper::getLinesCross(
+			x1, y1, x2, y2, firstWallTile->first, firstWallTile->second, firstWallTile->first, firstWallTile->second + TILE_SIZE);
+		if (cp3.y >= firstWallTile->second && cp3.y <= firstWallTile->second + TILE_SIZE) {
+			const auto dist2 = MathHelper::getVectorLength2(Vec2Double(x1 - cp3.x, y1 - cp3.y));
+			if (minDistCp == nullptr || dist2 < minDist) {
+				minDist = dist2;
+				minDistCp = &cp3;
+			}
+		}
+
+		auto cp4 = MathHelper::getLinesCross(
+			x1, y1, x2, y2, firstWallTile->first + TILE_SIZE, firstWallTile->second, firstWallTile->first + TILE_SIZE, firstWallTile->second + TILE_SIZE);
+		if (cp4.y >= firstWallTile->second && cp4.y <= firstWallTile->second + TILE_SIZE) {
+			const auto dist2 = MathHelper::getVectorLength2(Vec2Double(x1 - cp4.x, y1 - cp4.y));
+			if (minDistCp == nullptr || dist2 < minDist) {
+				minDist = dist2;
+				minDistCp = &cp4;
+			}
+		}
+
+		if (minDistCp == nullptr) {
+			throw runtime_error("no wall tile cross");
+		}
+		return *minDistCp;
+
 	}
 
 	return crossPoint;
@@ -184,7 +237,7 @@ void drawShootingSector(Debug& debug, const Unit& unit, const Game& game) {
 
 }
 
-bool isVisibleEnemy(const Unit& me, const Unit& enemy, const Game& game) {
+bool isVisibleEnemy(const Unit& me, const Unit& enemy, const Game& game) {//TODO: учесть размер пули и (в идеале) разброс
 	const auto weaponPoistion = Vec2Double(me.position.x, me.position.y + me.size.y / 2);
 	const auto enemyCenterPosition = Vec2Double(enemy.position.x, enemy.position.y + enemy.size.y / 2);
 	auto squares = MathHelper::getLineSquares(weaponPoistion, enemyCenterPosition, 1);
@@ -534,12 +587,14 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
   }
   
   
-  if (targetPos.x > unit.position.x &&
+  if ((unit.weapon == nullptr || unit.weapon != nullptr && !isVisible) &&
+	  targetPos.x > unit.position.x &&
       game.level.tiles[size_t(unit.position.x + 1)][size_t(unit.position.y)] ==
           Tile::WALL) {
     jump = true;
   }
-  if (targetPos.x < unit.position.x &&
+  if ((unit.weapon == nullptr || unit.weapon != nullptr && !isVisible) &&
+	  targetPos.x < unit.position.x &&
       game.level.tiles[size_t(unit.position.x - 1)][size_t(unit.position.y)] ==
           Tile::WALL) {
     jump = true;
