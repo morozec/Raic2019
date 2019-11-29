@@ -493,7 +493,19 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
 		//  std::string("IS SHOOTING ME")));
   //}
   bool jump = false;
-  double velocity = isVisible && unit.weapon != nullptr ? 0 : targetPos.x - unit.position.x;
+
+  double velocity;
+  if (isVisible && unit.weapon != nullptr) {
+	  velocity = 0;
+  }
+  else {
+	  if (targetPos.x > unit.position.x) {
+		  velocity = INT_MAX;
+	  }
+	  else {
+		  velocity = -INT_MAX;
+	  }	  
+  }
 
   if (getStopJumpTick() == 0) {
 	  jump = false;
