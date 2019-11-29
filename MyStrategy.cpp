@@ -60,6 +60,8 @@ Vec2Double getBulletCrossWallPoint(const Bullet& bullet, double maxX, double max
 	auto crossPoint = getBulletCrossBorderPoint(bullet, maxX, maxY);
 	const auto bulletTiles = MathHelper::getLineSquares(bullet.position, crossPoint, 1);
 	const pair<int, int> *firstWallTile = nullptr;
+
+	//TODO: учесть размер пули (можем своим краем задеть стену)
 	for (const auto& bt : bulletTiles) {
 		if (bt.first == 0 || bt.second == 0 || bt.first == game.level.tiles.size() - 1 || bt.second == game.level.tiles[0].size() - 1) {
 			break; //игнор крайних стен
@@ -407,9 +409,13 @@ pair<int, int> getJumpAndStopTicks(const Unit& me, const vector<ShootMeBullet>& 
 				const auto mePosition = getJumpUnitPosition(me, startJumpTick, stopJumpTick, tick, game);
 				for (const auto& smb : shootingMeBullets) {
 					if (smb.shootWallTick <= tick) continue;
-					const auto bulletPosition = getBulletPosition(smb.bullet, tick, game);
 
-					if (isBulletInUnit(mePosition, me.size, bulletPosition, smb.bullet.size)) {
+					const auto bulletPosition0 = getBulletPosition(smb.bullet, tick, game);
+					//считаем пулю на 1 тик вперед, чтобы не анализовать коллизии по микротикам
+					const auto bulletPosition1 = getBulletPosition(smb.bullet, tick + 1, game);
+
+					if (isBulletInUnit(mePosition, me.size, bulletPosition0, smb.bullet.size) ||
+						isBulletInUnit(mePosition, me.size, bulletPosition1, smb.bullet.size)) {
 						isGoodJump = false;
 						break;
 					}
@@ -527,12 +533,15 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
     jump = true;
   }
 
+  auto jumpDown = unit.weapon != nullptr ? false : !jump;
+
+  debug.draw(CustomData::Log("SHOOT: " + to_string(isVisible)));
  
 
   UnitAction action;
   action.velocity = velocity;
   action.jump = jump;
-  action.jumpDown = !action.jump;
+  action.jumpDown = jumpDown;
   action.aim = aim;
   action.shoot = isVisible;
   action.swapWeapon = false;
