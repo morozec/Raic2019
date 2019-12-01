@@ -475,7 +475,8 @@ ShootMeBulletCrossPoint get_shoot_me_bullet_cross_point(
 	//}
 }
 
-double getShootEnemyProbability(const Unit& me, const Unit& enemy, const Game& game, double spread) {
+double getShootEnemyProbability(const Unit& me, const Unit& enemy, const Game& game, double spread,
+	Debug* debug = nullptr) {
 	if (me.weapon == nullptr) return 0;
 	if (me.weapon->lastAngle == nullptr) return 1;
 
@@ -492,6 +493,7 @@ double getShootEnemyProbability(const Unit& me, const Unit& enemy, const Game& g
 	for (auto i = -ANGLE_SPLIT_COUNT; i <= ANGLE_SPLIT_COUNT; ++i)
 	{
 		auto isShooting = false;
+		Vec2Double cp = Vec2Double(0, 0);
 		
 		const auto angle = *me.weapon->lastAngle + deltaAngle * i;
 		auto bulletPos = Vec2Double(
@@ -503,6 +505,7 @@ double getShootEnemyProbability(const Unit& me, const Unit& enemy, const Game& g
 
 		if (shootEnemyCrossPoint.hasWallBefore) continue;
 		if (shootEnemyCrossPoint.hasCrossPoint) isShooting = true;
+		if (shootEnemyCrossPoint.hasCrossPoint) cp = shootEnemyCrossPoint.crossPoint;
 
 
 		bulletPos = Vec2Double(
@@ -514,6 +517,7 @@ double getShootEnemyProbability(const Unit& me, const Unit& enemy, const Game& g
 
 		if (shootEnemyCrossPoint.hasWallBefore) continue;
 		if (shootEnemyCrossPoint.hasCrossPoint) isShooting = true;
+		if (shootEnemyCrossPoint.hasCrossPoint) cp = shootEnemyCrossPoint.crossPoint;
 
 
 		bulletPos = Vec2Double(
@@ -525,6 +529,7 @@ double getShootEnemyProbability(const Unit& me, const Unit& enemy, const Game& g
 
 		if (shootEnemyCrossPoint.hasWallBefore) continue;
 		if (shootEnemyCrossPoint.hasCrossPoint) isShooting = true;
+		if (shootEnemyCrossPoint.hasCrossPoint) cp = shootEnemyCrossPoint.crossPoint;
 
 		bulletPos = Vec2Double(
 			bulletCenterPos.x + me.weapon->params.bullet.size / 2,
@@ -535,8 +540,16 @@ double getShootEnemyProbability(const Unit& me, const Unit& enemy, const Game& g
 
 		if (shootEnemyCrossPoint.hasWallBefore) continue;
 		if (shootEnemyCrossPoint.hasCrossPoint) isShooting = true;
+		if (shootEnemyCrossPoint.hasCrossPoint) cp = shootEnemyCrossPoint.crossPoint;
 
 		if (isShooting) shootingCount++;
+		if (isShooting && debug != nullptr)
+		{			 
+			(*debug).draw(CustomData::Line(
+				vec2DoubleToVec2Float(bulletCenterPos),
+				vec2DoubleToVec2Float(cp),
+				0.1, ColorFloat(100,100,100, 0.5)));
+		}
 	}
 
 	return shootingCount * 1.0 / (2 * ANGLE_SPLIT_COUNT + 1.0);
@@ -823,8 +836,6 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
   drawBullets(debug, game, unit.playerId);
   drawShootingSector(debug, unit, game);
 
-  //debug.draw(CustomData::Line(Vec2Float(10, 10), Vec2Float(500, 500), 10, ColorFloat(255, 0, 0, 1)));
-  Vec2Double aim = Vec2Double(0, 0);
   auto needGo = false;
   auto needShoot = false;
 	
@@ -832,13 +843,13 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
 	  if (unit.weapon != nullptr) {
 		  needGo = getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->params.minSpread) < 
 			  WALKING_PROBABILITY;
-		  needShoot = getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->spread) >=
+		  needShoot = getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->spread, &debug) >=
 			  SHOOTING_PROBABILITY;	  	
 	  }	
   }
 
-  aim = Vec2Double(nearestEnemy->position.x - unit.position.x,
-	  nearestEnemy->position.y - unit.position.y);
+  auto aim = Vec2Double(nearestEnemy->position.x - unit.position.x,
+                              nearestEnemy->position.y - unit.position.y);
 
   //bool isBulletShootingMe = false;
   //for (const auto& bullet : game.bullets) {
