@@ -13,6 +13,13 @@ Vec2Double MathHelper::getLinesCross(double x1, double y1, double x2, double y2,
 	return Vec2Double(x, y);
 }
 
+bool MathHelper::areSegmentsCross(
+	const Segment& s1, const Segment& s2)
+{
+	const auto lineCross = MathHelper::getLinesCross(s1.start.x, s1.start.y, s1.end.x, s1.end.y, 
+		s2.start.x, s2.start.y, s2.end.x, s2.end.y);
+	return IsBetween(lineCross, s1.start, s1.end) && IsBetween(lineCross, s2.start, s2.end);
+}
 
 
 /// <summary>
@@ -112,4 +119,9 @@ double MathHelper::getVectorLength2(const Vec2Double & v)
 double MathHelper::getScalarMult(const Vec2Double & v1, const Vec2Double & v2)
 {
 	return v1.x * v2.x + v1.y * v2.y;
+}
+
+bool MathHelper::IsBetween(const Vec2Double& p0, const Vec2Double& p1, const Vec2Double& p2)
+{
+	return (p1.x - p0.x) * (p2.x - p0.x) <= 0 && (p1.y - p0.y) * (p2.y - p0.y) <= 0;
 }

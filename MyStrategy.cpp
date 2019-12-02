@@ -10,6 +10,7 @@
 #include "ShootMeBullet.h"
 #include "ShootMeBulletCrossPoint.h"
 #include <map>
+#include "Segment.h"
 
 using namespace std;
 
@@ -568,12 +569,12 @@ double getShootEnemyProbability(const Unit& me, const Unit& enemy, const Game& g
 
 			if (!isCrossWall) {
 				shootingCount++;
-				if (debug != nullptr) {
+				/*if (debug != nullptr) {
 					(*debug).draw(CustomData::Line(
 						vec2DoubleToVec2Float(bulletCenterPos),
 						vec2DoubleToVec2Float(cp),
 						0.1, ColorFloat(100, 100, 100, 0.5)));
-				}
+				}*/
 			}
 		}
 		
@@ -690,8 +691,7 @@ int getShootMeBulletTick(const Unit& me, const Bullet& bullet, const Game& game)
 	return -1;
 }
 
-Vec2Double getBulletPosition(const Bullet& bullet, int tick, const Game& game) {
-	double time = 1.0 * tick / game.properties.ticksPerSecond;
+Vec2Double getBulletPosition(const Bullet& bullet, double time, const Game& game) {
 	return Vec2Double(bullet.position.x + bullet.velocity.x * time, bullet.position.y + bullet.velocity.y * time);
 }
 
@@ -711,47 +711,126 @@ vector<ShootMeBullet> getShootMeBullets(const Unit& unit, const Game& game) {
 
 
 //TODO: учесть максимальное время прыжка
-Vec2Double getJumpUnitPosition(const Unit& unit, int startJumpTick, int stopJumpTick, int tick, const Game& game) {
-	if (tick <= startJumpTick) {
+Vec2Double getJumpUnitPosition(const Unit& unit, int startJumpTick, int stopJumpTick, double time, const Game& game) {
+	if (time * game.properties.ticksPerSecond <= startJumpTick) {
 		return unit.position;
-	}	
+	}
 
-	if (tick <= stopJumpTick) {
-		double jumpTime = 1.0*(tick - startJumpTick) / game.properties.ticksPerSecond;
+	const auto startJumpTime = startJumpTick / game.properties.ticksPerSecond;
+
+	if (time * game.properties.ticksPerSecond <= stopJumpTick) {
+		double jumpTime = time - startJumpTime;
 		return Vec2Double(unit.position.x, unit.position.y + game.properties.unitJumpSpeed * jumpTime);
 	}
 
-	double jumpTime = 1.0*(stopJumpTick-startJumpTick) / game.properties.ticksPerSecond;
-	double fallTime = 1.0*(tick - stopJumpTick) / game.properties.ticksPerSecond;
-	if (fallTime > jumpTime) fallTime = jumpTime;//TODO: случай, когда прыгаем не с земли, а продолжаем прыжок
+	const auto stopJumpTime = stopJumpTick / game.properties.ticksPerSecond;	
+
+	const auto jumpTime = stopJumpTime - startJumpTime;
+	auto fallTime = time - stopJumpTime;
+	if (fallTime > jumpTime) fallTime = jumpTime;//TODO: случай, когда прыгаем не с земли, можем провалиться ниже
 	return Vec2Double(unit.position.x, unit.position.y + game.properties.unitJumpSpeed * jumpTime - game.properties.unitFallSpeed * fallTime);
 }
 
 
-bool isBulletInUnit(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Vec2Double& bulletPostion, double bulletSize) {
-	double bulletX1 = bulletPostion.x - bulletSize / 2;
-	double bulletX2 = bulletPostion.x + bulletSize / 2;
-	double bulletY1 = bulletPostion.y - bulletSize / 2;
-	double bulletY2 = bulletPostion.y + bulletSize / 2;
+bool isBulletMoveCrossUnitMove(
+	const Vec2Double& unitPos0, const Vec2Double& unitPos1,
+	const Vec2Double& bulletPos0, const Vec2Double& bulletPos1,
+	const Vec2Double& unitSize, double halfBulletSize)
+{
+	const auto unitLeftDown0 = Vec2Double(unitPos0.x - unitSize.x / 2, unitPos0.y);
+	const auto unitRightDown0 = Vec2Double(unitPos0.x + unitSize.x / 2, unitPos0.y);
+	const auto unitLeftUp0 = Vec2Double(unitPos0.x - unitSize.x / 2, unitPos0.y + unitSize.y);
+	const auto unitRightUp0 = Vec2Double(unitPos0.x + unitSize.x / 2, unitPos0.y + unitSize.y);
 
-	double unitX1 = unitPosition.x - unitSize.x / 2;
-	double unitX2 = unitPosition.x + unitSize.x / 2;
-	double unitY1 = unitPosition.y;
-	double unitY2 = unitPosition.y + unitSize.y;
+	const auto unitLeftDown1 = Vec2Double(unitPos1.x - unitSize.x / 2, unitPos1.y);
+	const auto unitRightDown1 = Vec2Double(unitPos1.x + unitSize.x / 2, unitPos1.y);
+	const auto unitLeftUp1 = Vec2Double(unitPos1.x - unitSize.x / 2, unitPos1.y + unitSize.y);
+	const auto unitRightUp1 = Vec2Double(unitPos1.x + unitSize.x / 2, unitPos1.y + unitSize.y);
 
-	if (bulletX1 >= unitX1 && bulletX1 <= unitX2) {
-		if (bulletY1 >= unitY1 && bulletY1 <= unitY2) return true;
-		if (bulletY2 >= unitY1 && bulletY2 <= unitY2) return true;
+	const Segment unitSegments[] = {
+		Segment(unitLeftDown0, unitLeftUp0),
+		Segment(unitLeftUp0, unitRightUp0),
+		Segment(unitRightUp0, unitRightDown0),
+		Segment(unitRightDown0, unitLeftDown0),
+		
+		Segment(unitLeftDown1, unitLeftUp1),
+		Segment(unitLeftUp1, unitRightUp1),
+		Segment(unitRightUp1, unitRightDown1),
+		Segment(unitRightDown1, unitLeftDown1),
+
+		Segment(unitLeftDown0, unitLeftDown1),
+		Segment(unitLeftUp0, unitLeftUp1),
+		Segment(unitRightUp0, unitRightUp1),
+		Segment(unitRightDown0, unitRightUp1)
+	};
+
+	const auto bulletLeftDown0 = Vec2Double(bulletPos0.x - halfBulletSize, bulletPos0.y - halfBulletSize);
+	const auto bulletLeftUp0 = Vec2Double(bulletPos0.x - halfBulletSize, bulletPos0.y + halfBulletSize);
+	const auto bulletRightUp0 = Vec2Double(bulletPos0.x + halfBulletSize, bulletPos0.y + halfBulletSize);
+	const auto bulletRightDown0 = Vec2Double(bulletPos0.x + halfBulletSize, bulletPos0.y - halfBulletSize);
+
+	const auto bulletLeftDown1 = Vec2Double(bulletPos1.x - halfBulletSize, bulletPos1.y - halfBulletSize);
+	const auto bulletLeftUp1 = Vec2Double(bulletPos1.x - halfBulletSize, bulletPos1.y + halfBulletSize);
+	const auto bulletRightUp1 = Vec2Double(bulletPos1.x + halfBulletSize, bulletPos1.y + halfBulletSize);
+	const auto bulletRightDown1 = Vec2Double(bulletPos1.x + halfBulletSize, bulletPos1.y - halfBulletSize);
+	
+	const Segment bulletSegments[] = {
+		Segment(bulletLeftDown0, bulletLeftDown1),
+		Segment(bulletLeftUp0, bulletLeftUp1),
+		Segment(bulletRightUp0, bulletRightUp1),
+		Segment(bulletRightDown0, bulletRightDown1)
+	};
+	
+	for (const auto& us: unitSegments)
+	{
+		for (const auto& bs: bulletSegments)
+		{
+			const auto cross = MathHelper::areSegmentsCross(us, bs);
+			if (cross) return true;
+		}
 	}
+	return false;
+}
 
-	if (bulletX2 >= unitX1 && bulletX2 <= unitX2) {
-		if (bulletY1 >= unitY1 && bulletY1 <= unitY2) return true;
-		if (bulletY2 >= unitY1 && bulletY2 <= unitY2) return true;
+bool isBulletShootJumpingUnit(
+	const Bullet& bullet, const Unit& unit, int startJumpTick, int stopJumpTick, double bulletShootWallTime, const Game& game)
+{
+	const auto shootWallTick = static_cast<int>(ceil(bulletShootWallTime * game.properties.ticksPerSecond));
+
+	auto prevUnitPos = unit.position;
+	auto prevBulletPos = bullet.position;
+	for (int tick = 1; tick <= shootWallTick; ++tick)
+	{
+		const auto time = tick / game.properties.ticksPerSecond;
+		auto unitPos = getJumpUnitPosition(unit, startJumpTick, stopJumpTick, time, game);
+		auto bulletPos = getBulletPosition(bullet, time, game);
+		if (!isBulletMoveCrossUnitMove(prevUnitPos, unitPos, prevBulletPos, bulletPos, unit.size, bullet.size/2))
+		{
+			prevUnitPos = unitPos;
+			prevBulletPos = bulletPos;
+			continue;
+		}
+		
+
+		//считаем по микротику
+		for (int j = 1; j <= game.properties.updatesPerTick; ++j)
+		{
+			const auto mtTime = (tick - 1 + j * 1.0 / game.properties.updatesPerTick) / game.properties.ticksPerSecond;
+			unitPos = getJumpUnitPosition(unit, stopJumpTick, stopJumpTick, mtTime, game);
+			bulletPos = getBulletPosition(bullet, mtTime, game);
+			if (isBulletMoveCrossUnitMove(prevUnitPos, unitPos, prevBulletPos, bulletPos, unit.size, bullet.size/2)) 
+				return true;
+
+			prevUnitPos = unitPos;
+			prevBulletPos = bulletPos;
+		}
+
+		prevUnitPos = unitPos;
+		prevBulletPos = bulletPos;
 	}
 
 	return false;
 }
-
 
 
 
@@ -783,25 +862,35 @@ pair<int, int> getJumpAndStopTicks(
 		for (int stopJumpTick = startJumpTick + 1; stopJumpTick < maxShootWallTick; ++stopJumpTick) {
 
 			auto isGoodJump = true;
-			for (auto tick = 1; tick < maxShootWallTick; ++tick) {
-				const auto mePosition = getJumpUnitPosition(me, startJumpTick, stopJumpTick, tick, game);
-				for (const auto& smb : shootingMeBullets) {
-					if (enemyBulletsShootWallTimes.at(smb.bullet) * game.properties.ticksPerSecond <= tick) continue;				
-					
-
-					const auto bulletPosition0 = getBulletPosition(smb.bullet, tick, game);
-					//считаем пулю на 1 тик вперед, чтобы не анализовать коллизии по микротикам
-					const auto bulletPosition1 = getBulletPosition(smb.bullet, tick + 1, game);
-
-					if (isBulletInUnit(mePosition, me.size, bulletPosition0, smb.bullet.size) ||
-						isBulletInUnit(mePosition, me.size, bulletPosition1, smb.bullet.size)) {
-						isGoodJump = false;
-						break;
-					}
+			for (const auto& bullet : game.bullets)
+			{
+				if (bullet.playerId == me.playerId) continue;
+				if (isBulletShootJumpingUnit(bullet, me, startJumpTick, stopJumpTick, enemyBulletsShootWallTimes.at(bullet), game))
+				{
+					isGoodJump = false;
+					break;
 				}
-
-				if (!isGoodJump) break;
 			}
+			
+
+			//for (auto tick = 1; tick < maxShootWallTick; ++tick) {
+			//	const auto mePosition = getJumpUnitPosition(me, startJumpTick, stopJumpTick, tick / game.properties.ticksPerSecond, game);
+			//	for (const auto& smb : shootingMeBullets) {
+			//		if (enemyBulletsShootWallTimes.at(smb.bullet) * game.properties.ticksPerSecond <= tick) continue;				
+
+			//		const auto bulletPosition0 = getBulletPosition(smb.bullet, tick/ game.properties.ticksPerSecond, game);
+			//		//TODO. считаем пулю на 1 тик вперед, чтобы не анализовать коллизии по микротикам
+			//		const auto bulletPosition1 = getBulletPosition(smb.bullet, (tick + 1) / game.properties.ticksPerSecond, game);
+
+			//		if (isBulletInUnit(mePosition, me.size, bulletPosition0, smb.bullet.size) ||
+			//			isBulletInUnit(mePosition, me.size, bulletPosition1, smb.bullet.size)) {
+			//			isGoodJump = false;
+			//			break;
+			//		}
+			//	}
+
+			//	if (!isGoodJump) break;
+			//}
 
 			if (isGoodJump) {
 				return make_pair(startJumpTick, stopJumpTick);
