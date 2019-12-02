@@ -12,6 +12,7 @@ public:
 	static std::vector<std::pair<int, int>>getLineSquares(const Vec2Double& start, const Vec2Double& end, int squareSide);
 	static double getVectorLength(const Vec2Double& v);
 	static double getVectorLength2(const Vec2Double& v);
+	static double getScalarMult(const Vec2Double& v1, const Vec2Double& v2);
 };
 
 

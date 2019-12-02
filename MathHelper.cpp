@@ -108,3 +108,8 @@ double MathHelper::getVectorLength2(const Vec2Double & v)
 {
 	return v.x * v.x + v.y * v.y;
 }
+
+double MathHelper::getScalarMult(const Vec2Double & v1, const Vec2Double & v2)
+{
+	return v1.x * v2.x + v1.y * v2.y;
+}

@@ -5,11 +5,10 @@ struct ShootMeBulletCrossPoint
 {
 	Vec2Double crossPoint;
 	bool hasCrossPoint;
-	bool hasWallBefore;
 	double crossPointDist2;
 
 	ShootMeBulletCrossPoint(
-		Vec2Double cp, bool hcp, bool hwb, double cpDist2):crossPoint(cp),hasCrossPoint(hcp),hasWallBefore(hwb),crossPointDist2(cpDist2)
+		Vec2Double cp, bool hcp, double cpDist2):crossPoint(cp),hasCrossPoint(hcp),crossPointDist2(cpDist2)
 	{
 		
 	}

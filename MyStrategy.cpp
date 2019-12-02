@@ -250,7 +250,7 @@ void drawBullets(Debug& debug, const Game& game, int meId) {
 }
 
 void drawShootingLine(
-	Debug& debug, const Game& game, const Vec2Double& weaponPoistion, double angle, double maxX, double maxY, ColorFloat color) {
+	Debug& debug, const Game& game, const Vec2Double& weaponPoistion, double angle, double maxX, double maxY, const ColorFloat& color) {
 	auto crossPoint = getShootingCrossBorderPoint(
 		weaponPoistion,
 		angle, maxX, maxY);
@@ -287,8 +287,8 @@ void drawShootingSector(Debug& debug, const Unit& unit, const Game& game) {
 
 	const auto weaponPoistion = Vec2Double(unit.position.x, unit.position.y + unit.size.y / 2);
 	//drawShootingLine(debug, game, weaponPoistion, *(*unit.weapon).lastAngle, maxX, maxY, ColorFloat(0, 0, 255, 0.5));
-	drawShootingLine(debug, game, weaponPoistion, *(*unit.weapon).lastAngle - (*unit.weapon).spread, maxX, maxY, ColorFloat(100, 100, 255, 0.5));
-	drawShootingLine(debug, game, weaponPoistion, *(*unit.weapon).lastAngle + (*unit.weapon).spread, maxX, maxY, ColorFloat(100, 100, 255, 0.5));
+	drawShootingLine(debug, game, weaponPoistion, *(*unit.weapon).lastAngle - (*unit.weapon).spread, maxX, maxY, ColorFloat(0, 0, 255, 0.5));
+	drawShootingLine(debug, game, weaponPoistion, *(*unit.weapon).lastAngle + (*unit.weapon).spread, maxX, maxY, ColorFloat(0, 0, 255, 0.5));
 	
 
 }
@@ -315,74 +315,48 @@ ShootMeBulletCrossPoint get_shoot_me_bullet_cross_point(
 		x2, y2, x2, y1);
 	auto cross4 = MathHelper::getLinesCross(bulletX1, bulletY1, bulletX2, bulletY2,
 		x2, y1, x1, y1);
+	
+	double minCrossDist2Shooting = INT_MAX;
+	Vec2Double* minCrossDist2ShootingPoint = nullptr;
 
-	double minCrossDist2 = INT_MAX;
-	Vec2Double* minCrossDist2Point = nullptr;	
-
+	auto dist2 = MathHelper::getVectorLength2(Vec2Double(cross1.x - bulletX1, cross1.y - bulletY1));	
 	if (cross1.y >= y1 && cross1.y <= y2)
-	{
-		auto dist2 = MathHelper::getVectorLength2(Vec2Double(cross1.x - bulletX1, cross1.y - bulletY1));
-		if (dist2 < minCrossDist2)
-		{
-			minCrossDist2 = dist2;
-			minCrossDist2Point = &cross1;
+	{		
+		if (dist2 < minCrossDist2Shooting) {
+			minCrossDist2Shooting = dist2;
+			minCrossDist2ShootingPoint = &cross1;
 		}
 	}
 
-	if (cross2.x >= x1 && cross2.x <= x2) {
-		auto dist2 = MathHelper::getVectorLength2(Vec2Double(cross2.x - bulletX1, cross2.y - bulletY1));
-		if (dist2 < minCrossDist2)
-		{
-			minCrossDist2 = dist2;
-			minCrossDist2Point = &cross2;
+	dist2 = MathHelper::getVectorLength2(Vec2Double(cross2.x - bulletX1, cross2.y - bulletY1));	
+	if (cross2.x >= x1 && cross2.x <= x2) {		
+		if (dist2 < minCrossDist2Shooting) {
+			minCrossDist2Shooting = dist2;
+			minCrossDist2ShootingPoint = &cross2;
 		}
 	}
 
-	if (cross3.y >= y1 && cross3.y <= y2) {
-		auto dist2 = MathHelper::getVectorLength2(Vec2Double(cross3.x - bulletX1, cross3.y - bulletY1));
-		if (dist2 < minCrossDist2)
-		{
-			minCrossDist2 = dist2;
-			minCrossDist2Point = &cross3;
+	dist2 = MathHelper::getVectorLength2(Vec2Double(cross3.x - bulletX1, cross3.y - bulletY1));	
+	if (cross3.y >= y1 && cross3.y <= y2) {	
+		if (dist2 < minCrossDist2Shooting) {
+			minCrossDist2Shooting = dist2;
+			minCrossDist2ShootingPoint = &cross3;
 		}
 	}
 
+	dist2 = MathHelper::getVectorLength2(Vec2Double(cross4.x - bulletX1, cross4.y - bulletY1));	
 	if (cross4.x >= x1 && cross4.x <= x2) {
-		auto dist2 = MathHelper::getVectorLength2(Vec2Double(cross4.x - bulletX1, cross4.y - bulletY1));
-		if (dist2 < minCrossDist2)
-		{
-			minCrossDist2 = dist2;
-			minCrossDist2Point = &cross4;
+		if (dist2 < minCrossDist2Shooting) {
+			minCrossDist2Shooting = dist2;
+			minCrossDist2ShootingPoint = &cross4;
 		}
 	}
-
-
-	if (minCrossDist2Point != nullptr)
-	{
-		const auto bulletTiles = MathHelper::getLineSquares(bulletPosition, *minCrossDist2Point, 1);
-		const pair<int, int>* firstWallTile = nullptr;
-		for (const auto& bt : bulletTiles) {
-			if (bt.first == 0 || bt.second == 0 || bt.first == game.level.tiles.size() - 1 || bt.second == game.level.tiles[0].size() - 1) {
-				break; //игнор крайних стен
-			}
-
-			if (game.level.tiles[bt.first][bt.second] == Tile::WALL) {
-				firstWallTile = &bt;
-				break;
-			}
-		}
-
-		if (firstWallTile != nullptr)
-		{
-			return {Vec2Double(0, 0), true, true, 0};
-		}
-	}
+	
 
 	return {
-		minCrossDist2Point != nullptr ? *minCrossDist2Point : Vec2Double(0,0),
-		minCrossDist2Point != nullptr,
-		false,
-		minCrossDist2
+		minCrossDist2ShootingPoint != nullptr ? *minCrossDist2ShootingPoint : Vec2Double(0,0),
+		minCrossDist2ShootingPoint != nullptr,
+		minCrossDist2Shooting
 	};
 
 	//const auto crossWallPoint = getBulletCrossWallPoint(bullet, maxX, maxY, game);
@@ -475,6 +449,28 @@ ShootMeBulletCrossPoint get_shoot_me_bullet_cross_point(
 	//}
 }
 
+
+bool isBulletCrossWall(const Vec2Double& bulletPosition, const Vec2Double& bulletVelocity, double time, const Game& game) {
+
+	const auto targetPosition = Vec2Double(bulletPosition.x + bulletVelocity.x * time, bulletPosition.y + bulletVelocity.y * time);
+
+	const auto bulletTiles = MathHelper::getLineSquares(bulletPosition, targetPosition, 1);
+	const pair<int, int>* firstWallTile = nullptr;
+	for (const auto& bt : bulletTiles) {
+		if (bt.first == 0 || bt.second == 0 || bt.first == game.level.tiles.size() - 1 || bt.second == game.level.tiles[0].size() - 1) {
+			break; //игнор крайних стен
+		}
+
+		if (game.level.tiles[bt.first][bt.second] == Tile::WALL) {
+			firstWallTile = &bt;
+			break;
+		}
+	}
+
+	return firstWallTile != nullptr;
+
+}
+
 double getShootEnemyProbability(const Unit& me, const Unit& enemy, const Game& game, double spread,
 	Debug* debug = nullptr) {
 	if (me.weapon == nullptr) return 0;
@@ -493,63 +489,94 @@ double getShootEnemyProbability(const Unit& me, const Unit& enemy, const Game& g
 	for (auto i = -ANGLE_SPLIT_COUNT; i <= ANGLE_SPLIT_COUNT; ++i)
 	{
 		auto isShooting = false;
+		double minCrossDist2 = INT_MAX;
 		Vec2Double cp = Vec2Double(0, 0);
+
+		const auto bulletVelocityLength = (*me.weapon).params.bullet.speed;
 		
 		const auto angle = *me.weapon->lastAngle + deltaAngle * i;
-		auto bulletPos = Vec2Double(
+		const auto bulletPos1 = Vec2Double(
 			bulletCenterPos.x - me.weapon->params.bullet.size / 2,
 			bulletCenterPos.y - me.weapon->params.bullet.size / 2);
-		auto bulletVelocity = Vec2Double(cos(angle), sin(angle));
+		auto bulletVelocity = Vec2Double(bulletVelocityLength * cos(angle), bulletVelocityLength * sin(angle));
 		auto shootEnemyCrossPoint = get_shoot_me_bullet_cross_point(
-			x1, y1, x2, y2, bulletPos, bulletVelocity, game);
+			x1, y1, x2, y2, bulletPos1, bulletVelocity, game);
 
-		if (shootEnemyCrossPoint.hasWallBefore) continue;
-		if (shootEnemyCrossPoint.hasCrossPoint) isShooting = true;
-		if (shootEnemyCrossPoint.hasCrossPoint) cp = shootEnemyCrossPoint.crossPoint;
+		if (shootEnemyCrossPoint.hasCrossPoint) {
+			isShooting = true;
+			cp = shootEnemyCrossPoint.crossPoint;
+			if (shootEnemyCrossPoint.crossPointDist2 < minCrossDist2) {
+				minCrossDist2 = shootEnemyCrossPoint.crossPointDist2;
+			}
+		}
 
 
-		bulletPos = Vec2Double(
+		const auto bulletPos2 = Vec2Double(
 			bulletCenterPos.x - me.weapon->params.bullet.size / 2,
 			bulletCenterPos.y + me.weapon->params.bullet.size / 2);
-		bulletVelocity = Vec2Double(cos(angle), sin(angle));
 		shootEnemyCrossPoint = get_shoot_me_bullet_cross_point(
-			x1, y1, x2, y2, bulletPos, bulletVelocity, game);
+			x1, y1, x2, y2, bulletPos2, bulletVelocity, game);
 
-		if (shootEnemyCrossPoint.hasWallBefore) continue;
-		if (shootEnemyCrossPoint.hasCrossPoint) isShooting = true;
-		if (shootEnemyCrossPoint.hasCrossPoint) cp = shootEnemyCrossPoint.crossPoint;
+		if (shootEnemyCrossPoint.hasCrossPoint) {
+			isShooting = true;
+			cp = shootEnemyCrossPoint.crossPoint;
+			if (shootEnemyCrossPoint.crossPointDist2 < minCrossDist2) {
+				minCrossDist2 = shootEnemyCrossPoint.crossPointDist2;
+			}
+		}
 
 
-		bulletPos = Vec2Double(
+		const auto bulletPos3 = Vec2Double(
 			bulletCenterPos.x + me.weapon->params.bullet.size / 2,
 			bulletCenterPos.y - me.weapon->params.bullet.size / 2);
-		bulletVelocity = Vec2Double(cos(angle), sin(angle));
 		shootEnemyCrossPoint = get_shoot_me_bullet_cross_point(
-			x1, y1, x2, y2, bulletPos, bulletVelocity, game);
+			x1, y1, x2, y2, bulletPos3, bulletVelocity, game);
 
-		if (shootEnemyCrossPoint.hasWallBefore) continue;
-		if (shootEnemyCrossPoint.hasCrossPoint) isShooting = true;
-		if (shootEnemyCrossPoint.hasCrossPoint) cp = shootEnemyCrossPoint.crossPoint;
+		if (shootEnemyCrossPoint.hasCrossPoint) {
+			isShooting = true;
+			cp = shootEnemyCrossPoint.crossPoint;
+			if (shootEnemyCrossPoint.crossPointDist2 < minCrossDist2) {
+				minCrossDist2 = shootEnemyCrossPoint.crossPointDist2;
+			}
+		}
 
-		bulletPos = Vec2Double(
+		const auto bulletPos4 = Vec2Double(
 			bulletCenterPos.x + me.weapon->params.bullet.size / 2,
 			bulletCenterPos.y + me.weapon->params.bullet.size / 2);
-		bulletVelocity = Vec2Double(cos(angle), sin(angle));
 		shootEnemyCrossPoint = get_shoot_me_bullet_cross_point(
-			x1, y1, x2, y2, bulletPos, bulletVelocity, game);
+			x1, y1, x2, y2, bulletPos4, bulletVelocity, game);
 
-		if (shootEnemyCrossPoint.hasWallBefore) continue;
-		if (shootEnemyCrossPoint.hasCrossPoint) isShooting = true;
-		if (shootEnemyCrossPoint.hasCrossPoint) cp = shootEnemyCrossPoint.crossPoint;
-
-		if (isShooting) shootingCount++;
-		if (isShooting && debug != nullptr)
-		{			 
-			(*debug).draw(CustomData::Line(
-				vec2DoubleToVec2Float(bulletCenterPos),
-				vec2DoubleToVec2Float(cp),
-				0.1, ColorFloat(100,100,100, 0.5)));
+		if (shootEnemyCrossPoint.hasCrossPoint) {
+			isShooting = true;
+			cp = shootEnemyCrossPoint.crossPoint;
+			if (shootEnemyCrossPoint.crossPointDist2 < minCrossDist2) {
+				minCrossDist2 = shootEnemyCrossPoint.crossPointDist2;
+			}
 		}
+
+
+
+		if (isShooting) {
+			const auto dist = sqrt(minCrossDist2);			
+			const auto time = dist / bulletVelocityLength;
+
+			const auto isCrossWall =
+				isBulletCrossWall(bulletPos1, bulletVelocity, time, game) ||
+				isBulletCrossWall(bulletPos2, bulletVelocity, time, game) ||
+				isBulletCrossWall(bulletPos3, bulletVelocity, time, game) ||
+				isBulletCrossWall(bulletPos4, bulletVelocity, time, game);
+
+			if (!isCrossWall) {
+				shootingCount++;
+				if (debug != nullptr) {
+					(*debug).draw(CustomData::Line(
+						vec2DoubleToVec2Float(bulletCenterPos),
+						vec2DoubleToVec2Float(cp),
+						0.1, ColorFloat(100, 100, 100, 0.5)));
+				}
+			}
+		}
+		
 	}
 
 	return shootingCount * 1.0 / (2 * ANGLE_SPLIT_COUNT + 1.0);
@@ -598,10 +625,6 @@ int getShootMeBulletTick(const Unit& me, const Bullet& bullet, const Game& game)
 	
 	const auto bulletPosition1 = Vec2Double(bullet.position.x - bullet.size / 2, bullet.position.y - bullet.size / 2);
 	const auto smbcp1 = get_shoot_me_bullet_cross_point(x1, y1, x2, y2, bulletPosition1, bullet.velocity, game);
-	if (smbcp1.hasWallBefore)
-	{
-		return -1;
-	}
 	if (smbcp1.hasCrossPoint)
 	{
 		if (smbcp1.crossPointDist2 < minCrossDist2)
@@ -613,10 +636,6 @@ int getShootMeBulletTick(const Unit& me, const Bullet& bullet, const Game& game)
 
 	const auto bulletPosition2 = Vec2Double(bullet.position.x + bullet.size / 2, bullet.position.y - bullet.size / 2);
 	const auto smbcp2 = get_shoot_me_bullet_cross_point(x1, y1, x2, y2, bulletPosition2, bullet.velocity, game);
-	if (smbcp2.hasWallBefore)
-	{
-		return -1;
-	}
 	if (smbcp2.hasCrossPoint)
 	{
 		if (smbcp2.crossPointDist2 < minCrossDist2)
@@ -628,10 +647,6 @@ int getShootMeBulletTick(const Unit& me, const Bullet& bullet, const Game& game)
 	
 	const auto bulletPosition3 = Vec2Double(bullet.position.x + bullet.size / 2, bullet.position.y + bullet.size / 2);
 	const auto smbcp3 = get_shoot_me_bullet_cross_point(x1, y1, x2, y2, bulletPosition3, bullet.velocity, game);
-	if (smbcp3.hasWallBefore)
-	{
-		return -1;
-	}
 	if (smbcp3.hasCrossPoint)
 	{
 		if (smbcp3.crossPointDist2 < minCrossDist2)
@@ -644,10 +659,6 @@ int getShootMeBulletTick(const Unit& me, const Bullet& bullet, const Game& game)
 	
 	const auto bulletPosition4 = Vec2Double(bullet.position.x + bullet.size / 2, bullet.position.y + bullet.size / 2);
 	const auto smbcp4 = get_shoot_me_bullet_cross_point(x1, y1, x2, y2, bulletPosition4, bullet.velocity, game);
-	if (smbcp4.hasWallBefore)
-	{
-		return -1;
-	}
 	if (smbcp4.hasCrossPoint)
 	{
 		if (smbcp4.crossPointDist2 < minCrossDist2)
@@ -659,18 +670,19 @@ int getShootMeBulletTick(const Unit& me, const Bullet& bullet, const Game& game)
 
 	if (minCrossDist2Point != nullptr)
 	{
-		auto bulletVelocity = MathHelper::getVectorLength(bullet.velocity);
-		
+		auto bulletVelocityLength = MathHelper::getVectorLength(bullet.velocity);		
 		auto minCrossDist = sqrt(minCrossDist2);
-		int shootMeTick = static_cast<int>(ceil(minCrossDist / bulletVelocity * game.properties.ticksPerSecond));
 
-		/*const auto maxX = game.level.tiles.size() * TILE_SIZE;
-		const auto maxY = game.level.tiles[0].size() * TILE_SIZE;
-		const auto crossWallPoint = getBulletCrossWallPoint(bullet, maxX, maxY, game);
-		auto wallDist = MathHelper::getVectorLength(
-			Vec2Double(bullet.position.x - crossWallPoint.x, bullet.position.y - crossWallPoint.y));		
-		int shootWallTick = static_cast<int>(ceil(wallDist / bulletVelocity * game.properties.ticksPerSecond));*/
-		
+		const auto time = minCrossDist / bulletVelocityLength;
+		const auto isCrossWall =
+			isBulletCrossWall(bulletPosition1, bullet.velocity, time, game) ||
+			isBulletCrossWall(bulletPosition2, bullet.velocity, time, game) ||
+			isBulletCrossWall(bulletPosition3, bullet.velocity, time, game) ||
+			isBulletCrossWall(bulletPosition4, bullet.velocity, time, game);
+
+		if (isCrossWall) return -1;
+
+		int shootMeTick = static_cast<int>(ceil(minCrossDist / bulletVelocityLength * game.properties.ticksPerSecond));
 		return shootMeTick;
 	}
 	
