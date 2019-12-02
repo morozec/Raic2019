@@ -6,16 +6,20 @@
 #include "model/Game.hpp"
 #include "model/Unit.hpp"
 #include "model/UnitAction.hpp"
+#include "RunawayDirection.h"
 
 class MyStrategy {
 public:
   MyStrategy();
   UnitAction getAction(const Unit &unit, const Game &game, Debug &debug);
-  int getStopJumpTick();
-  void setStopJumpTick(int sjt);
-  void decreaseStopJumpTick();
+	
+  int getRunawayDirection() const;
+  int getStopRunawayTick() const;
+  void setRunaway(RunawayDirection runaway_direction, int sjt);
+  void decreaseStopRunawayTick();
 private:
-	int stopJumpTick = -1;
+	int stop_runaway_tick_ = -1;
+	RunawayDirection runaway_direction_ = NONE;
 };
 
 #endif
