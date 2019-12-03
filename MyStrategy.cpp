@@ -14,6 +14,8 @@
 #include "Segment.h"
 #include "RunawayDirection.h"
 
+#include <sstream>
+
 using namespace std;
 
 
@@ -732,9 +734,29 @@ Vec2Double getUnitGoSidePosition(
 	return Vec2Double(unit.position.x + dx, unit.position.y);
 }
 
+//TODO: учесть особенности карты
+Vec2Double getFallingUnitPosition(
+	const Unit& unit, int startGoTick, int stopGoTick, double time, const Game& game)
+{
+	if (time * game.properties.ticksPerSecond <= startGoTick) {
+		return unit.position;
+	}
+
+	const auto startGoTime = startGoTick / game.properties.ticksPerSecond;
+
+	if (time * game.properties.ticksPerSecond <= stopGoTick || stopGoTick == -1) {//stopGoTick == -1 - для платформы, не можем остановиться
+		const auto goTime = time - startGoTime;
+		return Vec2Double(unit.position.x, unit.position.y - game.properties.unitFallSpeed * goTime);
+	}
+
+	const auto stopGoTime = stopGoTick / game.properties.ticksPerSecond;
+	const auto goTime = stopGoTime - startGoTime;
+	return Vec2Double(unit.position.x, unit.position.y - game.properties.unitFallSpeed * goTime);
+}
+
 
 //TODO: учесть максимальное время прыжка
-Vec2Double getJumpUnitPosition(const Unit& unit, int startJumpTick, int stopJumpTick, double time, const Game& game) {
+Vec2Double getJumpingUnitPosition(const Unit& unit, int startJumpTick, int stopJumpTick, double time, const Game& game) {
 	if (time * game.properties.ticksPerSecond <= startJumpTick) {
 		return unit.position;
 	}
@@ -871,7 +893,7 @@ bool isBulletShootJumpingUnit(
 	for (int tick = 1; tick <= shootWallTick; ++tick)
 	{
 		const auto time = tick / game.properties.ticksPerSecond;
-		auto unitPos = getJumpUnitPosition(unit, startJumpTick, stopJumpTick, time, game);
+		auto unitPos = getJumpingUnitPosition(unit, startJumpTick, stopJumpTick, time, game);
 		auto bulletPos = getBulletPosition(bullet, time, game);
 		if (!isBulletMoveCrossUnitMove(prevUnitPos, unitPos, prevBulletPos, bulletPos, unit.size, bullet.size/2))
 		{
@@ -885,7 +907,7 @@ bool isBulletShootJumpingUnit(
 		for (int j = 1; j <= game.properties.updatesPerTick; ++j)
 		{
 			const auto mtTime = (tick - 1 + j * 1.0 / game.properties.updatesPerTick) / game.properties.ticksPerSecond;
-			unitPos = getJumpUnitPosition(unit, startJumpTick, stopJumpTick, mtTime, game);
+			unitPos = getJumpingUnitPosition(unit, startJumpTick, stopJumpTick, mtTime, game);
 			bulletPos = getBulletPosition(bullet, mtTime, game);
 			if (isBulletMoveCrossUnitMove(prevUnitPos, unitPos, prevBulletPos, bulletPos, unit.size, bullet.size/2))
 			{
@@ -905,6 +927,74 @@ bool isBulletShootJumpingUnit(
 	return false;
 }
 
+bool isBulletShootFallingUnit(
+	const Bullet& bullet, const Unit& unit, int startJumpTick, int stopJumpTick,
+	double bulletShootWallTime, const Game& game, int& killTick)
+{
+	const auto shootWallTick = static_cast<int>(ceil(bulletShootWallTime * game.properties.ticksPerSecond));
+
+	auto prevUnitPos = unit.position;
+	auto prevBulletPos = bullet.position;
+	for (int tick = 1; tick <= shootWallTick; ++tick)
+	{
+		const auto time = tick / game.properties.ticksPerSecond;
+		auto unitPos = getFallingUnitPosition(unit, startJumpTick, stopJumpTick, time, game);
+		auto bulletPos = getBulletPosition(bullet, time, game);
+		if (!isBulletMoveCrossUnitMove(prevUnitPos, unitPos, prevBulletPos, bulletPos, unit.size, bullet.size / 2))
+		{
+			prevUnitPos = unitPos;
+			prevBulletPos = bulletPos;
+			continue;
+		}
+
+
+		//считаем по микротику
+		for (int j = 1; j <= game.properties.updatesPerTick; ++j)
+		{
+			const auto mtTime = (tick - 1 + j * 1.0 / game.properties.updatesPerTick) / game.properties.ticksPerSecond;
+			unitPos = getFallingUnitPosition(unit, startJumpTick, stopJumpTick, mtTime, game);
+			bulletPos = getBulletPosition(bullet, mtTime, game);
+			if (isBulletMoveCrossUnitMove(prevUnitPos, unitPos, prevBulletPos, bulletPos, unit.size, bullet.size / 2))
+			{
+				killTick = min(killTick, tick);
+				return true;
+			}
+
+
+			prevUnitPos = unitPos;
+			prevBulletPos = bulletPos;
+		}
+
+		prevUnitPos = unitPos;
+		prevBulletPos = bulletPos;
+	}
+
+	return false;
+}
+
+
+bool isUnitOnLadder(const Unit& unit, const Game& game)
+{
+	/*const auto centerUnitTile = game.level.tiles[size_t(unit.position.x)][size_t(unit.position.y + unit.size.y / 2)];
+	const auto downUnitTile = game.level.tiles[size_t(unit.position.x)][size_t(unit.position.y)];
+	return centerUnitTile == LADDER || downUnitTile == LADDER;*/
+
+	const auto leftSideDownTile = game.level.tiles[size_t(unit.position.x - unit.size.x / 2)][size_t(unit.position.y - 1)];
+	const auto rightSideDownTile = game.level.tiles[size_t(unit.position.x + unit.size.x / 2)][size_t(unit.position.y - 1)];
+	
+	return (leftSideDownTile == LADDER || rightSideDownTile == LADDER) &&
+		leftSideDownTile != WALL && rightSideDownTile != WALL;
+}
+
+
+bool isUnitOnPlatform(const Unit& unit, const Game& game)
+{
+	const auto leftSideDownTile = game.level.tiles[size_t(unit.position.x - unit.size.x / 2)][size_t(unit.position.y - 1)];
+	const auto rightSideDownTile = game.level.tiles[size_t(unit.position.x + unit.size.x / 2)][size_t(unit.position.y - 1)];
+
+	return (leftSideDownTile == PLATFORM || rightSideDownTile == PLATFORM) &&
+		leftSideDownTile != WALL && rightSideDownTile != WALL;
+}
 
 
 tuple<RunawayDirection,int, int> getJumpAndStopTicks(
@@ -930,89 +1020,93 @@ tuple<RunawayDirection,int, int> getJumpAndStopTicks(
 		}
 	}
 	const int maxShootWallTick = static_cast<int>(ceil(maxShootWallTime * game.properties.ticksPerSecond));
+
+	const bool isOnLadder = isUnitOnLadder(me, game);
+	const bool isOnPlatform = isUnitOnPlatform(me, game);
 	
-	for (int startJumpTick = minShootMeTick - 1; startJumpTick >= 0; startJumpTick--) {
+	for (int startGoTick = minShootMeTick - 1; startGoTick >= 0; startGoTick--) {
 
 		auto killGoUpTick = INT_MAX;
 		auto killGoLeftTick = INT_MAX;
 		auto killGoRightTick = INT_MAX;
+		auto killGoDownTick = INT_MAX;
 		
-		for (int stopJumpTick = startJumpTick + 1; stopJumpTick < maxShootWallTick; ++stopJumpTick) {
+		for (int stopGoTick = startGoTick + 1; stopGoTick < maxShootWallTick; ++stopGoTick) {
 
 			auto canGoUp = true;	
 			auto canGoLeft = true;		
 			auto canGoRight = true;
+			auto canGoDown = true;
 			
 			
 			for (const auto& bullet : game.bullets)
 			{
 				if (bullet.playerId == me.playerId) continue;
 
-				if (stopJumpTick > killGoUpTick)
+				if (stopGoTick > killGoUpTick)
 				{
 					canGoUp = false;
 				}
 				else if (canGoUp && isBulletShootJumpingUnit(
-					bullet, me, startJumpTick, stopJumpTick, enemyBulletsShootWallTimes.at(bullet), game, killGoUpTick))
+					bullet, me, startGoTick, stopGoTick, enemyBulletsShootWallTimes.at(bullet), game, killGoUpTick))
 				{
 					canGoUp = false;
 				}
 
-				if (stopJumpTick > killGoRightTick)
+				if (stopGoTick > killGoRightTick)
 				{
 					canGoRight = false;
 				}
 				else if (canGoRight && isBulletShootGoSideUnit(
-					bullet, me, startJumpTick, stopJumpTick, enemyBulletsShootWallTimes.at(bullet), 1, game, killGoRightTick))
+					bullet, me, startGoTick, stopGoTick, enemyBulletsShootWallTimes.at(bullet), 1, game, killGoRightTick))
 				{
 					canGoRight = false;
 				}
 
-				if (stopJumpTick > killGoLeftTick)
+				if (stopGoTick > killGoLeftTick)
 				{
 					canGoLeft = false;
 				}
 				else if (canGoLeft &&  isBulletShootGoSideUnit(
-					bullet, me, startJumpTick, stopJumpTick, enemyBulletsShootWallTimes.at(bullet), -1, game, killGoLeftTick))
+					bullet, me, startGoTick, stopGoTick, enemyBulletsShootWallTimes.at(bullet), -1, game, killGoLeftTick))
 				{
 					canGoLeft = false;
 				}
 
-				if (!canGoUp && !canGoLeft && !canGoRight) break;
+				if (!isOnLadder && !isOnPlatform || stopGoTick > killGoDownTick)
+				{
+					canGoDown = false;
+				}
+				else if (canGoDown &&  isBulletShootFallingUnit(
+					bullet, me, startGoTick, isOnLadder ? stopGoTick : -1, enemyBulletsShootWallTimes.at(bullet), game, killGoDownTick))
+				{
+					canGoDown = false;
+				}
+
+				if (!canGoUp && !canGoLeft && !canGoRight && !canGoDown) break;
 			}
 
 
 			if (canGoUp) { 
-				return make_tuple(UP, startJumpTick, stopJumpTick);
+				return make_tuple(UP, startGoTick, stopGoTick);
+			}
+			if (canGoDown)
+			{
+				return make_tuple(DOWN, startGoTick, stopGoTick);
 			}
 			if (canGoLeft) {
-				return make_tuple(LEFT, startJumpTick, stopJumpTick);
+				return make_tuple(LEFT, startGoTick, stopGoTick);
 			}
 			if (canGoRight) {
-				return make_tuple(RIGHT, startJumpTick, stopJumpTick);
+				return make_tuple(RIGHT, startGoTick, stopGoTick);
 			}
+			
 		}
 	}
 
 	return make_tuple(NONE, -1, -1);//нет пуль или нет шансов спастись
 }
 
-bool isUnitOnLadder(const Unit& unit, const Game& game)
-{
-	const auto centerUnitTile = game.level.tiles[size_t(unit.position.x)][size_t(unit.position.y + unit.size.y/2)];
-	const auto downUnitTile = game.level.tiles[size_t(unit.position.x)][size_t(unit.position.y)];
-	return  centerUnitTile == LADDER || downUnitTile == LADDER;
-}
-
-
-bool isUnitOnPlatform(const Unit& unit, const Game& game)
-{
-	const auto leftSideDownTile = game.level.tiles[size_t(unit.position.x - unit.size.x / 2)][size_t(unit.position.y - 1)];
-	const auto rightSideDownTile = game.level.tiles[size_t(unit.position.x + unit.size.x / 2)][size_t(unit.position.y - 1)];
-	
-	return (leftSideDownTile == PLATFORM || rightSideDownTile == PLATFORM) &&
-		leftSideDownTile != WALL && rightSideDownTile != WALL;		
-}
 
 
 
@@ -1044,8 +1138,6 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
   } else if (nearestEnemy != nullptr) {
     targetPos = nearestEnemy->position;
   }
-  debug.draw(CustomData::Log(
-      std::string("Target pos: ") + targetPos.toString() + "\n"));
 
   drawBullets(debug, game, unit.playerId);
   drawShootingSector(debug, unit, game);
@@ -1093,13 +1185,35 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
 	  }	  
   }
 
+
+  jump = unit.weapon == nullptr && targetPos.y > unit.position.y;
+  if ((unit.weapon == nullptr || unit.weapon != nullptr && needGo) &&
+	  targetPos.x > unit.position.x &&
+	  game.level.tiles[size_t(unit.position.x + 1)][size_t(unit.position.y)] ==
+	  Tile::WALL) {
+	  jump = true;
+  }
+  if ((unit.weapon == nullptr || unit.weapon != nullptr && needGo) &&
+	  targetPos.x < unit.position.x &&
+	  game.level.tiles[size_t(unit.position.x - 1)][size_t(unit.position.y)] ==
+	  Tile::WALL) {
+	  jump = true;
+  }
+  auto jumpDown = unit.weapon != nullptr ? false : !jump;
+
   if (getStopRunawayTick() == 0) {
 	  const auto runawayDirection = getRunawayDirection();
 	  if (runawayDirection == UP)
 	  {
-		  jump = false;	
+		  jump = false;
 		  velocity = 0;
-	  }  	
+	  }
+	  else if (runawayDirection == DOWN)
+	  {
+		  jump = false;
+		  velocity = 0;
+		  jumpDown = true;
+	  }
 	  decreaseStopRunawayTick();
   }
   else if (getStopRunawayTick() > 0) {
@@ -1108,6 +1222,12 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
 	  {
 		  jump = true;
 		  velocity = 0;
+	  }
+	  else if (runawayDirection == DOWN)
+	  {
+		  jump = false;
+		  velocity = 0;
+		  jumpDown = true;
 	  }
 	  else if (runawayDirection == LEFT)
 	  {
@@ -1122,56 +1242,62 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
 	  decreaseStopRunawayTick();
   }
   else {
-	  jump = unit.weapon == nullptr && targetPos.y > unit.position.y;	  
+	  
 
 	  if (unit.jumpState.canJump) {
-		  const auto shootMeBullet = getShootMeBullets(unit, game);
+		  const auto shootMeBullets = getShootMeBullets(unit, game);
 		  const auto enemyBulletsShootWallTimes = getEnemyBulletsShootWallTimes(game, unit.playerId);
-	  	
-		  const auto jumpAndStopTicks = getJumpAndStopTicks(unit, shootMeBullet, enemyBulletsShootWallTimes, game);
+
+		  const auto jumpAndStopTicks = getJumpAndStopTicks(unit, shootMeBullets, enemyBulletsShootWallTimes, game);
 		  debug.draw(CustomData::Log(
 			  to_string(std::get<0>(jumpAndStopTicks)) + " " +
 			  to_string(std::get<1>(jumpAndStopTicks)) + " " +
-			  to_string(std::get<2>(jumpAndStopTicks))));
+			  to_string(std::get<2>(jumpAndStopTicks)) + "\n"));
+
+		  if (!shootMeBullets.empty()) {
+			  stringstream ss;
+
+			  const auto smb = shootMeBullets[0];
+			  ss << "me: " << unit.position.x << " " << unit.position.y << "; bp: " << smb.bullet.position.x << " " <<
+				  smb.bullet.position.y << "; bv: " << smb.bullet.velocity.x << " " << smb.bullet.velocity.y;
+
+			  debug.draw(CustomData::Log(ss.str()));
+		  }
 
 		  if (std::get<1>(jumpAndStopTicks) == 0) {
 			  const auto runawayDirection = std::get<0>(jumpAndStopTicks);
 			  const auto stopRunawayTick = std::get<2>(jumpAndStopTicks);
 			  setRunaway(runawayDirection, stopRunawayTick);
-		  	
+
 			  if (runawayDirection == UP)
 			  {
 				  jump = true;
 				  velocity = 0;
-			  }else if (runawayDirection == LEFT)
+			  }
+			  else if (runawayDirection == DOWN)
+			  {
+				  jump = false;
+				  jumpDown = true;
+				  velocity = 0;
+			  }
+			  else if (runawayDirection == LEFT)
 			  {
 				  jump = false;
 				  velocity = -INT_MAX;
-			  }else if (runawayDirection == RIGHT)
+			  }
+			  else if (runawayDirection == RIGHT)
 			  {
 				  jump = false;
 				  velocity = INT_MAX;
 			  }
-		  	
-		  }
-	  } 
-  }
-  
-  
-  if ((unit.weapon == nullptr || unit.weapon != nullptr && needGo) &&
-	  targetPos.x > unit.position.x &&
-      game.level.tiles[size_t(unit.position.x + 1)][size_t(unit.position.y)] ==
-          Tile::WALL) {
-    jump = true;
-  }
-  if ((unit.weapon == nullptr || unit.weapon != nullptr && needGo) &&
-	  targetPos.x < unit.position.x &&
-      game.level.tiles[size_t(unit.position.x - 1)][size_t(unit.position.y)] ==
-          Tile::WALL) {
-    jump = true;
-  }
 
-  auto jumpDown = unit.weapon != nullptr ? false : !jump;
+		  }
+	  }
+  }
+  
+  
+ 
+
 
   debug.draw(CustomData::Log("SHOOT: " + to_string(needShoot)));
  
@@ -1184,18 +1310,6 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
   action.shoot = needShoot;
   action.swapWeapon = false;
   action.plantMine = false;
-
-  if (isUnitOnLadder(unit, game))
-  {
-	  bool jd = true;
-
-	 /* if (jd) {
-		  action.jumpDown = jd;
-		  action.jump = !jd;
-		  action.velocity = 0;
-		  return action;
-	  }*/
-  }
 
 	
   return action;
