@@ -2,9 +2,9 @@
 
 enum RunawayDirection
 {
-	UP,
-	LEFT,
-	RIGHT,
-	DOWN,
-	NONE
+	GoUP,
+	GoLEFT,
+	GoRIGHT,
+	GoDOWN,
+	GoNONE
 };

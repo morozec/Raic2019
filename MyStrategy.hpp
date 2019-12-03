@@ -20,7 +20,7 @@ public:
   void decreaseStopRunawayTick();
 private:
 	int stop_runaway_tick_ = -1;
-	RunawayDirection runaway_direction_ = NONE;
+	RunawayDirection runaway_direction_ = GoNONE;
 	Strategy strategy_ = Strategy();
 };
 

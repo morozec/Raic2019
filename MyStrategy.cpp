@@ -122,12 +122,12 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	if (getStopRunawayTick() == 0)
 	{
 		const auto runawayDirection = getRunawayDirection();
-		if (runawayDirection == UP)
+		if (runawayDirection == GoUP)
 		{
 			jump = false;
 			velocity = 0;
 		}
-		else if (runawayDirection == DOWN)
+		else if (runawayDirection == GoDOWN)
 		{
 			jump = false;
 			velocity = 0;
@@ -138,23 +138,23 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	else if (getStopRunawayTick() > 0)
 	{
 		const auto runawayDirection = getRunawayDirection();
-		if (runawayDirection == UP)
+		if (runawayDirection == GoUP)
 		{
 			jump = true;
 			velocity = 0;
 		}
-		else if (runawayDirection == DOWN)
+		else if (runawayDirection == GoDOWN)
 		{
 			jump = false;
 			velocity = 0;
 			jumpDown = true;
 		}
-		else if (runawayDirection == LEFT)
+		else if (runawayDirection == GoLEFT)
 		{
 			jump = false;
 			velocity = -INT_MAX;
 		}
-		else if (runawayDirection == RIGHT)
+		else if (runawayDirection == GoRIGHT)
 		{
 			jump = false;
 			velocity = INT_MAX;
@@ -189,24 +189,24 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 				const auto stopRunawayTick = std::get<2>(jumpAndStopTicks);
 				setRunaway(runawayDirection, stopRunawayTick);
 
-				if (runawayDirection == UP)
+				if (runawayDirection == GoUP)
 				{
 					jump = true;
 					velocity = 0;
 				}
-				else if (runawayDirection == DOWN)
+				else if (runawayDirection == GoDOWN)
 				{
 					jump = false;
 					jumpDown = true;
 					velocity = 0;
 				}
-				else if (runawayDirection == LEFT)
+				else if (runawayDirection == GoLEFT)
 				{
 					jump = false;
 
 					velocity = -INT_MAX;
 				}
-				else if (runawayDirection == RIGHT)
+				else if (runawayDirection == GoRIGHT)
 				{
 					jump = false;
 					velocity = INT_MAX;

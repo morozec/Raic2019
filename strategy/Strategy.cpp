@@ -468,7 +468,7 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 {
 	if (shootingMeBullets.empty())
 	{
-		return std::make_tuple(NONE, -1, -1);
+		return std::make_tuple(GoNONE, -1, -1);
 	}
 	int minShootMeTick = INT_MAX;
 	for (const auto& smb : shootingMeBullets)
@@ -560,24 +560,24 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 
 			if (canGoUp)
 			{
-				return std::make_tuple(UP, startGoTick, stopGoTick);
+				return std::make_tuple(GoUP, startGoTick, stopGoTick);
 			}
 			if (canGoDown)
 			{
-				return std::make_tuple(DOWN, startGoTick, stopGoTick);
+				return std::make_tuple(GoDOWN, startGoTick, stopGoTick);
 			}
 			if (canGoLeft)
 			{
-				return std::make_tuple(LEFT, startGoTick, stopGoTick);
+				return std::make_tuple(GoLEFT, startGoTick, stopGoTick);
 			}
 			if (canGoRight)
 			{
-				return std::make_tuple(RIGHT, startGoTick, stopGoTick);
+				return std::make_tuple(GoRIGHT, startGoTick, stopGoTick);
 			}
 		}
 	}
 
-	return std::make_tuple(NONE, -1, -1); //нет пуль или нет шансов спастись
+	return std::make_tuple(GoNONE, -1, -1); //нет пуль или нет шансов спастись
 }
 
 
