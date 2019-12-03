@@ -134,11 +134,12 @@ Vec2Double Simulator::getBulletCornerCrossWallPoint(
 			}
 		}
 
-		if (minDistCp == nullptr)
+		/*if (minDistCp == nullptr)
 		{
 			throw std::runtime_error("no wall tile cross");
-		}
-		return *minDistCp;
+		}*/
+		//TODO: ошибка при отправке стратегии
+		return minDistCp != nullptr ? *minDistCp : Vec2Double(0,0); 
 	}
 
 	return crossPoint;
