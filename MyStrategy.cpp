@@ -225,6 +225,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	action.jumpDown = jumpDown;
 	action.aim = aim;
 	action.shoot = needShoot;
+	action.reload = false;
 	action.swapWeapon = false;
 	action.plantMine = false;
 
