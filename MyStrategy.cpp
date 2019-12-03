@@ -1196,10 +1196,8 @@ tuple<RunawayDirection, int, int> getJumpAndStopTicks(
 }
 
 //TODO: учесть границы
-Vec2Double getNextTickUnitPosition(const Unit& unit, const UnitAction& action, const Game& game)
+Vec2Double getUnitInTimePosition(const Unit& unit, const UnitAction& action, double time, const Game& game)
 {
-	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
-	
 	auto x = unit.position.x;
 	auto y = unit.position.y;
 	
@@ -1209,18 +1207,21 @@ Vec2Double getNextTickUnitPosition(const Unit& unit, const UnitAction& action, c
 
 	const auto velocityX = action.velocity >= 0 ? min(action.velocity, game.properties.unitMaxHorizontalSpeed) :
 		max(action.velocity, -game.properties.unitMaxHorizontalSpeed);
-	return { x + velocityX * tickTime, y + velocityY * tickTime };
+	return { x + velocityX * time, y + velocityY * time };
 }
 
-bool isSafeMove(const Unit& unit, const UnitAction& action, const Game& game)
+bool isSafeMove(const Unit& unit, const UnitAction& action, const map<Bullet, double>& enemyBulletShootWallTimes, const Game& game)
 {
-	const auto unitNextTickPosition = getNextTickUnitPosition(unit, action, game);
+	
 	for (const auto& bullet: game.bullets)
 	{
 		if (bullet.playerId == unit.playerId) continue;
-		const auto bulletNextTickPosition = getBulletPosition(bullet, 1.0 / game.properties.ticksPerSecond, game);//TODO: учесть удар о стену
+		const auto time = min(enemyBulletShootWallTimes.at(bullet), 1.0 / game.properties.ticksPerSecond);
+
+		const auto unitInTimePosition = getUnitInTimePosition(unit, action, time, game);
+		const auto bulletNextTickPosition = getBulletPosition(bullet, time, game);
 		const auto cross = isBulletMoveCrossUnitMove(
-			unit.position, unitNextTickPosition,
+			unit.position, unitInTimePosition,
 			bullet.position, bulletNextTickPosition,
 			unit.size, bullet.size / 2.0);
 		if (cross) return false;
@@ -1339,6 +1340,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	auto jumpDown = unit.weapon != nullptr ? false : !jump;
 
 	const auto shootMeBullets = getShootMeBullets(unit, game);
+	const auto enemyBulletsShootWallTimes = getEnemyBulletsShootWallTimes(game, unit.playerId);
+	
 	if (getStopRunawayTick() == 0)
 	{
 		const auto runawayDirection = getRunawayDirection();
@@ -1384,8 +1387,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	else
 	{
 		if (unit.jumpState.canJump)
-		{			
-			const auto enemyBulletsShootWallTimes = getEnemyBulletsShootWallTimes(game, unit.playerId);
+		{						
 
 			const auto jumpAndStopTicks = getJumpAndStopTicks(unit, shootMeBullets, enemyBulletsShootWallTimes, game);
 			debug.draw(CustomData::Log(
@@ -1449,8 +1451,10 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	action.swapWeapon = false;
 	action.plantMine = false;
 
-	if (shootMeBullets.empty() && !isSafeMove(unit, action, game))
+	if (shootMeBullets.empty() && !isSafeMove(unit, action, enemyBulletsShootWallTimes, game))
 	{
+		const auto smb2 = getShootMeBullets(unit, game);
+		
 		action.jump = false;
 		action.jumpDown = false;
 		action.velocity = 0;
