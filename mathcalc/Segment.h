@@ -1,5 +1,5 @@
 #pragma once
-#include "model/Vec2Double.hpp"
+#include "../model/Vec2Double.hpp"
 
 struct Segment
 {

@@ -6,7 +6,8 @@
 #include "model/Game.hpp"
 #include "model/Unit.hpp"
 #include "model/UnitAction.hpp"
-#include "RunawayDirection.h"
+#include "strategy/RunawayDirection.h"
+#include "strategy/Strategy.h"
 
 class MyStrategy {
 public:
@@ -20,6 +21,7 @@ public:
 private:
 	int stop_runaway_tick_ = -1;
 	RunawayDirection runaway_direction_ = NONE;
+	Strategy strategy_ = Strategy();
 };
 
 #endif

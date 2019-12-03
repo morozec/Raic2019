@@ -1,5 +1,5 @@
 #pragma once
-#include "model/Bullet.hpp"
+#include "../model/Bullet.hpp"
 
 struct ShootMeBullet {
 public:

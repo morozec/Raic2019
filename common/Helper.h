@@ -1,8 +1,9 @@
 #pragma once
 
-#include "model/Vec2Float.hpp"
-#include "model/Vec2Double.hpp"
+#include "../model/Vec2Float.hpp"
+#include "../model/Vec2Double.hpp"
 
+class Bullet;
 constexpr auto TOLERACNE = 0.001;
 constexpr auto TILE_SIZE = 1;
 constexpr auto ANGLE_SPLIT_COUNT = 50;

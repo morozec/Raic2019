@@ -2,7 +2,6 @@
 //#define _MATHHELPER_HPP_
 #pragma once
 
-#include "model/Vec2Double.hpp"
 #include "Segment.h"
 #include <utility>
 #include <vector>
@@ -16,6 +15,7 @@ public:
 	static double getVectorLength2(const Vec2Double& v);
 	static double getScalarMult(const Vec2Double& v1, const Vec2Double& v2);
 	static bool IsBetween(const Vec2Double& p0, const Vec2Double& p1, const Vec2Double& p2);
+	static double distanceSqr(Vec2Double a, Vec2Double b);
 };
 
 

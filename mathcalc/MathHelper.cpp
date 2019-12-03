@@ -1,6 +1,6 @@
 #include "MathHelper.h"
-#include "Helper.h"
-#include <math.h>
+#include "../common/Helper.h"
+#include <cmath>
 #include <algorithm>
 
 using namespace std;
@@ -124,4 +124,10 @@ double MathHelper::getScalarMult(const Vec2Double & v1, const Vec2Double & v2)
 bool MathHelper::IsBetween(const Vec2Double& p0, const Vec2Double& p1, const Vec2Double& p2)
 {
 	return (p1.x - p0.x) * (p2.x - p0.x) <= 0 && (p1.y - p0.y) * (p2.y - p0.y) <= 0;
+}
+
+
+double MathHelper::distanceSqr(Vec2Double a, Vec2Double b)
+{
+	return (a.x - b.x) * (a.x - b.x) + (a.y - b.x) * (a.y - b.y);
 }
