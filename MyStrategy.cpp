@@ -997,6 +997,23 @@ tuple<RunawayDirection,int, int> getJumpAndStopTicks(
 	return make_tuple(NONE, -1, -1);//нет пуль или нет шансов спастись
 }
 
+bool isUnitOnLadder(const Unit& unit, const Game& game)
+{
+	const auto centerUnitTile = game.level.tiles[size_t(unit.position.x)][size_t(unit.position.y + unit.size.y/2)];
+	const auto downUnitTile = game.level.tiles[size_t(unit.position.x)][size_t(unit.position.y)];
+	return  centerUnitTile == LADDER || downUnitTile == LADDER;
+}
+
+
+bool isUnitOnPlatform(const Unit& unit, const Game& game)
+{
+	const auto leftSideDownTile = game.level.tiles[size_t(unit.position.x - unit.size.x / 2)][size_t(unit.position.y - 1)];
+	const auto rightSideDownTile = game.level.tiles[size_t(unit.position.x + unit.size.x / 2)][size_t(unit.position.y - 1)];
+	
+	return (leftSideDownTile == PLATFORM || rightSideDownTile == PLATFORM) &&
+		leftSideDownTile != WALL && rightSideDownTile != WALL;		
+}
+
 
 
 UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
@@ -1045,6 +1062,7 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
 	  }	
   }
 
+	
   auto aim = Vec2Double(nearestEnemy->position.x - unit.position.x,
                               nearestEnemy->position.y - unit.position.y);
 
@@ -1166,6 +1184,20 @@ UnitAction MyStrategy::getAction(const Unit &unit, const Game &game,
   action.shoot = needShoot;
   action.swapWeapon = false;
   action.plantMine = false;
+
+  if (isUnitOnLadder(unit, game))
+  {
+	  bool jd = true;
+
+	 /* if (jd) {
+		  action.jumpDown = jd;
+		  action.jump = !jd;
+		  action.velocity = 0;
+		  return action;
+	  }*/
+  }
+
+	
   return action;
 }
 
