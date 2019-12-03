@@ -131,14 +131,15 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	if (strategy_.getStopRunawayTick() == 0)
 	{
 		const auto runawayDirection = strategy_.getRunawayDirection();
-		strategy_.decreaseStopRunawayTick();
+		strategy_.setRunaway(GoNONE, -1);
+		
 		if (runawayDirection == GoUP)
 		{
 			action.jump = false;
 			action.jumpDown = true;
 			action.velocity = 0;
 			return action;
-		}	
+		}
 	}
 	else if (strategy_.getStopRunawayTick() > 0)
 	{
@@ -199,7 +200,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			{
 				const auto runawayDirection = std::get<0>(runawayAction);
 				const auto stopRunawayTick = std::get<2>(runawayAction);
-				strategy_.setRunaway(runawayDirection, stopRunawayTick);
+				strategy_.setRunaway(runawayDirection, stopRunawayTick - 1);
 
 				if (runawayDirection == GoUP)
 				{

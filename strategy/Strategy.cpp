@@ -489,11 +489,19 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 	}
 	const int maxShootWallTick = static_cast<int>(ceil(maxShootWallTime * game.properties.ticksPerSecond));
 
-	const bool isOnLadder = Simulator::isUnitOnLadder(me, game);
-	const bool isOnPlatform = Simulator::isUnitOnPlatform(me, game);
+	const bool isOnLadder = Simulator::isUnitOnLadder(me.position, me.size, game);
+	const bool isOnPlatform = Simulator::isUnitOnPlatform(me.position, me.size, game);
+
+	UnitAction action;
+	action.jump = false;
+	action.jumpDown = false;
+	action.velocity = false;
+
+	
 
 	for (int startGoTick = minShootMeTick - 1; startGoTick >= 0; startGoTick--)
-	{
+	{	
+		
 		auto killGoUpTick = INT_MAX;
 		auto killGoLeftTick = INT_MAX;
 		auto killGoRightTick = INT_MAX;
@@ -501,17 +509,57 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 
 		for (int stopGoTick = startGoTick + 1; stopGoTick < maxShootWallTick; ++stopGoTick)
 		{
+			
+			
 			auto canGoUp = true;
 			auto canGoLeft = true;
 			auto canGoRight = true;
 			auto canGoDown = true;
 
+			//auto unitMoveTime = (stopGoTick - startGoTick) / game.properties.ticksPerSecond;
+						
 
 			for (const auto& bullet : game.bullets)
 			{
 				if (bullet.playerId == me.playerId) continue;
 
-				if (stopGoTick > killGoUpTick)
+				auto unitPosition = me.position;
+				const auto shootWallTick = static_cast<int>(ceil(enemyBulletsShootWallTimes.at(bullet) * game.properties.ticksPerSecond));
+				auto bulletPosition = bullet.position;
+				
+				for (int tick = 1; tick <= shootWallTick; ++tick)
+				{
+					const auto bulletTime = tick / game.properties.ticksPerSecond;
+					auto newBulletPosition = Simulator::getBulletInTimePosition(bullet, bulletTime, game);
+
+					if (tick > stopGoTick)
+					{
+						action.jump = false;
+					}
+					else if (tick > startGoTick)
+					{
+						action.jump = true;
+					}
+					const auto newUnitPosition = Simulator::getUnitNextTickPosition(
+						unitPosition, me.size, action, game);
+
+					action.jump = false;
+
+					if (isBulletMoveCrossUnitMove(
+						unitPosition, newUnitPosition, bulletPosition, newBulletPosition, me.size, bullet.size / 2))
+					{
+						canGoUp = false;
+						break;
+					}
+
+					unitPosition = newUnitPosition;
+					bulletPosition = newBulletPosition;
+				}
+
+				
+				
+
+				/*if (stopGoTick > killGoUpTick)
 				{
 					canGoUp = false;
 				}
@@ -554,7 +602,9 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 					canGoDown = false;
 				}
 
-				if (!canGoUp && !canGoLeft && !canGoRight && !canGoDown) break;
+				if (!canGoUp && !canGoLeft && !canGoRight && !canGoDown) break;*/
+
+				if (!canGoUp) break;
 			}
 
 
@@ -562,7 +612,7 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 			{
 				return std::make_tuple(GoUP, startGoTick, stopGoTick);
 			}
-			if (canGoDown)
+			/*if (canGoDown)
 			{
 				return std::make_tuple(GoDOWN, startGoTick, stopGoTick);
 			}
@@ -573,7 +623,7 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 			if (canGoRight)
 			{
 				return std::make_tuple(GoRIGHT, startGoTick, stopGoTick);
-			}
+			}*/
 		}
 	}
 
@@ -585,12 +635,12 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 bool Strategy::isSafeMove(const Unit& unit, const UnitAction& action, const std::map<Bullet, double>& enemyBulletShootWallTimes, const Game& game)
 {
 
-	for (const auto& bullet : game.bullets)
+	/*for (const auto& bullet : game.bullets)
 	{
 		if (bullet.playerId == unit.playerId) continue;
 		const auto time = std::min(enemyBulletShootWallTimes.at(bullet), 1.0 / game.properties.ticksPerSecond);
 
-		const auto unitInTimePosition = Simulator::getUnitInTimePosition(unit, action, time, game);
+		const auto unitInTimePosition = Simulator::getUnitNextTickPosition(unit, action, time, game);
 		const auto bulletInTimePosition = Simulator::getBulletInTimePosition(bullet, time, game);
 		const auto cross = isBulletMoveCrossUnitMove(
 			unit.position, unitInTimePosition,
@@ -598,7 +648,8 @@ bool Strategy::isSafeMove(const Unit& unit, const UnitAction& action, const std:
 			unit.size, bullet.size / 2.0);
 		if (cross) return false;
 	}
-	return true;
+	return true;*/
+	return true;//TODO
 }
 
 int Strategy::getRunawayDirection() const

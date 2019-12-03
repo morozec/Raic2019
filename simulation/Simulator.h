@@ -28,13 +28,16 @@ public:
 		const Unit& unit, int startGoTick, int stopGoTick, double time, const Game& game);
 
 	static Vec2Double getJumpingUnitPosition(const Unit& unit, int startJumpTick, int stopJumpTick, double time, const Game& game);
-	static Vec2Double getUnitInTimePosition(const Unit& unit, const UnitAction& action, double time, const Game& game);
+	static Vec2Double getUnitNextTickPosition(const Vec2Double& unitPosition, const Vec2Double& unitSize, const UnitAction& action, const Game& game);
 
 	//unit positioning
-	static bool isUnitOnLadder(const Unit& unit, const Game& game);
-	static bool isUnitOnPlatform(const Unit& unit, const Game& game);
+	static bool isUnitOnWall(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game);
+	static bool isUnitOnLadder(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game);
+	static bool isUnitOnPlatform(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game);
+	static bool isUnitOnAir(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game);
 	
 private:
 	static Vec2Double getBulletCornerCrossWallPoint(
 		const Vec2Double& bulletPosition, const Vec2Double& bulletVelocity, double maxX, double maxY, const Game& game);
+	static bool canGoThroughTile(const Tile& tile, bool jumpDown);
 };
