@@ -601,3 +601,25 @@ bool Strategy::isSafeMove(const Unit& unit, const UnitAction& action, const std:
 	return true;
 }
 
+int Strategy::getRunawayDirection() const
+{
+	return runaway_direction_;
+}
+
+int Strategy::getStopRunawayTick() const
+{
+	return stop_runaway_tick_;
+}
+
+void Strategy::setRunaway(RunawayDirection runaway_direction, int sjt)
+{
+	runaway_direction_ = runaway_direction;
+	stop_runaway_tick_ = sjt;
+}
+
+void Strategy::decreaseStopRunawayTick()
+{
+	if (stop_runaway_tick_ >= 0) stop_runaway_tick_--;
+}
+
+

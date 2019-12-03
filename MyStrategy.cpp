@@ -74,9 +74,14 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		}
 	}
 
+	const auto shootMeBullets = strategy_.getShootMeBullets(unit, game);
+	const auto enemyBulletsShootWallTimes = strategy_.getEnemyBulletsShootWallTimes(game, unit.playerId);
 
-	auto aim = Vec2Double(nearestEnemy->position.x - unit.position.x,
-	                      nearestEnemy->position.y - unit.position.y);
+
+	const auto aim = nearestEnemy != nullptr ?
+		Vec2Double(nearestEnemy->position.x - unit.position.x,
+			nearestEnemy->position.y - unit.position.y) :
+		Vec2Double(0, 0);
 
 	
 	bool jump = false;
@@ -116,12 +121,11 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	auto jumpDown = unit.weapon != nullptr ? false : !jump;
 
-	const auto shootMeBullets = strategy_.getShootMeBullets(unit, game);
-	const auto enemyBulletsShootWallTimes = strategy_.getEnemyBulletsShootWallTimes(game, unit.playerId);
 	
-	if (getStopRunawayTick() == 0)
+	
+	if (strategy_.getStopRunawayTick() == 0)
 	{
-		const auto runawayDirection = getRunawayDirection();
+		const auto runawayDirection = strategy_.getRunawayDirection();
 		if (runawayDirection == GoUP)
 		{
 			jump = false;
@@ -133,11 +137,11 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			velocity = 0;
 			jumpDown = true;
 		}
-		decreaseStopRunawayTick();
+		strategy_.decreaseStopRunawayTick();
 	}
-	else if (getStopRunawayTick() > 0)
+	else if (strategy_.getStopRunawayTick() > 0)
 	{
-		const auto runawayDirection = getRunawayDirection();
+		const auto runawayDirection = strategy_.getRunawayDirection();
 		if (runawayDirection == GoUP)
 		{
 			jump = true;
@@ -159,7 +163,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			jump = false;
 			velocity = INT_MAX;
 		}
-		decreaseStopRunawayTick();
+		strategy_.decreaseStopRunawayTick();
 	}
 	else
 	{
@@ -187,7 +191,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			{
 				const auto runawayDirection = std::get<0>(jumpAndStopTicks);
 				const auto stopRunawayTick = std::get<2>(jumpAndStopTicks);
-				setRunaway(runawayDirection, stopRunawayTick);
+				strategy_.setRunaway(runawayDirection, stopRunawayTick);
 
 				if (runawayDirection == GoUP)
 				{
@@ -241,23 +245,3 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	return action;
 }
 
-int MyStrategy::getRunawayDirection() const
-{
-	return runaway_direction_;
-}
-
-int MyStrategy::getStopRunawayTick() const
-{
-	return stop_runaway_tick_;
-}
-
-void MyStrategy::setRunaway(RunawayDirection runaway_direction, int sjt)
-{
-	runaway_direction_ = runaway_direction;
-	stop_runaway_tick_ = sjt;
-}
-
-void MyStrategy::decreaseStopRunawayTick()
-{
-	if (stop_runaway_tick_ >= 0) stop_runaway_tick_--;
-}

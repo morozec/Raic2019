@@ -37,4 +37,13 @@ public:
 		const Game& game);
 
 	static bool isSafeMove(const Unit& unit, const UnitAction& action, const std::map<Bullet, double>& enemyBulletShootWallTimes, const Game& game);
+
+	int getRunawayDirection() const;
+	int getStopRunawayTick() const;
+	void setRunaway(RunawayDirection runaway_direction, int sjt);
+	void decreaseStopRunawayTick();
+
+private:
+	int stop_runaway_tick_ = -1;
+	RunawayDirection runaway_direction_ = GoNONE;
 };

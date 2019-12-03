@@ -12,15 +12,9 @@
 class MyStrategy {
 public:
   MyStrategy();
-  UnitAction getAction(const Unit &unit, const Game &game, Debug &debug);
-	
-  int getRunawayDirection() const;
-  int getStopRunawayTick() const;
-  void setRunaway(RunawayDirection runaway_direction, int sjt);
-  void decreaseStopRunawayTick();
+  UnitAction getAction(const Unit &unit, const Game &game, Debug &debug); 
 private:
-	int stop_runaway_tick_ = -1;
-	RunawayDirection runaway_direction_ = GoNONE;
+	
 	Strategy strategy_ = Strategy();
 };
 
