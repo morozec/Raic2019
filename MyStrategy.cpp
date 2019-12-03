@@ -18,6 +18,29 @@ MyStrategy::MyStrategy()
 }
 
 
+void setAttackEnemyAction(
+	const Unit& me, const Vec2Double& enemyPosition, bool needGo, const Game& game, UnitAction& action)
+{
+	double velocity = 0;
+	bool jump = false;
+	const bool jumpDown = false;
+
+	if (needGo)
+	{
+		velocity = enemyPosition.x > me.position.x ? INT_MAX : -INT_MAX;
+		jump = enemyPosition.x > me.position.x &&
+			game.level.tiles[size_t(me.position.x + 1)][size_t(me.position.y)] == WALL ||
+			enemyPosition.x < me.position.x &&
+			game.level.tiles[size_t(me.position.x - 1)][size_t(me.position.y)] ==
+			WALL;
+	}
+
+	action.velocity = velocity;
+	action.jump = jump;
+	action.jumpDown = jumpDown;
+	
+}
+
 UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
                                  Debug& debug)
 {
@@ -60,121 +83,106 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	drawBullets(debug, game, unit.playerId);
 	drawShootingSector(debug, unit, game);
 
+	UnitAction action;
+	action.aim = nearestEnemy != nullptr ?
+		Vec2Double(nearestEnemy->position.x - unit.position.x,
+			nearestEnemy->position.y - unit.position.y) :
+		Vec2Double(0, 0);
+	
+	action.reload = false;
+	action.swapWeapon = false;
+	action.plantMine = false;
+
+	if (unit.weapon == nullptr)
+	{
+		action.jump = targetPos.y > unit.position.y ||
+			targetPos.x > unit.position.x &&
+			game.level.tiles[size_t(unit.position.x + 1)][size_t(unit.position.y)] == WALL ||
+			targetPos.x < unit.position.x &&
+			game.level.tiles[size_t(unit.position.x - 1)][size_t(unit.position.y)] == WALL;
+
+		action.jumpDown = !action.jump;
+		action.velocity = nearestWeapon->position.x > unit.position.x ? INT_MAX : -INT_MAX;
+		
+		action.shoot = false;
+		action.reload = false;
+		action.swapWeapon = false;
+		action.plantMine = false;
+
+		return action;
+	}
+
 	auto needGo = false;
 	auto needShoot = false;
 
 	if (nearestEnemy != nullptr)
-	{
-		if (unit.weapon != nullptr)
-		{
-			needGo = strategy_.getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->params.minSpread) <
-				WALKING_PROBABILITY;
-			needShoot = strategy_.getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->spread, &debug) >=
-				SHOOTING_PROBABILITY;
-		}
+	{		
+		needGo = strategy_.getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->params.minSpread) <
+			WALKING_PROBABILITY;
+		needShoot = strategy_.getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->spread, &debug) >=
+			SHOOTING_PROBABILITY;		
 	}
+	action.shoot = needShoot;
 
 	const auto shootMeBullets = strategy_.getShootMeBullets(unit, game);
 	const auto enemyBulletsShootWallTimes = strategy_.getEnemyBulletsShootWallTimes(game, unit.playerId);
-
-
-	const auto aim = nearestEnemy != nullptr ?
-		Vec2Double(nearestEnemy->position.x - unit.position.x,
-			nearestEnemy->position.y - unit.position.y) :
-		Vec2Double(0, 0);
-
-	
-	bool jump = false;
-
-	double velocity;
-	if (unit.weapon != nullptr && !needGo)
-	{
-		velocity = 0;
-	}
-	else
-	{
-		if (targetPos.x > unit.position.x)
-		{
-			velocity = INT_MAX;
-		}
-		else
-		{
-			velocity = -INT_MAX;
-		}
-	}
-
-
-	jump = unit.weapon == nullptr && targetPos.y > unit.position.y;
-	if ((unit.weapon == nullptr || unit.weapon != nullptr && needGo) &&
-		targetPos.x > unit.position.x &&
-		game.level.tiles[size_t(unit.position.x + 1)][size_t(unit.position.y)] ==
-		WALL)
-	{
-		jump = true;
-	}
-	if ((unit.weapon == nullptr || unit.weapon != nullptr && needGo) &&
-		targetPos.x < unit.position.x &&
-		game.level.tiles[size_t(unit.position.x - 1)][size_t(unit.position.y)] ==
-		WALL)
-	{
-		jump = true;
-	}
-	auto jumpDown = unit.weapon != nullptr ? false : !jump;
-
-	
+		   	
 	
 	if (strategy_.getStopRunawayTick() == 0)
 	{
 		const auto runawayDirection = strategy_.getRunawayDirection();
+		strategy_.decreaseStopRunawayTick();
 		if (runawayDirection == GoUP)
 		{
-			jump = false;
-			velocity = 0;
-		}
-		else if (runawayDirection == GoDOWN)
-		{
-			jump = false;
-			velocity = 0;
-			jumpDown = true;
-		}
-		strategy_.decreaseStopRunawayTick();
+			action.jump = false;
+			action.jumpDown = true;
+			action.velocity = 0;
+			return action;
+		}	
 	}
 	else if (strategy_.getStopRunawayTick() > 0)
 	{
 		const auto runawayDirection = strategy_.getRunawayDirection();
 		if (runawayDirection == GoUP)
 		{
-			jump = true;
-			velocity = 0;
+			action.jump = true;
+			action.jumpDown = false;
+			action.velocity = 0;
 		}
 		else if (runawayDirection == GoDOWN)
 		{
-			jump = false;
-			velocity = 0;
-			jumpDown = true;
+			action.jump = false;
+			action.jumpDown = true;
+			action.velocity = 0;
 		}
 		else if (runawayDirection == GoLEFT)
 		{
-			jump = false;
-			velocity = -INT_MAX;
+			action.jump = false;
+			action.jumpDown = false;
+			action.velocity = -INT_MAX;
 		}
 		else if (runawayDirection == GoRIGHT)
 		{
-			jump = false;
-			velocity = INT_MAX;
+			action.jump = false;
+			action.jumpDown = false;
+			action.velocity = INT_MAX;
+		}else
+		{
+			throw runtime_error("unknown runawayDirection");
 		}
 		strategy_.decreaseStopRunawayTick();
+		return action;
 	}
 	else
 	{
 		if (unit.jumpState.canJump)
-		{						
+		{					
 
-			const auto jumpAndStopTicks = strategy_.getRunawayAction(unit, shootMeBullets, enemyBulletsShootWallTimes, game);
+			const auto runawayAction = strategy_.getRunawayAction(unit, shootMeBullets, enemyBulletsShootWallTimes, game);
 			debug.draw(CustomData::Log(
-				to_string(std::get<0>(jumpAndStopTicks)) + " " +
-				to_string(std::get<1>(jumpAndStopTicks)) + " " +
-				to_string(std::get<2>(jumpAndStopTicks)) + "\n"));
+				to_string(std::get<0>(runawayAction)) + " " +
+				to_string(std::get<1>(runawayAction)) + " " +
+				to_string(std::get<2>(runawayAction)) + "\n"));
 
 			if (!shootMeBullets.empty())
 			{
@@ -187,34 +195,41 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 				debug.draw(CustomData::Log(ss.str()));
 			}
 
-			if (std::get<1>(jumpAndStopTicks) == 0)
+			if (std::get<1>(runawayAction) == 0)
 			{
-				const auto runawayDirection = std::get<0>(jumpAndStopTicks);
-				const auto stopRunawayTick = std::get<2>(jumpAndStopTicks);
+				const auto runawayDirection = std::get<0>(runawayAction);
+				const auto stopRunawayTick = std::get<2>(runawayAction);
 				strategy_.setRunaway(runawayDirection, stopRunawayTick);
 
 				if (runawayDirection == GoUP)
 				{
-					jump = true;
-					velocity = 0;
+					action.jump = true;
+					action.jumpDown = false;
+					action.velocity = 0;
 				}
 				else if (runawayDirection == GoDOWN)
 				{
-					jump = false;
-					jumpDown = true;
-					velocity = 0;
+					action.jump = false;
+					action.jumpDown = true;
+					action.velocity = 0;
 				}
 				else if (runawayDirection == GoLEFT)
 				{
-					jump = false;
-
-					velocity = -INT_MAX;
+					action.jump = false;
+					action.jumpDown = false;
+					action.velocity = -INT_MAX;
 				}
 				else if (runawayDirection == GoRIGHT)
 				{
-					jump = false;
-					velocity = INT_MAX;
+					action.jump = false;
+					action.jumpDown = false;
+					action.velocity = INT_MAX;
+				}else
+				{
+					throw runtime_error("unknown runawayDirection 2");
 				}
+
+				return action;
 			}
 		}
 	}
@@ -222,21 +237,14 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 	debug.draw(CustomData::Log("SHOOT: " + to_string(needShoot)));
 
-
-	UnitAction action;
-	action.velocity = velocity;
-	action.jump = jump;
-	action.jumpDown = jumpDown;
-	action.aim = aim;
-	action.shoot = needShoot;
-	action.reload = false;
-	action.swapWeapon = false;
-	action.plantMine = false;
-
+	if (nearestEnemy == nullptr) return action;
+	
+	setAttackEnemyAction(unit, nearestEnemy->position, needGo, game, action);
+	//проверяем опасность итогового действия
 	if (shootMeBullets.empty() && !strategy_.isSafeMove(unit, action, enemyBulletsShootWallTimes, game))
 	{
 		const auto smb2 = strategy_.getShootMeBullets(unit, game);
-		
+
 		action.jump = false;
 		action.jumpDown = false;
 		action.velocity = 0;
