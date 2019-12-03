@@ -337,7 +337,7 @@ bool Strategy::isBulletShootGoSideUnit(
 	{
 		const auto time = tick / game.properties.ticksPerSecond;
 		auto unitPos = Simulator::getUnitGoSidePosition(unit, startGoTick, stopGoTick, time, coeff, game);
-		auto bulletPos = Simulator::getBulletPosition(bullet, time, game);
+		auto bulletPos = Simulator::getBulletInTimePosition(bullet, time, game);
 		if (!isBulletMoveCrossUnitMove(prevUnitPos, unitPos, prevBulletPos, bulletPos, unit.size, bullet.size / 2))
 		{
 			prevUnitPos = unitPos;
@@ -351,7 +351,7 @@ bool Strategy::isBulletShootGoSideUnit(
 		{
 			const auto mtTime = (tick - 1 + j * 1.0 / game.properties.updatesPerTick) / game.properties.ticksPerSecond;
 			unitPos = Simulator::getUnitGoSidePosition(unit, startGoTick, stopGoTick, mtTime, coeff, game);
-			bulletPos = Simulator::getBulletPosition(bullet, mtTime, game);
+			bulletPos = Simulator::getBulletInTimePosition(bullet, mtTime, game);
 			if (isBulletMoveCrossUnitMove(prevUnitPos, unitPos, prevBulletPos, bulletPos, unit.size, bullet.size / 2))
 			{
 				killTick = std::min(killTick, tick);
@@ -382,7 +382,7 @@ bool Strategy::isBulletShootJumpingUnit(
 	{
 		const auto time = tick / game.properties.ticksPerSecond;
 		auto unitPos = Simulator::getJumpingUnitPosition(unit, startJumpTick, stopJumpTick, time, game);
-		auto bulletPos = Simulator::getBulletPosition(bullet, time, game);
+		auto bulletPos = Simulator::getBulletInTimePosition(bullet, time, game);
 		if (!isBulletMoveCrossUnitMove(prevUnitPos, unitPos, prevBulletPos, bulletPos, unit.size, bullet.size / 2))
 		{
 			prevUnitPos = unitPos;
@@ -396,7 +396,7 @@ bool Strategy::isBulletShootJumpingUnit(
 		{
 			const auto mtTime = (tick - 1 + j * 1.0 / game.properties.updatesPerTick) / game.properties.ticksPerSecond;
 			unitPos = Simulator::getJumpingUnitPosition(unit, startJumpTick, stopJumpTick, mtTime, game);
-			bulletPos = Simulator::getBulletPosition(bullet, mtTime, game);
+			bulletPos = Simulator::getBulletInTimePosition(bullet, mtTime, game);
 			if (isBulletMoveCrossUnitMove(prevUnitPos, unitPos, prevBulletPos, bulletPos, unit.size, bullet.size / 2))
 			{
 				killTick = std::min(killTick, tick);
@@ -427,7 +427,7 @@ bool Strategy::isBulletShootFallingUnit(
 	{
 		const auto time = tick / game.properties.ticksPerSecond;
 		auto unitPos = Simulator::getFallingUnitPosition(unit, startJumpTick, stopJumpTick, time, game);
-		auto bulletPos = Simulator::getBulletPosition(bullet, time, game);
+		auto bulletPos = Simulator::getBulletInTimePosition(bullet, time, game);
 		if (!isBulletMoveCrossUnitMove(prevUnitPos, unitPos, prevBulletPos, bulletPos, unit.size, bullet.size / 2))
 		{
 			prevUnitPos = unitPos;
@@ -441,7 +441,7 @@ bool Strategy::isBulletShootFallingUnit(
 		{
 			const auto mtTime = (tick - 1 + j * 1.0 / game.properties.updatesPerTick) / game.properties.ticksPerSecond;
 			unitPos = Simulator::getFallingUnitPosition(unit, startJumpTick, stopJumpTick, mtTime, game);
-			bulletPos = Simulator::getBulletPosition(bullet, mtTime, game);
+			bulletPos = Simulator::getBulletInTimePosition(bullet, mtTime, game);
 			if (isBulletMoveCrossUnitMove(prevUnitPos, unitPos, prevBulletPos, bulletPos, unit.size, bullet.size / 2))
 			{
 				killTick = std::min(killTick, tick);
@@ -591,10 +591,10 @@ bool Strategy::isSafeMove(const Unit& unit, const UnitAction& action, const std:
 		const auto time = std::min(enemyBulletShootWallTimes.at(bullet), 1.0 / game.properties.ticksPerSecond);
 
 		const auto unitInTimePosition = Simulator::getUnitInTimePosition(unit, action, time, game);
-		const auto bulletNextTickPosition = Simulator::getBulletPosition(bullet, time, game);
+		const auto bulletInTimePosition = Simulator::getBulletInTimePosition(bullet, time, game);
 		const auto cross = isBulletMoveCrossUnitMove(
 			unit.position, unitInTimePosition,
-			bullet.position, bulletNextTickPosition,
+			bullet.position, bulletInTimePosition,
 			unit.size, bullet.size / 2.0);
 		if (cross) return false;
 	}

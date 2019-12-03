@@ -8,6 +8,7 @@
 class Simulator
 {
 public:
+	//bullet simulation
 	static Vec2Double getBulletCrossBorderPoint(const Vec2Double& bulletPosition, const Vec2Double& bulletVelocity, double maxX,
 		double maxY);	
 	static Vec2Double getBulletCrossWallPoint(const Bullet& bullet, double maxX, double maxY, const Game& game);
@@ -17,8 +18,9 @@ public:
 		const Game& game);
 	static bool isBulletCrossWall(const Vec2Double& bulletPosition, const Vec2Double& bulletVelocity, double time,
 		const Game& game);
-	static Vec2Double getBulletPosition(const Bullet& bullet, double time, const Game& game);
-
+	static Vec2Double getBulletInTimePosition(const Bullet& bullet, double time, const Game& game);
+		
+	//unit simulation
 	static Vec2Double getUnitGoSidePosition(
 		const Unit& unit, int startGoTick, int stopGoTick, double time, int coeff, const Game& game);
 
@@ -28,6 +30,7 @@ public:
 	static Vec2Double getJumpingUnitPosition(const Unit& unit, int startJumpTick, int stopJumpTick, double time, const Game& game);
 	static Vec2Double getUnitInTimePosition(const Unit& unit, const UnitAction& action, double time, const Game& game);
 
+	//unit positioning
 	static bool isUnitOnLadder(const Unit& unit, const Game& game);
 	static bool isUnitOnPlatform(const Unit& unit, const Game& game);
 	

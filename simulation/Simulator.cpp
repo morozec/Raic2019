@@ -299,7 +299,7 @@ bool Simulator::isBulletCrossWall(const Vec2Double& bulletPosition, const Vec2Do
 
 
 
-Vec2Double Simulator::getBulletPosition(const Bullet& bullet, double time, const Game& game)
+Vec2Double Simulator::getBulletInTimePosition(const Bullet& bullet, double time, const Game& game)
 {
 	return Vec2Double(bullet.position.x + bullet.velocity.x * time, bullet.position.y + bullet.velocity.y * time);
 }
