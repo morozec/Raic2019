@@ -682,10 +682,10 @@ int getShootMeBulletTick(const Unit& me, const Bullet& bullet, const Game& game)
 	auto y1 = me.position.y;
 	auto y2 = me.position.y + me.size.y;
 
-	if (bullet.velocity.x > 0 && bullet.position.x > x2) return -1;
-	if (bullet.velocity.x < 0 && bullet.position.x < x1) return -1;
-	if (bullet.velocity.y > 0 && bullet.position.y > y2) return -1;
-	if (bullet.velocity.y < 0 && bullet.position.y < y1) return -1;
+	if (bullet.velocity.x > 0 && bullet.position.x - bullet.size/2 > x2) return -1;
+	if (bullet.velocity.x < 0 && bullet.position.x + bullet.size/2 < x1) return -1;
+	if (bullet.velocity.y > 0 && bullet.position.y - bullet.size/2 > y2) return -1;
+	if (bullet.velocity.y < 0 && bullet.position.y + bullet.size/2 < y1) return -1;
 
 
 	double minCrossDist2 = INT_MAX;
@@ -1451,8 +1451,6 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 	if (shootMeBullets.empty() && !isSafeMove(unit, action, game))
 	{
-		const auto shootMeBullets2 = getShootMeBullets(unit, game);
-		
 		action.jump = false;
 		action.jumpDown = false;
 		action.velocity = 0;
