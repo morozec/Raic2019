@@ -289,11 +289,19 @@ void drawShootingSector(Debug& debug, const Unit& unit, const Game& game) {
 	const auto maxX = game.level.tiles.size() * TILE_SIZE;
 	const auto maxY = game.level.tiles[0].size() * TILE_SIZE;
 
+	auto angle1 = *(*unit.weapon).lastAngle - (*unit.weapon).spread;
+	if (angle1 > M_PI) angle1 -= 2 * M_PI;
+	else if (angle1 < -M_PI) angle1 += 2 * M_PI;
+
+	auto angle2 = *(*unit.weapon).lastAngle + (*unit.weapon).spread;
+	if (angle2 > M_PI) angle2 -= 2 * M_PI;
+	else if (angle2 < -M_PI) angle2 += 2 * M_PI;
+
 
 	const auto weaponPoistion = Vec2Double(unit.position.x, unit.position.y + unit.size.y / 2);
 	//drawShootingLine(debug, game, weaponPoistion, *(*unit.weapon).lastAngle, maxX, maxY, ColorFloat(0, 0, 255, 0.5));
-	drawShootingLine(debug, game, weaponPoistion, *(*unit.weapon).lastAngle - (*unit.weapon).spread, maxX, maxY, ColorFloat(0, 0, 255, 0.5));
-	drawShootingLine(debug, game, weaponPoistion, *(*unit.weapon).lastAngle + (*unit.weapon).spread, maxX, maxY, ColorFloat(0, 0, 255, 0.5));
+	drawShootingLine(debug, game, weaponPoistion, angle1, maxX, maxY, ColorFloat(0, 0, 255, 0.5));
+	drawShootingLine(debug, game, weaponPoistion, angle2, maxX, maxY, ColorFloat(0, 0, 255, 0.5));
 	
 
 }
