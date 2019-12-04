@@ -7,14 +7,20 @@
 #include <sstream>
 #include "common/Helper.h"
 #include "mathcalc/MathHelper.h"
-#include "strategy/ShootMeBullet.h"
 #include "debug/DebugHelper.h"
+#include "simulation/Simulator.h"
 
 using namespace std;
 
 
 MyStrategy::MyStrategy()
 {	
+}
+
+
+inline bool operator<(const Bullet& lhs, const Bullet& rhs)
+{
+	return lhs.position.x < rhs.position.x;
 }
 
 
@@ -44,6 +50,21 @@ void setAttackEnemyAction(
 UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
                                  Debug& debug)
 {
+	/*
+	Vec2Double crossPointCur;
+	double minDist2Cur = INT_MAX;
+	const auto hasWallCross = Simulator::getBulletPointRectangleFirstCrossPoint(
+		{ 34.816666665661, 20 },
+		{ 14.7163169141329,  -47.7852489423546 },
+		38, 7, 39, 8, crossPointCur, minDist2Cur);*/
+
+	/*const auto bbCross = Simulator::getBulletBorderCross(
+		{ 7.2000000000002604, 17.098333334333333 }, 
+		{ 20.000000000000000, 0.0000000000000000000000000
+		},
+		game);*/
+
+	
 	const Unit* nearestEnemy = nullptr;
 	for (const Unit& other : game.units)
 	{
@@ -80,8 +101,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		targetPos = nearestEnemy->position;
 	}
 
-	drawBullets(debug, game, unit.playerId);
-	drawShootingSector(debug, unit, game);
+	
 
 	UnitAction action;
 	action.aim = nearestEnemy != nullptr ?
@@ -124,9 +144,12 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	action.shoot = needShoot;
 
-	const auto shootMeBullets = strategy_.getShootMeBullets(unit, game);
-	const auto enemyBulletsShootWallTimes = strategy_.getEnemyBulletsShootWallTimes(game, unit.playerId);
-		   	
+	
+	const auto enemyBulletsSimulation = strategy_.getEnemyBulletsSimulation(game, unit.playerId);
+	const auto shootMeBullets = strategy_.getShootMeBullets(unit, enemyBulletsSimulation, game);
+
+	drawBullets(debug, game, enemyBulletsSimulation, unit.playerId);
+	drawShootingSector(debug, unit, game);
 	
 	if (strategy_.getStopRunawayTick() == 0)
 	{
@@ -179,13 +202,13 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		if (unit.jumpState.canJump)
 		{					
 
-			const auto runawayAction = strategy_.getRunawayAction(unit, shootMeBullets, enemyBulletsShootWallTimes, game);
+			const auto runawayAction = strategy_.getRunawayAction(unit, shootMeBullets, enemyBulletsSimulation, game);
 			debug.draw(CustomData::Log(
 				to_string(std::get<0>(runawayAction)) + " " +
 				to_string(std::get<1>(runawayAction)) + " " +
 				to_string(std::get<2>(runawayAction)) + "\n"));
 
-			if (!shootMeBullets.empty())
+			/*if (!shootMeBullets.empty())
 			{
 				stringstream ss;
 
@@ -194,7 +217,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 					smb.bullet.position.y << "; bv: " << smb.bullet.velocity.x << " " << smb.bullet.velocity.y;
 
 				debug.draw(CustomData::Log(ss.str()));
-			}
+			}*/
 
 			if (std::get<1>(runawayAction) == 0)
 			{
@@ -242,9 +265,10 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	
 	setAttackEnemyAction(unit, nearestEnemy->position, needGo, game, action);
 	//проверяем опасность итогового действия
-	if (shootMeBullets.empty() && !strategy_.isSafeMove(unit, action, enemyBulletsShootWallTimes, game))
+	//TODO: не только когда shootMeBullets.empty()
+	if (shootMeBullets.empty() && !strategy_.isSafeMove(unit, action, enemyBulletsSimulation, game))
 	{
-		const auto smb2 = strategy_.getShootMeBullets(unit, game);
+		//const auto smb2 = strategy_.getShootMeBullets(unit, game);
 
 		action.jump = false;
 		action.jumpDown = false;

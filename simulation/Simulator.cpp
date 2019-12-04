@@ -7,143 +7,6 @@
 #include <algorithm>
 #include <climits>
 
-//TODO: учесть граничный TILE
-Vec2Double Simulator::getBulletCrossBorderPoint(const Vec2Double& bulletPosition, const Vec2Double& bulletVelocity, double maxX,
-	double maxY)
-{
-	if (abs(bulletVelocity.y) < TOLERACNE)
-	{
-		return Vec2Double(bulletVelocity.x > 0 ? maxX : 0, bulletPosition.y);
-	}
-
-	if (abs(bulletVelocity.x) < TOLERACNE)
-	{
-		return Vec2Double(bulletPosition.x, bulletVelocity.y > 0 ? maxY : 0);
-	}
-
-	const auto x1 = bulletPosition.x;
-	const auto y1 = bulletPosition.y;
-	const auto x2 = bulletPosition.x + bulletVelocity.x;
-	const auto y2 = bulletPosition.y + bulletVelocity.y;
-
-	if (bulletVelocity.x > 0)
-	{
-		const auto vertCross = MathHelper::getLinesCross(x1, y1, x2, y2, maxX, 0, maxX, maxY);
-		if (vertCross.y >= 0 && vertCross.y < maxY)
-		{
-			return vertCross;
-		}
-
-		return bulletVelocity.y < 0
-			? MathHelper::getLinesCross(x1, y1, x2, y2, 0, 0, maxX, 0)
-			: MathHelper::getLinesCross(x1, y1, x2, y2, 0, maxY, maxX, maxY);
-	}
-	const auto vertCross = MathHelper::getLinesCross(x1, y1, x2, y2, 0, 0, 0, maxY);
-	if (vertCross.y >= 0 && vertCross.y < maxY)
-	{
-		return vertCross;
-	}
-
-	return bulletVelocity.y < 0
-		? MathHelper::getLinesCross(x1, y1, x2, y2, 0, 0, maxX, 0)
-		: MathHelper::getLinesCross(x1, y1, x2, y2, 0, maxY, maxX, maxY);
-}
-
-
-Vec2Double Simulator::getBulletCornerCrossWallPoint(
-	const Vec2Double& bulletPosition, const Vec2Double& bulletVelocity, double maxX, double maxY, const Game& game)
-{
-	auto crossPoint = Simulator::getBulletCrossBorderPoint(bulletPosition, bulletVelocity, maxX, maxY);
-	const auto bulletTiles = MathHelper::getLineSquares(bulletPosition, crossPoint, 1);
-	const std::pair<int, int>* firstWallTile = nullptr;
-
-	for (const auto& bt : bulletTiles)
-	{
-		if (bt.first == 0 || bt.second == 0 || bt.first == game.level.tiles.size() - 1 || bt.second == game.level.tiles[
-			0].size() - 1)
-		{
-			break; //игнор крайних стен
-		}
-
-			if (game.level.tiles[bt.first][bt.second] == WALL)
-			{
-				firstWallTile = &bt;
-				break;
-			}
-	}
-
-	if (firstWallTile != nullptr)
-	{
-		const auto x1 = bulletPosition.x;
-		const auto y1 = bulletPosition.y;
-		const auto x2 = bulletPosition.x + bulletVelocity.x;
-		const auto y2 = bulletPosition.y + bulletVelocity.y;
-
-		int minDist = INT_MAX;
-		const Vec2Double* minDistCp = nullptr;
-
-		auto cp1 = MathHelper::getLinesCross(
-			x1, y1, x2, y2, firstWallTile->first, firstWallTile->second, firstWallTile->first + TILE_SIZE,
-			firstWallTile->second);
-		if (cp1.x >= firstWallTile->first && cp1.x <= firstWallTile->first + TILE_SIZE)
-		{
-			const auto dist2 = MathHelper::getVectorLength2(Vec2Double(x1 - cp1.x, y1 - cp1.y));
-			if (minDistCp == nullptr || dist2 < minDist)
-			{
-				minDist = dist2;
-				minDistCp = &cp1;
-			}
-		}
-
-		auto cp2 = MathHelper::getLinesCross(
-			x1, y1, x2, y2, firstWallTile->first, firstWallTile->second + TILE_SIZE, firstWallTile->first + TILE_SIZE,
-			firstWallTile->second + TILE_SIZE);
-		if (cp2.x >= firstWallTile->first && cp2.x <= firstWallTile->first + TILE_SIZE)
-		{
-			const auto dist2 = MathHelper::getVectorLength2(Vec2Double(x1 - cp2.x, y1 - cp2.y));
-			if (minDistCp == nullptr || dist2 < minDist)
-			{
-				minDist = dist2;
-				minDistCp = &cp2;
-			}
-		}
-
-		auto cp3 = MathHelper::getLinesCross(
-			x1, y1, x2, y2, firstWallTile->first, firstWallTile->second, firstWallTile->first,
-			firstWallTile->second + TILE_SIZE);
-		if (cp3.y >= firstWallTile->second && cp3.y <= firstWallTile->second + TILE_SIZE)
-		{
-			const auto dist2 = MathHelper::getVectorLength2(Vec2Double(x1 - cp3.x, y1 - cp3.y));
-			if (minDistCp == nullptr || dist2 < minDist)
-			{
-				minDist = dist2;
-				minDistCp = &cp3;
-			}
-		}
-
-		auto cp4 = MathHelper::getLinesCross(
-			x1, y1, x2, y2, firstWallTile->first + TILE_SIZE, firstWallTile->second, firstWallTile->first + TILE_SIZE,
-			firstWallTile->second + TILE_SIZE);
-		if (cp4.y >= firstWallTile->second && cp4.y <= firstWallTile->second + TILE_SIZE)
-		{
-			const auto dist2 = MathHelper::getVectorLength2(Vec2Double(x1 - cp4.x, y1 - cp4.y));
-			if (minDistCp == nullptr || dist2 < minDist)
-			{
-				minDist = dist2;
-				minDistCp = &cp4;
-			}
-		}
-
-		/*if (minDistCp == nullptr)
-		{
-			throw std::runtime_error("no wall tile cross");
-		}*/
-		//TODO: ошибка при отправке стратегии
-		return minDistCp != nullptr ? *minDistCp : Vec2Double(0,0); 
-	}
-
-	return crossPoint;
-}
 
 bool Simulator::canGoThroughTile(const Tile& tile, bool jumpDown)
 {
@@ -151,163 +14,343 @@ bool Simulator::canGoThroughTile(const Tile& tile, bool jumpDown)
 	return !jumpDown || jumpDown && (tile == LADDER || tile == PLATFORM || tile == EMPTY);
 }
 
-
-Vec2Double Simulator::getBulletCrossWallPoint(const Bullet& bullet, double maxX, double maxY, const Game& game)
+Vec2Double Simulator::getBulletBorderCross(const Vec2Double& bulletPos, const Vec2Double& bulletVelocity, const Game& game)
 {
-	double minCrossPointDist2 = INT_MAX;
-	const Vec2Double* minCrossPoint = nullptr;
+	const double minX = 1;
+	const double minY = 1;
+	const double maxX = game.level.tiles.size() - 1;
+	const double maxY = game.level.tiles[0].size() - 1;
 
-	Vec2Double bulletPosition1 = Vec2Double(bullet.position.x - bullet.size / 2, bullet.position.y - bullet.size / 2);
-	const auto cp1 = getBulletCornerCrossWallPoint(bulletPosition1, bullet.velocity, maxX, maxY, game);
-	auto dist2 = MathHelper::getVectorLength2(Vec2Double(cp1.x - bulletPosition1.x, cp1.y - bulletPosition1.y));
-	if (dist2 < minCrossPointDist2)
+	const auto x0 = bulletPos.x;
+	const auto y0 = bulletPos.y;
+	const auto x1 = bulletPos.x + bulletVelocity.x;
+	const auto y1 = bulletPos.y + bulletVelocity.y;
+	
+	if (bulletVelocity.x > 0)
 	{
-		minCrossPointDist2 = dist2;
-		minCrossPoint = &cp1;
-	}
+		const auto vertCross = MathHelper::getLinesCross(
+			x0, y0, x1, y1, maxX, minY, maxX, maxY);
+		if (MathHelper::IsBetween(vertCross, { maxX, minY }, { maxX, maxY }))
+		{
+			return vertCross;
+		}
 
-	Vec2Double bulletPosition2 = Vec2Double(bullet.position.x + bullet.size / 2, bullet.position.y - bullet.size / 2);
-	const auto cp2 = getBulletCornerCrossWallPoint(bulletPosition2, bullet.velocity, maxX, maxY, game);
-	dist2 = MathHelper::getVectorLength2(Vec2Double(cp2.x - bulletPosition2.x, cp2.y - bulletPosition2.y));
-	if (dist2 < minCrossPointDist2)
+		return bulletVelocity.y > 0 ?
+			MathHelper::getLinesCross(x0, y0, x1, y1, minX, maxY, maxX, maxY) :
+			MathHelper::getLinesCross(x0, y0, x1, y1, minX, minY, maxX, minY);
+	}
+	else
 	{
-		minCrossPointDist2 = dist2;
-		minCrossPoint = &cp2;
+		const auto vertCross = MathHelper::getLinesCross(
+			x0, y0, x1, y1, minX, minY, minX, maxY);
+		if (MathHelper::IsBetween(vertCross, { minX, minY }, { minX, maxY }))
+		{
+			return vertCross;
+		}
+
+		return bulletVelocity.y > 0 ?
+			MathHelper::getLinesCross(x0, y0, x1, y1, minX, maxY, maxX, maxY) :
+			MathHelper::getLinesCross(x0, y0, x1, y1, minX, minY, maxX, minY);
 	}
-
-	Vec2Double bulletPosition3 = Vec2Double(bullet.position.x - bullet.size / 2, bullet.position.y + bullet.size / 2);
-	const auto cp3 = getBulletCornerCrossWallPoint(bulletPosition3, bullet.velocity, maxX, maxY, game);
-	dist2 = MathHelper::getVectorLength2(Vec2Double(cp3.x - bulletPosition3.x, cp3.y - bulletPosition3.y));
-	if (dist2 < minCrossPointDist2)
-	{
-		minCrossPointDist2 = dist2;
-		minCrossPoint = &cp3;
-	}
-
-	Vec2Double bulletPosition4 = Vec2Double(bullet.position.x + bullet.size / 2, bullet.position.y + bullet.size / 2);
-	const auto cp4 = getBulletCornerCrossWallPoint(bulletPosition4, bullet.velocity, maxX, maxY, game);
-	dist2 = MathHelper::getVectorLength2(Vec2Double(cp4.x - bulletPosition4.x, cp4.y - bulletPosition4.y));
-	if (dist2 < minCrossPointDist2)
-	{
-		minCrossPointDist2 = dist2;
-		minCrossPoint = &cp4;
-	}
-
-	if (minCrossPoint == nullptr) throw std::runtime_error("no bullet cross wall point");
-
-	return *minCrossPoint;
 }
 
-
-ShootMeBulletCrossPoint Simulator::get_shoot_me_bullet_cross_point(
-	double x1, double y1, double x2, double y2,
-	const Vec2Double& bulletPosition, const Vec2Double& bulletVelocity,
-	const Game& game)
+bool Simulator::getBulletPointRectangleFirstCrossPoint(const Vec2Double& bulletPos, const Vec2Double& bulletVelocity,
+	double xLeft, double yDown, double xRight, double yUp, Vec2Double& crossPoint, double& minDist2)
 {
-	const auto maxX = game.level.tiles.size() * TILE_SIZE;
-	const auto maxY = game.level.tiles[0].size() * TILE_SIZE;
+	bool hasCross = false;
 
-	const auto bulletX1 = bulletPosition.x;
-	const auto bulletY1 = bulletPosition.y;
-	const auto bulletX2 = bulletPosition.x + bulletVelocity.x;
-	const auto bulletY2 = bulletPosition.y + bulletVelocity.y;
-
-	auto cross1 = MathHelper::getLinesCross(bulletX1, bulletY1, bulletX2, bulletY2,
-		x1, y1, x1, y2);
-	auto cross2 = MathHelper::getLinesCross(bulletX1, bulletY1, bulletX2, bulletY2,
-		x1, y2, x2, y2);
-	auto cross3 = MathHelper::getLinesCross(bulletX1, bulletY1, bulletX2, bulletY2,
-		x2, y2, x2, y1);
-	auto cross4 = MathHelper::getLinesCross(bulletX1, bulletY1, bulletX2, bulletY2,
-		x2, y1, x1, y1);
-
-	double minCrossDist2Shooting = INT_MAX;
-	Vec2Double* minCrossDist2ShootingPoint = nullptr;
-
-	auto dist2 = MathHelper::getVectorLength2(Vec2Double(cross1.x - bulletX1, cross1.y - bulletY1));
-	if (cross1.y >= y1 && cross1.y <= y2)
+	const auto x0 = bulletPos.x;
+	const auto y0 = bulletPos.y;
+	const auto x1 = bulletPos.x + bulletVelocity.x;
+	const auto y1 = bulletPos.y+ bulletVelocity.y;
+	
+	
+	const auto cpLeft = MathHelper::getLinesCross(x0, y0, x1, y1,
+		xLeft, yDown, xLeft, yUp);
+	if (MathHelper::IsBetween(xLeft, cpLeft.y, xLeft, yDown, xLeft, yUp))
 	{
-		if (dist2 < minCrossDist2Shooting)
+		hasCross = true;
+		const auto dist2 = MathHelper::getVectorLength2(Vec2Double(cpLeft.x - x0, cpLeft.y - y0));
+		if (dist2 < minDist2)
 		{
-			minCrossDist2Shooting = dist2;
-			minCrossDist2ShootingPoint = &cross1;
+			minDist2 = dist2;
+			crossPoint = cpLeft;
 		}
 	}
 
-	dist2 = MathHelper::getVectorLength2(Vec2Double(cross2.x - bulletX1, cross2.y - bulletY1));
-	if (cross2.x >= x1 && cross2.x <= x2)
+	const auto cpUp = MathHelper::getLinesCross(x0, y0, x1, y1,
+		xLeft, yUp, xRight, yUp);
+	if (MathHelper::IsBetween(cpUp.x, yUp, xLeft, yUp, xRight, yUp))
 	{
-		if (dist2 < minCrossDist2Shooting)
+		hasCross = true;
+		const auto dist2 = MathHelper::getVectorLength2(Vec2Double(cpUp.x - x0, cpUp.y - y0));
+		if (dist2 < minDist2)
 		{
-			minCrossDist2Shooting = dist2;
-			minCrossDist2ShootingPoint = &cross2;
+			minDist2 = dist2;
+			crossPoint = cpUp;
 		}
 	}
 
-	dist2 = MathHelper::getVectorLength2(Vec2Double(cross3.x - bulletX1, cross3.y - bulletY1));
-	if (cross3.y >= y1 && cross3.y <= y2)
+	const auto cpRight = MathHelper::getLinesCross(x0, y0, x1, y1,
+		xRight, yUp, xRight, yDown);
+	if (MathHelper::IsBetween(xRight, cpRight.y, xRight, yUp, xRight, yDown))
 	{
-		if (dist2 < minCrossDist2Shooting)
+		hasCross = true;
+		const auto dist2 = MathHelper::getVectorLength2(Vec2Double(cpRight.x - x0, cpRight.y - y0));
+		if (dist2 < minDist2)
 		{
-			minCrossDist2Shooting = dist2;
-			minCrossDist2ShootingPoint = &cross3;
+			minDist2 = dist2;
+			crossPoint = cpRight;
 		}
 	}
 
-	dist2 = MathHelper::getVectorLength2(Vec2Double(cross4.x - bulletX1, cross4.y - bulletY1));
-	if (cross4.x >= x1 && cross4.x <= x2)
+	const auto cpDown = MathHelper::getLinesCross(x0, y0, x1, y1,
+		xRight, yDown, xLeft, yDown);
+	if (MathHelper::IsBetween(cpDown.x, yDown, xRight, yDown, xLeft, yDown))
 	{
-		if (dist2 < minCrossDist2Shooting)
+		hasCross = true;
+		const auto dist2 = MathHelper::getVectorLength2(Vec2Double(cpDown.x - x0, cpDown.y - y0));
+		if (dist2 < minDist2)
 		{
-			minCrossDist2Shooting = dist2;
-			minCrossDist2ShootingPoint = &cross4;
+			minDist2 = dist2;
+			crossPoint = cpDown;
 		}
 	}
 
-
-	return {
-		minCrossDist2ShootingPoint != nullptr ? *minCrossDist2ShootingPoint : Vec2Double(0, 0),
-		minCrossDist2ShootingPoint != nullptr,
-		minCrossDist2Shooting
-	};
-
+	return hasCross;
 }
 
 
 
-
-
-bool Simulator::isBulletCrossWall(const Vec2Double& bulletPosition, const Vec2Double& bulletVelocity, double time,
-	const Game& game)
+bool Simulator::getBulletInTimePosition(
+	const Bullet& bullet, double time, const BulletSimulation& bulletSimulation, const Game& game,
+	Vec2Double& position)
 {
-	const auto targetPosition = Vec2Double(bulletPosition.x + bulletVelocity.x * time,
-		bulletPosition.y + bulletVelocity.y * time);
+	if (time > bulletSimulation.targetCrossTime) return false;	
+	position = Vec2Double(bullet.position.x + bullet.velocity.x * time, bullet.position.y + bullet.velocity.y * time);
+	return true;
+}
 
-	const auto bulletTiles = MathHelper::getLineSquares(bulletPosition, targetPosition, 1);
-	const std::pair<int, int>* firstWallTile = nullptr;
-	for (const auto& bt : bulletTiles)
+BulletSimulation Simulator::getBulletSimulation(const Vec2Double& bulletPosition, const Vec2Double& bulletVelocity, double halfBulletSize, const Game& game)
+{
+	const auto bulletLD0 = Vec2Double(bulletPosition.x - halfBulletSize, bulletPosition.y - halfBulletSize);
+	const auto bulletLU0 = Vec2Double(bulletPosition.x - halfBulletSize, bulletPosition.y + halfBulletSize);
+	const auto bulletRU0 = Vec2Double(bulletPosition.x + halfBulletSize, bulletPosition.y + halfBulletSize);
+	const auto bulletRD0 = Vec2Double(bulletPosition.x + halfBulletSize, bulletPosition.y - halfBulletSize);
+	
+	auto wallCrossPoint = Vec2Double(0, 0);
+	auto bulletWallCrossCorner = Vec2Double(0, 0);
+	double minWallCrossPointDist2 = INT_MAX;
+
+	//пересечение с границами
+	auto crossWallLD = getBulletBorderCross(bulletLD0, bulletVelocity, game);
+	auto dist2 = MathHelper::getVectorLength2({ crossWallLD.x - bulletLD0.x, crossWallLD.y - bulletLD0.y });
+	if (dist2 < minWallCrossPointDist2)
 	{
-		if (bt.first == 0 || bt.second == 0 || bt.first == game.level.tiles.size() - 1 || bt.second == game.level.tiles[
-			0].size() - 1)
+		minWallCrossPointDist2 = dist2;
+		wallCrossPoint = crossWallLD;
+		bulletWallCrossCorner = bulletLD0;
+	}
+	
+	auto crossWallLU = getBulletBorderCross(bulletLU0, bulletVelocity, game);
+	dist2 = MathHelper::getVectorLength2({ crossWallLU.x - bulletLU0.x, crossWallLU.y - bulletLU0.y });
+	if (dist2 < minWallCrossPointDist2)
+	{
+		minWallCrossPointDist2 = dist2;
+		wallCrossPoint = crossWallLU;
+		bulletWallCrossCorner = bulletLU0;
+	}
+	
+	auto crossWallRU = getBulletBorderCross(bulletRU0, bulletVelocity, game);
+	dist2 = MathHelper::getVectorLength2({ crossWallRU.x - bulletRU0.x, crossWallRU.y - bulletRU0.y });
+	if (dist2 < minWallCrossPointDist2)
+	{
+		minWallCrossPointDist2 = dist2;
+		wallCrossPoint = crossWallRU;
+		bulletWallCrossCorner = bulletRU0;
+	}
+	
+	auto crossWallRD = getBulletBorderCross(bulletRD0, bulletVelocity, game);
+	dist2 = MathHelper::getVectorLength2({ crossWallRD.x - bulletRD0.x, crossWallRD.y - bulletRD0.y });
+	if (dist2 < minWallCrossPointDist2)
+	{
+		minWallCrossPointDist2 = dist2;
+		wallCrossPoint = crossWallRD;
+		bulletWallCrossCorner = bulletRD0;
+	}
+
+	const auto squaresLD = MathHelper::getLineSquares(bulletLD0, crossWallLD, 1);
+	const auto squaresLU = MathHelper::getLineSquares(bulletLU0, crossWallLU, 1);
+	const auto squaresRU = MathHelper::getLineSquares(bulletRU0, crossWallRU, 1);
+	const auto squaresRD = MathHelper::getLineSquares(bulletRD0, crossWallRD, 1);
+
+
+	const std::pair<int, int>* firstWallTileLD = nullptr;
+	for (const auto& square:squaresLD)
+	{
+		if (square.first == 0 || square.second == 0 || 
+			square.first == game.level.tiles.size() - 1 || square.second == game.level.tiles[0].size() - 1)
+		{
+			break; //игнор крайних стен
+		}
+		
+		if (game.level.tiles[square.first][square.second] == WALL)
+		{
+			firstWallTileLD = &square;
+			break;
+		}
+	}
+
+	if (firstWallTileLD != nullptr)
+	{
+		const auto xLeft = (*firstWallTileLD).first;
+		const auto yDown = (*firstWallTileLD).second;
+		const auto xRight = (*firstWallTileLD).first + 1;
+		const auto yUp = (*firstWallTileLD).second + 1;
+		
+		Vec2Double crossPointCur;
+		double minDist2Cur = INT_MAX;
+		auto hasWallCross = getBulletPointRectangleFirstCrossPoint(bulletLD0, bulletVelocity,
+			xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
+		if (!hasWallCross)
+		{
+			hasWallCross = getBulletPointRectangleFirstCrossPoint(bulletLD0, bulletVelocity,
+				xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
+			throw std::runtime_error("no wall cross");
+		}
+		if (minDist2Cur < minWallCrossPointDist2)
+		{
+			minWallCrossPointDist2 = minDist2Cur;
+			wallCrossPoint = crossPointCur;
+			bulletWallCrossCorner = bulletLD0;
+		}	
+	}
+
+	const std::pair<int, int>* firstWallTileLU = nullptr;
+	for (const auto& square : squaresLU)
+	{
+		if (square.first == 0 || square.second == 0 ||
+			square.first == game.level.tiles.size() - 1 || square.second == game.level.tiles[0].size() - 1)
 		{
 			break; //игнор крайних стен
 		}
 
-			if (game.level.tiles[bt.first][bt.second] == WALL)
-			{
-				firstWallTile = &bt;
-				break;
-			}
+		if (game.level.tiles[square.first][square.second] == WALL)
+		{
+			firstWallTileLU = &square;
+			break;
+		}
 	}
 
-	return firstWallTile != nullptr;
-}
 
+	if (firstWallTileLU != nullptr)
+	{
+		const auto xLeft = (*firstWallTileLU).first;
+		const auto yDown = (*firstWallTileLU).second;
+		const auto xRight = (*firstWallTileLU).first + 1;
+		const auto yUp = (*firstWallTileLU).second + 1;
 
+		Vec2Double crossPointCur;
+		double minDist2Cur = INT_MAX;
+		auto hasWallCross = getBulletPointRectangleFirstCrossPoint(bulletLU0, bulletVelocity,
+			xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
+		if (!hasWallCross) {
+			hasWallCross = getBulletPointRectangleFirstCrossPoint(bulletLU0, bulletVelocity,
+				xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
+			throw std::runtime_error("no wall cross");
+		}
+		if (minDist2Cur < minWallCrossPointDist2)
+		{
+			minWallCrossPointDist2 = minDist2Cur;
+			wallCrossPoint = crossPointCur;
+			bulletWallCrossCorner = bulletLU0;
+		}
+	}
 
-Vec2Double Simulator::getBulletInTimePosition(const Bullet& bullet, double time, const Game& game)
-{
-	return Vec2Double(bullet.position.x + bullet.velocity.x * time, bullet.position.y + bullet.velocity.y * time);
+	const std::pair<int, int>* firstWallTileRU = nullptr;
+	for (const auto& square : squaresRU)
+	{
+		if (square.first == 0 || square.second == 0 ||
+			square.first == game.level.tiles.size() - 1 || square.second == game.level.tiles[0].size() - 1)
+		{
+			break; //игнор крайних стен
+		}
+
+		if (game.level.tiles[square.first][square.second] == WALL)
+		{
+			firstWallTileRU = &square;
+			break;
+		}
+	}
+
+	if (firstWallTileRU != nullptr)
+	{
+		const auto xLeft = (*firstWallTileRU).first;
+		const auto yDown = (*firstWallTileRU).second;
+		const auto xRight = (*firstWallTileRU).first + 1;
+		const auto yUp = (*firstWallTileRU).second + 1;
+
+		Vec2Double crossPointCur;
+		double minDist2Cur = INT_MAX;
+		auto hasWallCross = getBulletPointRectangleFirstCrossPoint(bulletRU0, bulletVelocity,
+			xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
+		if (!hasWallCross) {
+			hasWallCross = getBulletPointRectangleFirstCrossPoint(bulletRU0, bulletVelocity,
+				xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
+			throw std::runtime_error("no wall cross");
+		}
+		if (minDist2Cur < minWallCrossPointDist2)
+		{
+			minWallCrossPointDist2 = minDist2Cur;
+			wallCrossPoint = crossPointCur;
+			bulletWallCrossCorner = bulletRU0;
+		}
+	}
+
+	const std::pair<int, int>* firstWallTileRD = nullptr;
+	for (const auto& square : squaresRD)
+	{
+		if (square.first == 0 || square.second == 0 ||
+			square.first == game.level.tiles.size() - 1 || square.second == game.level.tiles[0].size() - 1)
+		{
+			break; //игнор крайних стен
+		}
+
+		
+		if (game.level.tiles[square.first][square.second] == WALL)
+		{
+			firstWallTileRD = &square;
+			break;
+		}
+	}
+
+	if (firstWallTileRD != nullptr)
+	{
+		const auto xLeft = (*firstWallTileRD).first;
+		const auto yDown = (*firstWallTileRD).second;
+		const auto xRight = (*firstWallTileRD).first + 1;
+		const auto yUp = (*firstWallTileRD).second + 1;
+
+		Vec2Double crossPointCur;
+		double minDist2Cur = INT_MAX;
+		auto hasWallCross = getBulletPointRectangleFirstCrossPoint(bulletRD0, bulletVelocity,
+			xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
+		if (!hasWallCross) {
+			hasWallCross = getBulletPointRectangleFirstCrossPoint(bulletRD0, bulletVelocity,
+				xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
+			throw std::runtime_error("no wall cross");
+		}
+		if (minDist2Cur < minWallCrossPointDist2)
+		{
+			minWallCrossPointDist2 = minDist2Cur;
+			wallCrossPoint = crossPointCur;
+			bulletWallCrossCorner = bulletRD0;
+		}
+	}
+
+	const auto shootWallTime = MathHelper::getVectorLength(bulletWallCrossCorner.x, bulletWallCrossCorner.y, wallCrossPoint.x, wallCrossPoint.y) /
+		MathHelper::getVectorLength(bulletVelocity);
+	return { wallCrossPoint, bulletWallCrossCorner, shootWallTime };
 }
 
 
@@ -353,22 +396,22 @@ Vec2Double Simulator::getUnitNextTickPosition(
 		canGoThroughTile(rightTopTile, action.jumpDown) && canGoThroughTile(rightBottomTile, action.jumpDown);
 
 	auto canGoAction = false;
-	if (abs(velocityX - actionVelocityX) > TOLERACNE )
+	if (abs(velocityX - actionVelocityX) > TOLERANCE )
 	{
-		if (actionVelocityX > 0 && game.level.tiles[size_t(x + unitSize.x / 2 + TOLERACNE)][size_t(y)] != WALL &&
-								   game.level.tiles[size_t(x + unitSize.x / 2 + TOLERACNE)][size_t(y + unitSize.y)] != WALL ||
-			actionVelocityX < 0 && game.level.tiles[size_t(x - unitSize.x / 2 - TOLERACNE)][size_t(y)] != WALL &&
-								   game.level.tiles[size_t(x - unitSize.x / 2 - TOLERACNE)][size_t(y + unitSize.y)] != WALL)			
+		if (actionVelocityX > 0 && game.level.tiles[size_t(x + unitSize.x / 2 + TOLERANCE)][size_t(y)] != WALL &&
+								   game.level.tiles[size_t(x + unitSize.x / 2 + TOLERANCE)][size_t(y + unitSize.y)] != WALL ||
+			actionVelocityX < 0 && game.level.tiles[size_t(x - unitSize.x / 2 - TOLERANCE)][size_t(y)] != WALL &&
+								   game.level.tiles[size_t(x - unitSize.x / 2 - TOLERANCE)][size_t(y + unitSize.y)] != WALL)			
 		{
 			canGoAction = true;
 		}
 	}
-	else if (abs(velocityY - actionVelocityY) > TOLERACNE)
+	else if (abs(velocityY - actionVelocityY) > TOLERANCE)
 	{
-		if (actionVelocityY > 0 && game.level.tiles[size_t(x - unitSize.x / 2)][size_t(y + unitSize.y + TOLERACNE)] != WALL &&
-			game.level.tiles[size_t(x + unitSize.x / 2)][size_t(y + unitSize.y + TOLERACNE)] != WALL ||
-			actionVelocityY < 0 && game.level.tiles[size_t(x - unitSize.x / 2)][size_t(y - TOLERACNE)] == EMPTY &&
-			game.level.tiles[size_t(x + unitSize.x / 2)][size_t(y - TOLERACNE)] == EMPTY)
+		if (actionVelocityY > 0 && game.level.tiles[size_t(x - unitSize.x / 2)][size_t(y + unitSize.y + TOLERANCE)] != WALL &&
+			game.level.tiles[size_t(x + unitSize.x / 2)][size_t(y + unitSize.y + TOLERANCE)] != WALL ||
+			actionVelocityY < 0 && game.level.tiles[size_t(x - unitSize.x / 2)][size_t(y - TOLERANCE)] == EMPTY &&
+			game.level.tiles[size_t(x + unitSize.x / 2)][size_t(y - TOLERANCE)] == EMPTY)
 		{
 			canGoAction = true;
 		}
@@ -408,7 +451,7 @@ Vec2Double Simulator::getUnitNextTickPosition(
 				continue;
 			}
 			
-			if (abs(velocityX) > TOLERACNE)//отключаем горизонтальное движение
+			if (abs(velocityX) > TOLERANCE)//отключаем горизонтальное движение
 			{
 				velocityX = 0;
 				nextX = x + velocityX * microTickTime;
@@ -431,7 +474,7 @@ Vec2Double Simulator::getUnitNextTickPosition(
 				}
 			}
 
-			if (abs(velocityY) > TOLERACNE)//отключаем вертикальное движение
+			if (abs(velocityY) > TOLERANCE)//отключаем вертикальное движение
 			{
 				velocityX = startTickVelocityX;
 				velocityY = 0;
@@ -542,9 +585,9 @@ Vec2Double Simulator::getUnitNextTickPosition(
 bool Simulator::isUnitOnWall(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game)
 {
 	const auto leftSideDownTile = game.level.tiles[size_t(unitPosition.x - unitSize.x / 2)][size_t(
-		unitPosition.y - TOLERACNE)];
+		unitPosition.y - TOLERANCE)];
 	const auto rightSideDownTile = game.level.tiles[size_t(unitPosition.x + unitSize.x / 2)][size_t(
-		unitPosition.y - TOLERACNE)];
+		unitPosition.y - TOLERANCE)];
 	return leftSideDownTile == WALL || rightSideDownTile == WALL;
 }
 
@@ -558,9 +601,9 @@ bool Simulator::isUnitOnLadder(const Vec2Double& unitPosition, const Vec2Double&
 	if (isUnitOnWall(unitPosition, unitSize, game)) return false;
 
 	const auto leftSideDownTile = game.level.tiles[size_t(unitPosition.x - unitSize.x / 2)][size_t(
-		unitPosition.y - TOLERACNE)];
+		unitPosition.y - TOLERANCE)];
 	const auto rightSideDownTile = game.level.tiles[size_t(unitPosition.x + unitSize.x / 2)][size_t(
-		unitPosition.y - TOLERACNE)];
+		unitPosition.y - TOLERANCE)];
 
 	return leftSideDownTile == LADDER || rightSideDownTile == LADDER;
 	
@@ -572,9 +615,9 @@ bool Simulator::isUnitOnPlatform(const Vec2Double& unitPosition, const Vec2Doubl
 	if (isUnitOnWall(unitPosition, unitSize, game)) return false;
 	
 	const auto leftSideDownTile = game.level.tiles[size_t(unitPosition.x - unitSize.x / 2)][size_t(
-		unitPosition.y - TOLERACNE)];
+		unitPosition.y - TOLERANCE)];
 	const auto rightSideDownTile = game.level.tiles[size_t(unitPosition.x + unitSize.x / 2)][size_t(
-		unitPosition.y - TOLERACNE)];
+		unitPosition.y - TOLERANCE)];
 
 	return leftSideDownTile == PLATFORM || rightSideDownTile == PLATFORM;
 }
@@ -582,6 +625,70 @@ bool Simulator::isUnitOnPlatform(const Vec2Double& unitPosition, const Vec2Doubl
 bool Simulator::isUnitOnAir(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game)
 {
 	return !isUnitOnWall(unitPosition, unitSize, game) && !isUnitOnLadder(unitPosition, unitSize, game) && !isUnitOnPlatform(unitPosition, unitSize, game);
+}
+
+bool Simulator::getBulletRectangleFirstCrossPoint(const Vec2Double& bulletPos, const Vec2Double& bulletVelocity, double halfBulletSize,
+	double xLeft, double yDown, double xRight, double yUp,
+	Vec2Double& crossPoint, Vec2Double& bulletCorner)
+{
+	bool hasCross = false;
+	double minDist2 = INT_MAX;
+	crossPoint = Vec2Double(0, 0);
+	bulletCorner = Vec2Double(0, 0);
+	
+	const auto bulletLD = Vec2Double(bulletPos.x - halfBulletSize, bulletPos.y - halfBulletSize);
+	Vec2Double crossPointCur = Vec2Double(0, 0);
+	double minDist2Cur = INT_MAX;
+	auto hasWallCross = getBulletPointRectangleFirstCrossPoint(bulletLD, bulletVelocity,
+		xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
+	if (hasWallCross && minDist2Cur < minDist2)
+	{
+		hasCross = true;
+		minDist2 = minDist2Cur;
+		crossPoint = crossPointCur;
+		bulletCorner = bulletLD;
+	}
+
+	const auto bulletLU = Vec2Double(bulletPos.x - halfBulletSize, bulletPos.y + halfBulletSize);
+	crossPointCur = Vec2Double(0, 0);
+	minDist2Cur = INT_MAX;
+	hasWallCross = getBulletPointRectangleFirstCrossPoint(bulletLU, bulletVelocity,
+		xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
+	if (hasWallCross && minDist2Cur < minDist2)
+	{
+		hasCross = true;
+		minDist2 = minDist2Cur;
+		crossPoint = crossPointCur;
+		bulletCorner = bulletLU;
+	}
+
+	const auto bulletRU = Vec2Double(bulletPos.x + halfBulletSize, bulletPos.y + halfBulletSize);
+	crossPointCur = Vec2Double(0, 0);
+	minDist2Cur = INT_MAX;
+	hasWallCross = getBulletPointRectangleFirstCrossPoint(bulletRU, bulletVelocity,
+		xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
+	if (hasWallCross && minDist2Cur < minDist2)
+	{
+		hasCross = true;
+		minDist2 = minDist2Cur;
+		crossPoint = crossPointCur;
+		bulletCorner = bulletRU;
+	}
+
+	const auto bulletRD = Vec2Double(bulletPos.x + halfBulletSize, bulletPos.y - halfBulletSize);
+	crossPointCur = Vec2Double(0, 0);
+	minDist2Cur = INT_MAX;
+	hasWallCross = getBulletPointRectangleFirstCrossPoint(bulletRD, bulletVelocity,
+		xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
+	if (hasWallCross && minDist2Cur < minDist2)
+	{
+		hasCross = true;
+		minDist2 = minDist2Cur;
+		crossPoint = crossPointCur;
+		bulletCorner = bulletRD;
+	}
+
+	return hasCross;
 }
 
 

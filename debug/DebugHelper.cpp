@@ -9,26 +9,33 @@
 #include "../Debug.hpp"
 #include "../simulation/Simulator.h"
 #include <climits>
+#include <map>
+
+
+inline bool operator<(const Bullet& lhs, const Bullet& rhs)
+{
+	return lhs.position.x < rhs.position.x;
+}
 
 
 Vec2Double getShootingCrossBorderPoint(const Vec2Double& position, double lastAngle, double maxX, double maxY)
 {
-	if (abs(lastAngle) < TOLERACNE)
+	if (abs(lastAngle) < TOLERANCE)
 	{
 		return Vec2Double(maxX, position.y);
 	}
 
-	if (abs(lastAngle - M_PI) < TOLERACNE)
+	if (abs(lastAngle - M_PI) < TOLERANCE)
 	{
 		return Vec2Double(0, position.y);
 	}
 
-	if (abs(lastAngle - M_PI / 2) < TOLERACNE)
+	if (abs(lastAngle - M_PI / 2) < TOLERANCE)
 	{
 		return Vec2Double(position.x, 0);
 	}
 
-	if (abs(lastAngle + M_PI / 2) < TOLERACNE)
+	if (abs(lastAngle + M_PI / 2) < TOLERANCE)
 	{
 		return Vec2Double(position.x, maxY);
 	}
@@ -68,18 +75,17 @@ Vec2Double getShootingCrossBorderPoint(const Vec2Double& position, double lastAn
 
 
 
-void drawBullets(Debug& debug, const Game& game, int meId)
+void drawBullets(Debug& debug, const Game& game, const std::map<Bullet, BulletSimulation>& bulletsSimulations, int mePlayerId)
 {
 	const auto maxX = game.level.tiles.size() * TILE_SIZE;
 	const auto maxY = game.level.tiles[0].size() * TILE_SIZE;
 	for (const auto& bullet : game.bullets)
-	{
-		auto crossPoint = Simulator::getBulletCrossWallPoint(bullet, maxX, maxY, game);
-
+	{		
+		if (bullet.playerId == mePlayerId) continue;
 		const auto debugBullet = vec2DoubleToVec2Float(bullet.position);
-		const auto debugCrossPoint = vec2DoubleToVec2Float(crossPoint);
+		const auto debugCrossPoint = vec2DoubleToVec2Float(bulletsSimulations.at(bullet).targetCrossPoint);
 		debug.draw(CustomData::Line(debugBullet, debugCrossPoint, 0.1,
-			ColorFloat(bullet.playerId == meId ? 0 : 255, bullet.playerId == meId ? 255 : 0, 0,
+			ColorFloat(bullet.playerId == mePlayerId ? 0 : 255, bullet.playerId == mePlayerId ? 255 : 0, 0,
 				0.25)));
 	}
 }

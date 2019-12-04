@@ -79,7 +79,7 @@ vector<pair<int, int>> MathHelper::getLineSquares(const Vec2Double& start, const
 	while (x != endX) //while anchor is not finished
 	{
 		auto newX = x + squareSide * xCoeff;//x coord of next x border
-		auto yReal = abs(end.x - start.x) < TOLERACNE ? start.y : start.y + (end.y - start.y) * (newX - start.x) / (end.x - start.x);//y coord of next x border 
+		auto yReal = abs(end.x - start.x) < TOLERANCE ? start.y : start.y + (end.y - start.y) * (newX - start.x) / (end.x - start.x);//y coord of next x border 
 		auto newY = GetSquareIndex(yReal, squareSide) * squareSide;//top coord of containing yReal square 
 		while (y != newY) //look through current anchor [(x, y), (newX, newY)] 
 		{
@@ -106,9 +106,19 @@ vector<pair<int, int>> MathHelper::getLineSquares(const Vec2Double& start, const
 	return result;
 }
 
+double MathHelper::getVectorLength(double x0, double y0, double x1, double y1)
+{
+	return sqrt(getVectorLength2(x0, y0, x1, y1));
+}
+
 double MathHelper::getVectorLength(const Vec2Double & v)
 {
 	return sqrt(MathHelper::getVectorLength2(v));
+}
+
+double MathHelper::getVectorLength2(double x0, double y0, double x1, double y1)
+{
+	return (x1 - x0)*(x1 - x0) + (y1 - y0)*(y1 - y0);
 }
 
 double MathHelper::getVectorLength2(const Vec2Double & v)
@@ -123,7 +133,12 @@ double MathHelper::getScalarMult(const Vec2Double & v1, const Vec2Double & v2)
 
 bool MathHelper::IsBetween(const Vec2Double& p0, const Vec2Double& p1, const Vec2Double& p2)
 {
-	return (p1.x - p0.x) * (p2.x - p0.x) <= 0 && (p1.y - p0.y) * (p2.y - p0.y) <= 0;
+	return IsBetween(p0.x, p0.y, p1.x, p1.y, p2.x, p2.y);
+}
+
+bool MathHelper::IsBetween(double x0, double y0, double x1, double y1, double x2, double y2)
+{
+	return (x1 - x0) * (x2 - x0) <= TOLERANCE && (y1 - y0) * (y2 - y0) <= TOLERANCE;
 }
 
 

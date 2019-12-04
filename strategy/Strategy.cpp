@@ -4,7 +4,6 @@
 #include "../model/Unit.hpp"
 #include "../mathcalc/MathHelper.h"
 #include <map>
-#include "ShootMeBullet.h"
 #include "RunawayDirection.h"
 #include <climits>
 #include <cmath>
@@ -16,7 +15,6 @@ inline bool operator<(const Bullet& lhs, const Bullet& rhs)
 	return lhs.position.x < rhs.position.x;
 }
 
-
 double Strategy::getShootEnemyProbability(const Unit& me, const Unit& enemy, const Game& game, double spread,
 	Debug* debug) const
 {
@@ -26,102 +24,35 @@ double Strategy::getShootEnemyProbability(const Unit& me, const Unit& enemy, con
 	const auto bulletCenterPos = Vec2Double(me.position.x, me.position.y + me.size.y / 2);
 	const auto deltaAngle = spread / ANGLE_SPLIT_COUNT;
 
-	const auto x1 = enemy.position.x - enemy.size.x / 2;
-	const auto x2 = enemy.position.x + enemy.size.x / 2;
-	const auto y1 = enemy.position.y;
-	const auto y2 = enemy.position.y + enemy.size.y;
+	const auto xLeft = enemy.position.x - enemy.size.x / 2;
+	const auto xRight = enemy.position.x + enemy.size.x / 2;
+	const auto yDown = enemy.position.y;
+	const auto yUp = enemy.position.y + enemy.size.y;
 
 	auto shootingCount = 0;
 
+	const auto bulletVelocityLength = (*me.weapon).params.bullet.speed;
+	const auto halfBulletSize = me.weapon->params.bullet.size / 2;
+
 	for (auto i = -ANGLE_SPLIT_COUNT; i <= ANGLE_SPLIT_COUNT; ++i)
-	{
-		auto isShooting = false;
-		double minCrossDist2 = INT_MAX;
-		Vec2Double cp = Vec2Double(0, 0);
-
-		const auto bulletVelocityLength = (*me.weapon).params.bullet.speed;
-
-		const auto angle = *me.weapon->lastAngle + deltaAngle * i;
-		const auto bulletPos1 = Vec2Double(
-			bulletCenterPos.x - me.weapon->params.bullet.size / 2,
-			bulletCenterPos.y - me.weapon->params.bullet.size / 2);
+	{		
+		const auto angle = *me.weapon->lastAngle + deltaAngle * i;	
 		auto bulletVelocity = Vec2Double(bulletVelocityLength * cos(angle), bulletVelocityLength * sin(angle));
-		auto shootEnemyCrossPoint = Simulator::get_shoot_me_bullet_cross_point(
-			x1, y1, x2, y2, bulletPos1, bulletVelocity, game);
 
-		if (shootEnemyCrossPoint.hasCrossPoint)
-		{
-			isShooting = true;
-			cp = shootEnemyCrossPoint.crossPoint;
-			if (shootEnemyCrossPoint.crossPointDist2 < minCrossDist2)
-			{
-				minCrossDist2 = shootEnemyCrossPoint.crossPointDist2;
-			}
-		}
-
-
-		const auto bulletPos2 = Vec2Double(
-			bulletCenterPos.x - me.weapon->params.bullet.size / 2,
-			bulletCenterPos.y + me.weapon->params.bullet.size / 2);
-		shootEnemyCrossPoint = Simulator::get_shoot_me_bullet_cross_point(
-			x1, y1, x2, y2, bulletPos2, bulletVelocity, game);
-
-		if (shootEnemyCrossPoint.hasCrossPoint)
-		{
-			isShooting = true;
-			cp = shootEnemyCrossPoint.crossPoint;
-			if (shootEnemyCrossPoint.crossPointDist2 < minCrossDist2)
-			{
-				minCrossDist2 = shootEnemyCrossPoint.crossPointDist2;
-			}
-		}
-
-
-		const auto bulletPos3 = Vec2Double(
-			bulletCenterPos.x + me.weapon->params.bullet.size / 2,
-			bulletCenterPos.y - me.weapon->params.bullet.size / 2);
-		shootEnemyCrossPoint = Simulator::get_shoot_me_bullet_cross_point(
-			x1, y1, x2, y2, bulletPos3, bulletVelocity, game);
-
-		if (shootEnemyCrossPoint.hasCrossPoint)
-		{
-			isShooting = true;
-			cp = shootEnemyCrossPoint.crossPoint;
-			if (shootEnemyCrossPoint.crossPointDist2 < minCrossDist2)
-			{
-				minCrossDist2 = shootEnemyCrossPoint.crossPointDist2;
-			}
-		}
-
-		const auto bulletPos4 = Vec2Double(
-			bulletCenterPos.x + me.weapon->params.bullet.size / 2,
-			bulletCenterPos.y + me.weapon->params.bullet.size / 2);
-		shootEnemyCrossPoint = Simulator::get_shoot_me_bullet_cross_point(
-			x1, y1, x2, y2, bulletPos4, bulletVelocity, game);
-
-		if (shootEnemyCrossPoint.hasCrossPoint)
-		{
-			isShooting = true;
-			cp = shootEnemyCrossPoint.crossPoint;
-			if (shootEnemyCrossPoint.crossPointDist2 < minCrossDist2)
-			{
-				minCrossDist2 = shootEnemyCrossPoint.crossPointDist2;
-			}
-		}
-
+		Vec2Double shootingCrossPoint;
+		Vec2Double bulletCornerPoint;
+		const auto isShooting = Simulator::getBulletRectangleFirstCrossPoint(bulletCenterPos, bulletVelocity, halfBulletSize,
+			xLeft, yDown, xRight, yUp, shootingCrossPoint, bulletCornerPoint);		
 
 		if (isShooting)
 		{
-			const auto dist = sqrt(minCrossDist2);
-			const auto time = dist / bulletVelocityLength;
+			const auto bulletSimulation = Simulator::getBulletSimulation(bulletCenterPos, bulletVelocity, halfBulletSize, game);							
 
-			const auto isCrossWall =
-				Simulator::isBulletCrossWall(bulletPos1, bulletVelocity, time, game) ||
-				Simulator::isBulletCrossWall(bulletPos2, bulletVelocity, time, game) ||
-				Simulator::isBulletCrossWall(bulletPos3, bulletVelocity, time, game) ||
-				Simulator::isBulletCrossWall(bulletPos4, bulletVelocity, time, game);
-
-			if (!isCrossWall)
+			if (MathHelper::getVectorLength2(
+				bulletCornerPoint.x, bulletCornerPoint.y, shootingCrossPoint.x, shootingCrossPoint.y) <
+				MathHelper::getVectorLength2(
+					bulletSimulation.bulletCrossCorner.x, bulletSimulation.bulletCrossCorner.y,
+					bulletSimulation.targetCrossPoint.x, bulletSimulation.targetCrossPoint.y))
 			{
 				shootingCount++;
 				/*if (debug != nullptr) {
@@ -137,128 +68,48 @@ double Strategy::getShootEnemyProbability(const Unit& me, const Unit& enemy, con
 	return shootingCount * 1.0 / (2 * ANGLE_SPLIT_COUNT + 1.0);
 }
 
-
-std::map<Bullet, double> Strategy::getEnemyBulletsShootWallTimes(const Game& game, int meId)
+std::map<Bullet, BulletSimulation> Strategy::getEnemyBulletsSimulation(const Game& game, int meId)
 {
-	const auto maxX = game.level.tiles.size() * TILE_SIZE;
-	const auto maxY = game.level.tiles[0].size() * TILE_SIZE;
-
-	std::map<Bullet, double> result;
-	for (const auto& bullet : game.bullets)
+	std::map<Bullet, BulletSimulation> simulations;
+	for (const auto& bullet: game.bullets)
 	{
 		if (bullet.playerId == meId) continue;
-
-		const auto crossWallPoint = Simulator::getBulletCrossWallPoint(bullet, maxX, maxY, game);
-		const auto wallDist = MathHelper::getVectorLength(
-			Vec2Double(bullet.position.x - crossWallPoint.x, bullet.position.y - crossWallPoint.y));
-
-		const auto bulletVelocity = MathHelper::getVectorLength(bullet.velocity);
-
-		const double shootWallTime = wallDist / bulletVelocity;
-		result[bullet] = shootWallTime;
+		const auto simulation = Simulator::getBulletSimulation(bullet.position, bullet.velocity, bullet.size / 2, game);
+		simulations[bullet] = simulation;
 	}
-
-	return result;
+	return simulations;
 }
 
-
-
-int Strategy::getShootMeBulletTick(const Unit& me, const Bullet& bullet, const Game& game)
+std::map<Bullet, BulletSimulation> Strategy::getShootMeBullets(const Unit& me,
+	const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, const Game& game) const
 {
-	auto x1 = me.position.x - me.size.x / 2;
-	auto x2 = me.position.x + me.size.x / 2;
-	auto y1 = me.position.y;
-	auto y2 = me.position.y + me.size.y;
-
-	if (bullet.velocity.x > 0 && bullet.position.x - bullet.size / 2 > x2) return -1;
-	if (bullet.velocity.x < 0 && bullet.position.x + bullet.size / 2 < x1) return -1;
-	if (bullet.velocity.y > 0 && bullet.position.y - bullet.size / 2 > y2) return -1;
-	if (bullet.velocity.y < 0 && bullet.position.y + bullet.size / 2 < y1) return -1;
-
-
-	double minCrossDist2 = INT_MAX;
-	const Vec2Double* minCrossDist2Point = nullptr;
-
-	const auto bulletPosition1 = Vec2Double(bullet.position.x - bullet.size / 2, bullet.position.y - bullet.size / 2);
-	const auto smbcp1 = Simulator::get_shoot_me_bullet_cross_point(x1, y1, x2, y2, bulletPosition1, bullet.velocity, game);
-	if (smbcp1.hasCrossPoint)
+	std::map<Bullet, BulletSimulation> shootMeBullets;
+	for (const auto& bullet:game.bullets)
 	{
-		if (smbcp1.crossPointDist2 < minCrossDist2)
+		if (bullet.playerId == me.playerId) continue;
+		Vec2Double shootingCrossPoint;
+		Vec2Double bulletCornerPoint;
+		const auto isShooting = Simulator::getBulletRectangleFirstCrossPoint(
+			bullet.position, bullet.velocity, bullet.size/2,
+			me.position.x - me.size.x/2, me.position.y, me.position.x + me.size.x/2, me.position.y + me.size.y, 
+			shootingCrossPoint, bulletCornerPoint);
+		if (!isShooting) continue;
+
+		
+		const auto bulletSimulation = enemyBulletsSimulations.at(bullet);
+		if (MathHelper::getVectorLength2(
+			bulletCornerPoint.x, bulletCornerPoint.y, shootingCrossPoint.x, shootingCrossPoint.y) <
+			MathHelper::getVectorLength2(
+				bulletSimulation.bulletCrossCorner.x, bulletSimulation.bulletCrossCorner.y, bulletSimulation.targetCrossPoint.x, bulletSimulation.targetCrossPoint.y))
 		{
-			minCrossDist2 = smbcp1.crossPointDist2;
-			minCrossDist2Point = &smbcp1.crossPoint;
+			const auto shootMeTime = MathHelper::getVectorLength(
+				bulletCornerPoint.x, bulletCornerPoint.y, shootingCrossPoint.x, shootingCrossPoint.y) /
+				MathHelper::getVectorLength(bullet.velocity);
+			shootMeBullets[bullet] = BulletSimulation(shootingCrossPoint, bulletCornerPoint, shootMeTime);
 		}
 	}
-
-	const auto bulletPosition2 = Vec2Double(bullet.position.x + bullet.size / 2, bullet.position.y - bullet.size / 2);
-	const auto smbcp2 = Simulator::get_shoot_me_bullet_cross_point(x1, y1, x2, y2, bulletPosition2, bullet.velocity, game);
-	if (smbcp2.hasCrossPoint)
-	{
-		if (smbcp2.crossPointDist2 < minCrossDist2)
-		{
-			minCrossDist2 = smbcp2.crossPointDist2;
-			minCrossDist2Point = &smbcp2.crossPoint;
-		}
-	}
-
-	const auto bulletPosition3 = Vec2Double(bullet.position.x + bullet.size / 2, bullet.position.y + bullet.size / 2);
-	const auto smbcp3 = Simulator::get_shoot_me_bullet_cross_point(x1, y1, x2, y2, bulletPosition3, bullet.velocity, game);
-	if (smbcp3.hasCrossPoint)
-	{
-		if (smbcp3.crossPointDist2 < minCrossDist2)
-		{
-			minCrossDist2 = smbcp3.crossPointDist2;
-			minCrossDist2Point = &smbcp3.crossPoint;
-		}
-	}
-
-
-	const auto bulletPosition4 = Vec2Double(bullet.position.x + bullet.size / 2, bullet.position.y + bullet.size / 2);
-	const auto smbcp4 = Simulator::get_shoot_me_bullet_cross_point(x1, y1, x2, y2, bulletPosition4, bullet.velocity, game);
-	if (smbcp4.hasCrossPoint)
-	{
-		if (smbcp4.crossPointDist2 < minCrossDist2)
-		{
-			minCrossDist2 = smbcp4.crossPointDist2;
-			minCrossDist2Point = &smbcp4.crossPoint;
-		}
-	}
-
-	if (minCrossDist2Point != nullptr)
-	{
-		auto bulletVelocityLength = MathHelper::getVectorLength(bullet.velocity);
-		auto minCrossDist = sqrt(minCrossDist2);
-
-		const auto time = minCrossDist / bulletVelocityLength;
-		const auto isCrossWall =
-			Simulator::isBulletCrossWall(bulletPosition1, bullet.velocity, time, game) ||
-			Simulator::isBulletCrossWall(bulletPosition2, bullet.velocity, time, game) ||
-			Simulator::isBulletCrossWall(bulletPosition3, bullet.velocity, time, game) ||
-			Simulator::isBulletCrossWall(bulletPosition4, bullet.velocity, time, game);
-
-		if (isCrossWall) return -1;
-
-		int shootMeTick = static_cast<int>(ceil(minCrossDist / bulletVelocityLength * game.properties.ticksPerSecond));
-		return shootMeTick;
-	}
-
-
-	return -1;
-}
-
-
-std::vector<ShootMeBullet> Strategy::getShootMeBullets(const Unit& unit, const Game& game)
-{
-	std::vector<ShootMeBullet> result;
-	for (const auto& bullet : game.bullets)
-	{
-		if (bullet.playerId == unit.playerId) continue;
-		const auto smbt = getShootMeBulletTick(unit, bullet, game);
-		if (smbt == -1) continue;
-		result.emplace_back(ShootMeBullet(bullet, smbt));
-	}
-
-	return result;
+	return shootMeBullets;
+	
 }
 
 
@@ -326,29 +177,31 @@ bool Strategy::isBulletMoveCrossUnitMove(
 
 
 std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
-	const Unit& me, const std::vector<ShootMeBullet>& shootingMeBullets,
-	const std::map<Bullet, double>& enemyBulletsShootWallTimes,
+	const Unit& me, 
+	const std::map<Bullet, BulletSimulation>& shootingMeBullets,
+	const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations,
 	const Game& game)
 {
 	if (shootingMeBullets.empty())
 	{
 		return std::make_tuple(GoNONE, -1, -1);
 	}
-	int minShootMeTick = INT_MAX;
+	double minShootMeTime = INT_MAX;
 	for (const auto& smb : shootingMeBullets)
 	{
-		if (smb.shootMeTick < minShootMeTick)
+		if (smb.second.targetCrossTime < minShootMeTime)
 		{
-			minShootMeTick = smb.shootMeTick;
+			minShootMeTime = smb.second.targetCrossTime;
 		}
 	}
+	const auto minShootMeTick = static_cast<int>(ceil(minShootMeTime * game.properties.ticksPerSecond));
 
 	double maxShootWallTime = 0;
-	for (const auto& item : enemyBulletsShootWallTimes)
+	for (const auto& item : enemyBulletsSimulations)
 	{
-		if (item.second > maxShootWallTime)
+		if (item.second.targetCrossTime > maxShootWallTime)
 		{
-			maxShootWallTime = item.second;
+			maxShootWallTime = item.second.targetCrossTime;
 		}
 	}
 	const int maxShootWallTick = static_cast<int>(ceil(maxShootWallTime * game.properties.ticksPerSecond));
@@ -367,10 +220,10 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 	for (int startGoTick = minShootMeTick - 1; startGoTick >= 0; startGoTick--)
 	{	
 		
-		auto killGoUpTick = INT_MAX;
+	/*	auto killGoUpTick = INT_MAX;
 		auto killGoLeftTick = INT_MAX;
 		auto killGoRightTick = INT_MAX;
-		auto killGoDownTick = INT_MAX;
+		auto killGoDownTick = INT_MAX;*/
 
 		for (int stopGoTick = startGoTick + 1; stopGoTick < maxShootWallTick; ++stopGoTick)
 		{
@@ -388,19 +241,26 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 			{
 				if (bullet.playerId == me.playerId) continue;
 
+				const auto bulletSimulation = enemyBulletsSimulations.at(bullet);
+
 				const auto halfBulletSize = bullet.size / 2;
 				auto jumpUnitPosition = me.position;
 				auto fallUnitPosition = me.position;
 				auto goLeftUnitPosition = me.position;
 				auto goRightUnitPosition = me.position;
 				
-				const auto shootWallTick = static_cast<int>(ceil(enemyBulletsShootWallTimes.at(bullet) * game.properties.ticksPerSecond));
+				const auto shootWallTick = static_cast<int>(ceil(bulletSimulation.targetCrossTime * game.properties.ticksPerSecond));
 				auto bulletPosition = bullet.position;
 				
 				for (int tick = 1; tick <= shootWallTick; ++tick)
 				{
 					const auto bulletTime = tick / game.properties.ticksPerSecond;
-					auto newBulletPosition = Simulator::getBulletInTimePosition(bullet, bulletTime, game);
+					Vec2Double newBulletPosition;
+					auto exists = Simulator::getBulletInTimePosition(bullet, bulletTime, bulletSimulation, game, newBulletPosition);
+					if (!exists)
+					{
+						//TODO: проверить случай, когда пуля исчезнет в этот тик
+					}				
 
 					//jump
 					if (tick > stopGoTick)
@@ -568,16 +428,23 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 
 
 
-bool Strategy::isSafeMove(const Unit& unit, const UnitAction& action, const std::map<Bullet, double>& enemyBulletShootWallTimes, const Game& game)
+bool Strategy::isSafeMove(
+	const Unit& unit, const UnitAction& action, const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, const Game& game)
 {
-	//TODO: учесть удар пули о стену
+	//TODO: учесть не только позицию в следующий тик, но и возможность избежать пули потом
+
+	const auto time = 1.0 / game.properties.ticksPerSecond;
 	for (const auto& bullet : game.bullets)
 	{
 		if (bullet.playerId == unit.playerId) continue;
-		const auto time = 1.0 / game.properties.ticksPerSecond;
+	
 
 		const auto unitInTimePosition = Simulator::getUnitNextTickPosition(unit.position, unit.size, action, game);
-		const auto bulletInTimePosition = Simulator::getBulletInTimePosition(bullet, time, game);
+
+		Vec2Double bulletInTimePosition;
+		const auto exists = Simulator::getBulletInTimePosition(bullet, time, enemyBulletsSimulations.at(bullet), game, bulletInTimePosition);
+		if (!exists) continue;
+		
 		const auto cross = isBulletMoveCrossUnitMove(
 			unit.position, unitInTimePosition,
 			bullet.position, bulletInTimePosition,
