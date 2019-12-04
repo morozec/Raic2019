@@ -136,7 +136,6 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		if (runawayDirection == GoUP)
 		{
 			action.jump = false;
-			action.jumpDown = true;
 			action.velocity = 0;
 			return action;
 		}
