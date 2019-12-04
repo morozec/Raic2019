@@ -527,6 +527,8 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 				const auto halfBulletSize = bullet.size / 2;
 				auto jumpUnitPosition = me.position;
 				auto fallUnitPosition = me.position;
+				auto goLeftUnitPosition = me.position;
+				auto goRightUnitPosition = me.position;
 				
 				const auto shootWallTick = static_cast<int>(ceil(enemyBulletsShootWallTimes.at(bullet) * game.properties.ticksPerSecond));
 				auto bulletPosition = bullet.position;
@@ -578,11 +580,52 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 						canGoDown = false;
 					}
 					fallUnitPosition = newFallUnitPosition;
-					
-					
-					bulletPosition = newBulletPosition;
 
-					if (!canGoUp && !canGoDown) break;
+					//left
+					if (tick > stopGoTick)
+					{
+						action.velocity = 0;
+					}
+					else if (tick > startGoTick)
+					{
+						action.velocity = -INT_MAX;
+					}
+					const auto newGoLeftUnitPosition = Simulator::getUnitNextTickPosition(
+						goLeftUnitPosition, me.size, action, game);
+
+					action.velocity = 0;
+
+					if (isBulletMoveCrossUnitMove(
+						goLeftUnitPosition, newGoLeftUnitPosition, bulletPosition, newBulletPosition, me.size, halfBulletSize))
+					{
+						canGoLeft = false;
+					}
+					goLeftUnitPosition = newGoLeftUnitPosition;
+
+					//right
+					if (tick > stopGoTick)
+					{
+						action.velocity = 0;
+					}
+					else if (tick > startGoTick)
+					{
+						action.velocity = INT_MAX;
+					}
+					const auto newGoRightUnitPosition = Simulator::getUnitNextTickPosition(
+						goRightUnitPosition, me.size, action, game);
+
+					action.velocity = 0;
+
+					if (isBulletMoveCrossUnitMove(
+						goRightUnitPosition, newGoRightUnitPosition, bulletPosition, newBulletPosition, me.size, halfBulletSize))
+					{
+						canGoRight = false;
+					}
+					goRightUnitPosition = newGoRightUnitPosition;
+					
+					
+					bulletPosition = newBulletPosition;	
+					if (!canGoUp && !canGoDown && !canGoLeft && !canGoRight) break;
 				}
 
 				
@@ -633,7 +676,7 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 
 				if (!canGoUp && !canGoLeft && !canGoRight && !canGoDown) break;*/
 
-				if (!canGoUp && !canGoDown) break;
+				if (!canGoUp && !canGoDown && !canGoLeft && !canGoRight) break;
 			}
 
 
@@ -644,15 +687,15 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 			if (canGoDown)
 			{
 				return std::make_tuple(GoDOWN, startGoTick, stopGoTick);
-			}
-			/*if (canGoLeft)
+			}			
+			if (canGoLeft)
 			{
 				return std::make_tuple(GoLEFT, startGoTick, stopGoTick);
 			}
 			if (canGoRight)
 			{
 				return std::make_tuple(GoRIGHT, startGoTick, stopGoTick);
-			}*/
+			}
 		}
 	}
 
