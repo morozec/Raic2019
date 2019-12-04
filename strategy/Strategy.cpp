@@ -663,13 +663,13 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 
 bool Strategy::isSafeMove(const Unit& unit, const UnitAction& action, const std::map<Bullet, double>& enemyBulletShootWallTimes, const Game& game)
 {
-
-	/*for (const auto& bullet : game.bullets)
+	//TODO: учесть удар пули о стену
+	for (const auto& bullet : game.bullets)
 	{
 		if (bullet.playerId == unit.playerId) continue;
-		const auto time = std::min(enemyBulletShootWallTimes.at(bullet), 1.0 / game.properties.ticksPerSecond);
+		const auto time = 1.0 / game.properties.ticksPerSecond;
 
-		const auto unitInTimePosition = Simulator::getUnitNextTickPosition(unit, action, time, game);
+		const auto unitInTimePosition = Simulator::getUnitNextTickPosition(unit.position, unit.size, action, game);
 		const auto bulletInTimePosition = Simulator::getBulletInTimePosition(bullet, time, game);
 		const auto cross = isBulletMoveCrossUnitMove(
 			unit.position, unitInTimePosition,
@@ -677,8 +677,7 @@ bool Strategy::isSafeMove(const Unit& unit, const UnitAction& action, const std:
 			unit.size, bullet.size / 2.0);
 		if (cross) return false;
 	}
-	return true;*/
-	return true;//TODO
+	return true;
 }
 
 int Strategy::getRunawayDirection() const
