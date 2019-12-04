@@ -430,16 +430,22 @@ Vec2Double Simulator::getUnitNextTickPosition(
 		canGoThroughTile(rightTopTile, action.jumpDown) && canGoThroughTile(rightBottomTile, action.jumpDown);
 
 	auto canGoAction = false;
-	if (abs(velocityX - actionVelocityX) > TOLERACNE || abs(velocityY - actionVelocityY) > TOLERACNE)
+	if (abs(velocityX - actionVelocityX) > TOLERACNE )
 	{
 		if (actionVelocityX > 0 && game.level.tiles[size_t(x + unitSize.x / 2 + TOLERACNE)][size_t(y)] != WALL &&
 								   game.level.tiles[size_t(x + unitSize.x / 2 + TOLERACNE)][size_t(y + unitSize.y)] != WALL ||
 			actionVelocityX < 0 && game.level.tiles[size_t(x - unitSize.x / 2 - TOLERACNE)][size_t(y)] != WALL &&
-								   game.level.tiles[size_t(x - unitSize.x / 2 - TOLERACNE)][size_t(y + unitSize.y)] != WALL ||
-			actionVelocityY > 0 && game.level.tiles[size_t(x - unitSize.x / 2)][size_t(y + unitSize.y + TOLERACNE)] != WALL &&
-								   game.level.tiles[size_t(x + unitSize.x / 2)][size_t(y + unitSize.y + TOLERACNE)] != WALL ||
+								   game.level.tiles[size_t(x - unitSize.x / 2 - TOLERACNE)][size_t(y + unitSize.y)] != WALL)			
+		{
+			canGoAction = true;
+		}
+	}
+	else if (abs(velocityY - actionVelocityY) > TOLERACNE)
+	{
+		if (actionVelocityY > 0 && game.level.tiles[size_t(x - unitSize.x / 2)][size_t(y + unitSize.y + TOLERACNE)] != WALL &&
+			game.level.tiles[size_t(x + unitSize.x / 2)][size_t(y + unitSize.y + TOLERACNE)] != WALL ||
 			actionVelocityY < 0 && game.level.tiles[size_t(x - unitSize.x / 2)][size_t(y - TOLERACNE)] == EMPTY &&
-								   game.level.tiles[size_t(x + unitSize.x / 2)][size_t(y - TOLERACNE)] == EMPTY)
+			game.level.tiles[size_t(x + unitSize.x / 2)][size_t(y - TOLERACNE)] == EMPTY)
 		{
 			canGoAction = true;
 		}
