@@ -20,16 +20,6 @@ public:
 		const Vec2Double& unitPos0, const Vec2Double& unitPos1,
 		const Vec2Double& bulletPos0, const Vec2Double& bulletPos1,
 		const Vec2Double& unitSize, double halfBulletSize);
-	bool isBulletShootGoSideUnit(
-		const Bullet& bullet, const Unit& unit, int startGoTick, int stopGoTick,
-		double bulletShootWallTime, int coeff, const Game& game, int& killTick);
-	bool isBulletShootJumpingUnit(
-		const Bullet& bullet, const Unit& unit, int startJumpTick, int stopJumpTick,
-		double bulletShootWallTime, const Game& game, int& killTick);
-
-	bool isBulletShootFallingUnit(
-		const Bullet& bullet, const Unit& unit, int startJumpTick, int stopJumpTick,
-		double bulletShootWallTime, const Game& game, int& killTick) const;
 
 	std::tuple<RunawayDirection, int, int> getRunawayAction(
 		const Unit& me, const std::vector<ShootMeBullet>& shootingMeBullets,

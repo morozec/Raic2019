@@ -20,14 +20,7 @@ public:
 		const Game& game);
 	static Vec2Double getBulletInTimePosition(const Bullet& bullet, double time, const Game& game);
 		
-	//unit simulation
-	static Vec2Double getUnitGoSidePosition(
-		const Unit& unit, int startGoTick, int stopGoTick, double time, int coeff, const Game& game);
-
-	static Vec2Double getFallingUnitPosition(
-		const Unit& unit, int startGoTick, int stopGoTick, double time, const Game& game);
-
-	static Vec2Double getJumpingUnitPosition(const Unit& unit, int startJumpTick, int stopJumpTick, double time, const Game& game);
+	//unit simulation	
 	static Vec2Double getUnitNextTickPosition(const Vec2Double& unitPosition, const Vec2Double& unitSize, const UnitAction& action, const Game& game);
 
 	//unit positioning
