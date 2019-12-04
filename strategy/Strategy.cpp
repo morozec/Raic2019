@@ -262,7 +262,7 @@ std::vector<ShootMeBullet> Strategy::getShootMeBullets(const Unit& unit, const G
 }
 
 
-
+//TODO: упускаем случаи (например, пуля летит вверх, я иду вправо к ней)
 bool Strategy::isBulletMoveCrossUnitMove(
 	const Vec2Double& unitPos0, const Vec2Double& unitPos1,
 	const Vec2Double& bulletPos0, const Vec2Double& bulletPos1,
