@@ -126,6 +126,11 @@ double MathHelper::getVectorLength2(const Vec2Double & v)
 	return v.x * v.x + v.y * v.y;
 }
 
+double MathHelper::getVectorLength2(const Vec2Double& start, const Vec2Double& end)
+{
+	return getVectorLength2(end.x, end.y, start.x, start.y);
+}
+
 double MathHelper::getScalarMult(const Vec2Double & v1, const Vec2Double & v2)
 {
 	return v1.x * v2.x + v1.y * v2.y;
@@ -141,8 +146,3 @@ bool MathHelper::IsBetween(double x0, double y0, double x1, double y1, double x2
 	return (x1 - x0) * (x2 - x0) <= TOLERANCE && (y1 - y0) * (y2 - y0) <= TOLERANCE;
 }
 
-
-double MathHelper::distanceSqr(Vec2Double a, Vec2Double b)
-{
-	return (a.x - b.x) * (a.x - b.x) + (a.y - b.x) * (a.y - b.y);
-}

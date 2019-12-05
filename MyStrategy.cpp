@@ -71,8 +71,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		if (other.playerId != unit.playerId)
 		{
 			if (nearestEnemy == nullptr ||
-				MathHelper::distanceSqr(unit.position, other.position) <
-				MathHelper::distanceSqr(unit.position, nearestEnemy->position))
+				MathHelper::getVectorLength2(unit.position, other.position) <
+				MathHelper::getVectorLength2(unit.position, nearestEnemy->position))
 			{
 				nearestEnemy = &other;
 			}
@@ -84,8 +84,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		if (std::dynamic_pointer_cast<Item::Weapon>(lootBox.item))
 		{
 			if (nearestWeapon == nullptr ||
-				MathHelper::distanceSqr(unit.position, lootBox.position) <
-				MathHelper::distanceSqr(unit.position, nearestWeapon->position))
+				MathHelper::getVectorLength2(unit.position, lootBox.position) <
+				MathHelper::getVectorLength2(unit.position, nearestWeapon->position))
 			{
 				nearestWeapon = &lootBox;
 			}
