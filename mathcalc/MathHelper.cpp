@@ -116,6 +116,11 @@ double MathHelper::getVectorLength(const Vec2Double & v)
 	return sqrt(MathHelper::getVectorLength2(v));
 }
 
+double MathHelper::getVectorLength(const Vec2Double& start, const Vec2Double& end)
+{
+	return sqrt(getVectorLength2(start, end));
+}
+
 double MathHelper::getVectorLength2(double x0, double y0, double x1, double y1)
 {
 	return (x1 - x0)*(x1 - x0) + (y1 - y0)*(y1 - y0);

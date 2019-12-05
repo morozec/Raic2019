@@ -48,11 +48,8 @@ double Strategy::getShootEnemyProbability(const Unit& me, const Unit& enemy, con
 		{
 			const auto bulletSimulation = Simulator::getBulletSimulation(bulletCenterPos, bulletVelocity, halfBulletSize, game);							
 
-			if (MathHelper::getVectorLength2(
-				bulletCornerPoint.x, bulletCornerPoint.y, shootingCrossPoint.x, shootingCrossPoint.y) <
-				MathHelper::getVectorLength2(
-					bulletSimulation.bulletCrossCorner.x, bulletSimulation.bulletCrossCorner.y,
-					bulletSimulation.targetCrossPoint.x, bulletSimulation.targetCrossPoint.y))
+			if (MathHelper::getVectorLength2(bulletCornerPoint, shootingCrossPoint) <
+				MathHelper::getVectorLength2(bulletSimulation.bulletCrossCorner, bulletSimulation.targetCrossPoint))
 			{
 				shootingCount++;
 				/*if (debug != nullptr) {
@@ -98,12 +95,11 @@ std::map<Bullet, BulletSimulation> Strategy::getShootMeBullets(const Unit& me,
 		
 		const auto bulletSimulation = enemyBulletsSimulations.at(bullet);
 		if (MathHelper::getVectorLength2(
-			bulletCornerPoint.x, bulletCornerPoint.y, shootingCrossPoint.x, shootingCrossPoint.y) <
+			bulletCornerPoint, shootingCrossPoint) <
 			MathHelper::getVectorLength2(
-				bulletSimulation.bulletCrossCorner.x, bulletSimulation.bulletCrossCorner.y, bulletSimulation.targetCrossPoint.x, bulletSimulation.targetCrossPoint.y))
+				bulletSimulation.bulletCrossCorner, bulletSimulation.targetCrossPoint))
 		{
-			const auto shootMeTime = MathHelper::getVectorLength(
-				bulletCornerPoint.x, bulletCornerPoint.y, shootingCrossPoint.x, shootingCrossPoint.y) /
+			const auto shootMeTime = MathHelper::getVectorLength(bulletCornerPoint, shootingCrossPoint) /
 				MathHelper::getVectorLength(bullet.velocity);
 			shootMeBullets[bullet] = BulletSimulation(shootingCrossPoint, bulletCornerPoint, shootMeTime);
 		}

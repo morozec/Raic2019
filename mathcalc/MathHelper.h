@@ -14,6 +14,7 @@ public:
 	
 	static double getVectorLength(double x0, double y0, double x1, double y1);
 	static double getVectorLength(const Vec2Double& v);
+	static double getVectorLength(const Vec2Double& start, const Vec2Double& end);
 	
 	static double getVectorLength2(double x0, double y0, double x1, double y1);
 	static double getVectorLength2(const Vec2Double& v);

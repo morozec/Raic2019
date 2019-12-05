@@ -70,7 +70,7 @@ bool Simulator::getBulletPointRectangleFirstCrossPoint(const Vec2Double& bulletP
 	if (MathHelper::IsBetween(xLeft, cpLeft.y, xLeft, yDown, xLeft, yUp))
 	{
 		hasCross = true;
-		const auto dist2 = MathHelper::getVectorLength2(Vec2Double(cpLeft.x - x0, cpLeft.y - y0));
+		const auto dist2 = MathHelper::getVectorLength2(bulletPos, cpLeft);
 		if (dist2 < minDist2)
 		{
 			minDist2 = dist2;
@@ -83,7 +83,7 @@ bool Simulator::getBulletPointRectangleFirstCrossPoint(const Vec2Double& bulletP
 	if (MathHelper::IsBetween(cpUp.x, yUp, xLeft, yUp, xRight, yUp))
 	{
 		hasCross = true;
-		const auto dist2 = MathHelper::getVectorLength2(Vec2Double(cpUp.x - x0, cpUp.y - y0));
+		const auto dist2 = MathHelper::getVectorLength2(bulletPos, cpUp);
 		if (dist2 < minDist2)
 		{
 			minDist2 = dist2;
@@ -96,7 +96,7 @@ bool Simulator::getBulletPointRectangleFirstCrossPoint(const Vec2Double& bulletP
 	if (MathHelper::IsBetween(xRight, cpRight.y, xRight, yUp, xRight, yDown))
 	{
 		hasCross = true;
-		const auto dist2 = MathHelper::getVectorLength2(Vec2Double(cpRight.x - x0, cpRight.y - y0));
+		const auto dist2 = MathHelper::getVectorLength2(bulletPos, cpRight);
 		if (dist2 < minDist2)
 		{
 			minDist2 = dist2;
@@ -109,7 +109,7 @@ bool Simulator::getBulletPointRectangleFirstCrossPoint(const Vec2Double& bulletP
 	if (MathHelper::IsBetween(cpDown.x, yDown, xRight, yDown, xLeft, yDown))
 	{
 		hasCross = true;
-		const auto dist2 = MathHelper::getVectorLength2(Vec2Double(cpDown.x - x0, cpDown.y - y0));
+		const auto dist2 = MathHelper::getVectorLength2(bulletPos, cpDown);
 		if (dist2 < minDist2)
 		{
 			minDist2 = dist2;
@@ -144,7 +144,7 @@ BulletSimulation Simulator::getBulletSimulation(const Vec2Double& bulletPosition
 
 	//пересечение с границами
 	auto crossWallLD = getBulletBorderCross(bulletLD0, bulletVelocity, game);
-	auto dist2 = MathHelper::getVectorLength2({ crossWallLD.x - bulletLD0.x, crossWallLD.y - bulletLD0.y });
+	auto dist2 = MathHelper::getVectorLength2(crossWallLD, bulletLD0);
 	if (dist2 < minWallCrossPointDist2)
 	{
 		minWallCrossPointDist2 = dist2;
@@ -153,7 +153,7 @@ BulletSimulation Simulator::getBulletSimulation(const Vec2Double& bulletPosition
 	}
 	
 	auto crossWallLU = getBulletBorderCross(bulletLU0, bulletVelocity, game);
-	dist2 = MathHelper::getVectorLength2({ crossWallLU.x - bulletLU0.x, crossWallLU.y - bulletLU0.y });
+	dist2 = MathHelper::getVectorLength2(crossWallLU, bulletLU0);
 	if (dist2 < minWallCrossPointDist2)
 	{
 		minWallCrossPointDist2 = dist2;
@@ -162,7 +162,7 @@ BulletSimulation Simulator::getBulletSimulation(const Vec2Double& bulletPosition
 	}
 	
 	auto crossWallRU = getBulletBorderCross(bulletRU0, bulletVelocity, game);
-	dist2 = MathHelper::getVectorLength2({ crossWallRU.x - bulletRU0.x, crossWallRU.y - bulletRU0.y });
+	dist2 = MathHelper::getVectorLength2(crossWallRU, bulletRU0);
 	if (dist2 < minWallCrossPointDist2)
 	{
 		minWallCrossPointDist2 = dist2;
@@ -171,7 +171,7 @@ BulletSimulation Simulator::getBulletSimulation(const Vec2Double& bulletPosition
 	}
 	
 	auto crossWallRD = getBulletBorderCross(bulletRD0, bulletVelocity, game);
-	dist2 = MathHelper::getVectorLength2({ crossWallRD.x - bulletRD0.x, crossWallRD.y - bulletRD0.y });
+	dist2 = MathHelper::getVectorLength2(crossWallRD, bulletRD0);
 	if (dist2 < minWallCrossPointDist2)
 	{
 		minWallCrossPointDist2 = dist2;
@@ -348,7 +348,7 @@ BulletSimulation Simulator::getBulletSimulation(const Vec2Double& bulletPosition
 		}
 	}
 
-	const auto shootWallTime = MathHelper::getVectorLength(bulletWallCrossCorner.x, bulletWallCrossCorner.y, wallCrossPoint.x, wallCrossPoint.y) /
+	const auto shootWallTime = MathHelper::getVectorLength(bulletWallCrossCorner, wallCrossPoint) /
 		MathHelper::getVectorLength(bulletVelocity);
 	return { wallCrossPoint, bulletWallCrossCorner, shootWallTime };
 }
