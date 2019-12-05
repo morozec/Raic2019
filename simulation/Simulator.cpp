@@ -126,7 +126,12 @@ bool Simulator::getBulletInTimePosition(
 	const Bullet& bullet, double time, const BulletSimulation& bulletSimulation, const Game& game,
 	Vec2Double& position)
 {
-	if (time > bulletSimulation.targetCrossTime) return false;	
+	if (time > bulletSimulation.targetCrossTime) {
+		position = Vec2Double(
+			bullet.position.x + bullet.velocity.x * bulletSimulation.targetCrossTime,
+			bullet.position.y + bullet.velocity.y * bulletSimulation.targetCrossTime);
+		return false;
+	}
 	position = Vec2Double(bullet.position.x + bullet.velocity.x * time, bullet.position.y + bullet.velocity.y * time);
 	return true;
 }
@@ -355,9 +360,9 @@ BulletSimulation Simulator::getBulletSimulation(const Vec2Double& bulletPosition
 
 
 //TODO: после конца прыжка или удара о потолок начинаетс€ падение
-Vec2Double Simulator::getUnitNextTickPosition(
-	const Vec2Double& unitPosition, const Vec2Double& unitSize,  const UnitAction& action, const Game& game)
-{
+Vec2Double Simulator::getUnitInTimePosition(
+	const Vec2Double& unitPosition, const Vec2Double& unitSize,  const UnitAction& action, double time, const Game& game)
+{	
 	auto x = unitPosition.x;
 	auto y = unitPosition.y;	
 
@@ -379,12 +384,9 @@ Vec2Double Simulator::getUnitNextTickPosition(
 	{
 		velocityY = -game.properties.unitFallSpeed;
 	}
-
-	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
-	const auto microTickTime = tickTime / game.properties.updatesPerTick;
-
-	auto nextX = x + velocityX * tickTime;
-	auto nextY = y + velocityY * tickTime;
+	
+	auto nextX = x + velocityX * time;
+	auto nextY = y + velocityY * time;
 
 	auto leftBottomTile = game.level.tiles[size_t(nextX - unitSize.x / 2)][size_t(nextY)];
 	auto leftTopTile = game.level.tiles[size_t(nextX - unitSize.x / 2)][size_t(nextY + unitSize.y)];
@@ -426,11 +428,15 @@ Vec2Double Simulator::getUnitNextTickPosition(
 
 	//симул€ци€ по микротикам
 
+	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
+	const auto microTickTime = tickTime / game.properties.updatesPerTick;
+	const auto microTicksCount = static_cast<int>(round(time / microTickTime));
+
 	if (!canGoThrough)
 	{
 		const auto startTickVelocityX = velocityX;
 		const auto startTickVelocityY = velocityY;
-		for (int j = 0; j < game.properties.updatesPerTick; ++j)
+		for (int j = 0; j < microTicksCount; ++j)
 		{
 			nextX = x + velocityX * microTickTime;
 			nextY = y + velocityY * microTickTime;
@@ -508,7 +514,7 @@ Vec2Double Simulator::getUnitNextTickPosition(
 		/*auto tickVelocityX = actionVelocityX;
 		auto tickVelocityY = actionVelocityY;*/
 
-		for (int j = 0; j < game.properties.updatesPerTick; ++j)
+		for (int j = 0; j < microTicksCount; ++j)
 		{
 			nextX = x + actionVelocityX * microTickTime;
 			nextY = y + actionVelocityY * microTickTime;

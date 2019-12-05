@@ -20,7 +20,8 @@ public:
 		Vec2Double& crossPoint, Vec2Double& bulletCorner);
 	
 	//unit simulation	
-	static Vec2Double getUnitNextTickPosition(const Vec2Double& unitPosition, const Vec2Double& unitSize, const UnitAction& action, const Game& game);
+	static Vec2Double getUnitInTimePosition(
+		const Vec2Double& unitPosition, const Vec2Double& unitSize, const UnitAction& action, double time, const Game& game);
 
 	//unit positioning
 	static bool isUnitOnWall(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game);
