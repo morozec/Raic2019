@@ -31,6 +31,9 @@ public:
 
 	static bool isSafeMove(const Unit& unit, const UnitAction& action, const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, const Game& game);
 
+	static bool isBulletExplosionShootUnit(const Bullet& bullet, const Vec2Double& bulletCrossWallCenter,
+		const Vec2Double& unitPosition, const Vec2Double& unitSize);
+
 	int getRunawayDirection() const;
 	int getStopRunawayTick() const;
 	void setRunaway(RunawayDirection runaway_direction, int sjt);
