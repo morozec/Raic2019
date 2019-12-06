@@ -220,8 +220,6 @@ BulletSimulation Simulator::getBulletSimulation(const Vec2Double& bulletPosition
 			xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
 		if (!hasWallCross)
 		{
-			hasWallCross = getBulletPointRectangleFirstCrossPoint(bulletLD0, bulletVelocity,
-				xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
 			throw std::runtime_error("no wall cross");
 		}
 		if (minDist2Cur < minWallCrossPointDist2)
@@ -261,8 +259,6 @@ BulletSimulation Simulator::getBulletSimulation(const Vec2Double& bulletPosition
 		auto hasWallCross = getBulletPointRectangleFirstCrossPoint(bulletLU0, bulletVelocity,
 			xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
 		if (!hasWallCross) {
-			hasWallCross = getBulletPointRectangleFirstCrossPoint(bulletLU0, bulletVelocity,
-				xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
 			throw std::runtime_error("no wall cross");
 		}
 		if (minDist2Cur < minWallCrossPointDist2)
@@ -301,8 +297,6 @@ BulletSimulation Simulator::getBulletSimulation(const Vec2Double& bulletPosition
 		auto hasWallCross = getBulletPointRectangleFirstCrossPoint(bulletRU0, bulletVelocity,
 			xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
 		if (!hasWallCross) {
-			hasWallCross = getBulletPointRectangleFirstCrossPoint(bulletRU0, bulletVelocity,
-				xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
 			throw std::runtime_error("no wall cross");
 		}
 		if (minDist2Cur < minWallCrossPointDist2)
@@ -342,8 +336,6 @@ BulletSimulation Simulator::getBulletSimulation(const Vec2Double& bulletPosition
 		auto hasWallCross = getBulletPointRectangleFirstCrossPoint(bulletRD0, bulletVelocity,
 			xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
 		if (!hasWallCross) {
-			hasWallCross = getBulletPointRectangleFirstCrossPoint(bulletRD0, bulletVelocity,
-				xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
 			throw std::runtime_error("no wall cross");
 		}
 		if (minDist2Cur < minWallCrossPointDist2)
