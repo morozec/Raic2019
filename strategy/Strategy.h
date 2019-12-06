@@ -16,7 +16,7 @@ public:
 		Debug* debug = nullptr) const;
 
 	static std::map<Bullet, BulletSimulation> getEnemyBulletsSimulation(const Game& game, int meId);
-	std::map<Bullet, BulletSimulation>  getShootMeBullets(const Unit& me, const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, const Game& game) const;
+	std::map<Bullet, int>  getShootMeBullets(const Unit& me, const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, const Game& game) const;
 	
 	static bool isBulletMoveCrossUnitMove(
 		const Vec2Double& unitPos, const Vec2Double& newUnitPos, const Vec2Double& unitSize,
@@ -24,7 +24,7 @@ public:
 
 	std::tuple<RunawayDirection, int, int> getRunawayAction(
 		const Unit& me,
-		const std::map<Bullet, BulletSimulation>& shootingMeBullets,
+		const std::map<Bullet, int>& shootingMeBullets,
 		const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations,
 		const Game& game);
 

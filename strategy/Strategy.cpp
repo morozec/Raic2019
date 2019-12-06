@@ -8,6 +8,7 @@
 #include <climits>
 #include <cmath>
 #include <algorithm>
+#include <map>
 
 
 inline bool operator<(const Bullet& lhs, const Bullet& rhs)
@@ -77,45 +78,114 @@ std::map<Bullet, BulletSimulation> Strategy::getEnemyBulletsSimulation(const Gam
 	return simulations;
 }
 
-std::map<Bullet, BulletSimulation> Strategy::getShootMeBullets(const Unit& me,
+std::map<Bullet, int> Strategy::getShootMeBullets(const Unit& me,
 	const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, const Game& game) const
 {
-	std::map<Bullet, BulletSimulation> shootMeBullets;
+	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
+	std::map<Bullet, int> shootMeBullets;
+	std::map<int, Vec2Double> mePositions;
+	mePositions[0] = me.position;
+
+	
+
+	UnitAction action;
+	action.velocity = 0;
+	action.jump = false;
+	action.jumpDown = false;
+
 	for (const auto& bullet:game.bullets)
 	{
 		if (bullet.playerId == me.playerId) continue;
-		const auto bulletSimulation = enemyBulletsSimulations.at(bullet);
-		
-		Vec2Double shootingCrossPoint;
-		Vec2Double bulletCornerPoint;
-		auto isShooting = Simulator::getBulletRectangleFirstCrossPoint(
-			bullet.position, bullet.velocity, bullet.size/2,
-			me.position.x - me.size.x/2, me.position.y, me.position.x + me.size.x/2, me.position.y + me.size.y, 
-			shootingCrossPoint, bulletCornerPoint);
 
-		if (isShooting)
+		std::map<int, Vec2Double> bulletPositions;
+		bulletPositions[0] = bullet.position;
+		
+		const auto bulletSimulation = enemyBulletsSimulations.at(bullet);
+		const auto bulletCrossWallTime = bulletSimulation.targetCrossTime;
+		const int bulletCrossWallTick = static_cast<int>(ceil(bulletCrossWallTime*game.properties.ticksPerSecond));
+		for (int tick = 1; tick <= bulletCrossWallTick; ++tick)
 		{
-			if (MathHelper::getVectorLength2(
-				bulletCornerPoint, shootingCrossPoint) <
-				MathHelper::getVectorLength2(
-					bulletSimulation.bulletCrossCorner, bulletSimulation.targetCrossPoint))
+			Vec2Double bulletInTimePosition;
+			const bool exists = Simulator::getBulletInTimePosition(
+				bullet, tick* tickTime, bulletSimulation, game, bulletInTimePosition);
+
+			if (exists)
 			{
-				const auto shootMeTime = MathHelper::getVectorLength(bulletCornerPoint, shootingCrossPoint) /
-					MathHelper::getVectorLength(bullet.velocity);
-				shootMeBullets[bullet] = BulletSimulation(shootingCrossPoint, bulletCornerPoint, shootMeTime);
+				bulletPositions[tick] = bulletInTimePosition;
+				
+				Vec2Double unitInTimePosition;
+				if (mePositions.count(tick) > 0) unitInTimePosition = mePositions[tick];//уже посчитали для другой пули
+				else
+				{
+					unitInTimePosition =
+						Simulator::getUnitInTimePosition(mePositions.at(tick - 1), me.size, action, tickTime, game);
+					mePositions[tick] = unitInTimePosition;
+				}
+				const bool isShooting = isBulletMoveCrossUnitMove(
+					mePositions.at(tick - 1), unitInTimePosition, me.size,
+					bulletPositions[tick - 1], bulletInTimePosition, bullet.size / 2.0);
+				if (isShooting)
+				{
+					shootMeBullets[bullet] = tick;
+				}
 			}
+			else
+			{
+				const auto thisTickBulletTime = bulletSimulation.targetCrossTime - (tick - 1) * tickTime;
+				const auto unitInTimePosition = 
+					Simulator::getUnitInTimePosition(mePositions.at(tick - 1), me.size, action, thisTickBulletTime, game);
+				bool isShooting = isBulletMoveCrossUnitMove(
+					mePositions.at(tick - 1), unitInTimePosition, me.size,
+					bulletPositions[tick - 1], bulletInTimePosition, bullet.size / 2.0);
+				if (!isShooting)
+				{
+					const auto bulletCrossWallCenter = Vec2Double(
+						bullet.position.x + bullet.velocity.x * bulletSimulation.targetCrossTime,
+						bullet.position.y + bullet.velocity.y * bulletSimulation.targetCrossTime);
+					if (isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, unitInTimePosition, me.size))
+					{
+						isShooting = true;
+					}
+				}
+
+				if (isShooting)
+				{
+					shootMeBullets[bullet] = tick;
+				}
+				
+			}			
 		}
-		else//проверяем взрыв
-		{
-			const auto bulletCrossWallCenter = Vec2Double(
-				bullet.position.x + bullet.velocity.x * bulletSimulation.targetCrossTime,
-				bullet.position.y + bullet.velocity.y * bulletSimulation.targetCrossTime);
-			if(isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, me.position, me.size))
-			{
-				shootMeBullets[bullet] = BulletSimulation(
-					bulletSimulation.targetCrossPoint, bulletSimulation.bulletCrossCorner, bulletSimulation.targetCrossTime);
-			}
-		}	
+		//
+		//Vec2Double shootingCrossPoint;
+		//Vec2Double bulletCornerPoint;
+		//auto isShooting = Simulator::getBulletRectangleFirstCrossPoint(
+		//	bullet.position, bullet.velocity, bullet.size/2,
+		//	me.position.x - me.size.x/2, me.position.y, me.position.x + me.size.x/2, me.position.y + me.size.y, 
+		//	shootingCrossPoint, bulletCornerPoint);
+
+		//if (isShooting)
+		//{
+		//	if (MathHelper::getVectorLength2(
+		//		bulletCornerPoint, shootingCrossPoint) <
+		//		MathHelper::getVectorLength2(
+		//			bulletSimulation.bulletCrossCorner, bulletSimulation.targetCrossPoint))
+		//	{
+		//		const auto shootMeTime = MathHelper::getVectorLength(bulletCornerPoint, shootingCrossPoint) /
+		//			MathHelper::getVectorLength(bullet.velocity);
+		//		shootMeBullets[bullet] = BulletSimulation(shootingCrossPoint, bulletCornerPoint, shootMeTime);
+		//	}
+		//}
+		//else//проверяем взрыв
+		//{
+		//	const auto bulletCrossWallCenter = Vec2Double(
+		//		bullet.position.x + bullet.velocity.x * bulletSimulation.targetCrossTime,
+		//		bullet.position.y + bullet.velocity.y * bulletSimulation.targetCrossTime);
+		//	if(isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, me.position, me.size))
+		//	{
+		//		shootMeBullets[bullet] = BulletSimulation(
+		//			bulletSimulation.targetCrossPoint, bulletSimulation.bulletCrossCorner, bulletSimulation.targetCrossTime);
+		//	}
+		//}	
 		
 	}
 	return shootMeBullets;
@@ -162,7 +232,7 @@ bool Strategy::isBulletMoveCrossUnitMove(
 
 std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 	const Unit& me, 
-	const std::map<Bullet, BulletSimulation>& shootingMeBullets,
+	const std::map<Bullet, int>& shootingMeBullets,
 	const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations,
 	const Game& game)
 {
@@ -172,15 +242,14 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 	}
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	
-	double minShootMeTime = INT_MAX;
+	auto minShootMeTick = INT_MAX;
 	for (const auto& smb : shootingMeBullets)
 	{
-		if (smb.second.targetCrossTime < minShootMeTime)
+		if (smb.second < minShootMeTick)
 		{
-			minShootMeTime = smb.second.targetCrossTime;
+			minShootMeTick = smb.second;
 		}
 	}
-	const auto minShootMeTick = static_cast<int>(ceil(minShootMeTime * game.properties.ticksPerSecond));
 
 	double maxShootWallTime = 0;
 	for (const auto& item : enemyBulletsSimulations)
