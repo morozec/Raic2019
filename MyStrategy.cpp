@@ -198,64 +198,62 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		return action;
 	}
 	else
-	{
-		if (unit.jumpState.canJump)
-		{					
+	{						
 
-			const auto runawayAction = strategy_.getRunawayAction(unit, shootMeBullets, enemyBulletsSimulation, game);
-			debug.draw(CustomData::Log(
-				to_string(std::get<0>(runawayAction)) + " " +
-				to_string(std::get<1>(runawayAction)) + " " +
-				to_string(std::get<2>(runawayAction)) + "\n"));
+		const auto runawayAction = strategy_.getRunawayAction(unit, shootMeBullets, enemyBulletsSimulation, game);
+		debug.draw(CustomData::Log(
+			to_string(std::get<0>(runawayAction)) + " " +
+			to_string(std::get<1>(runawayAction)) + " " +
+			to_string(std::get<2>(runawayAction)) + "\n"));
 
-			/*if (!shootMeBullets.empty())
+		/*if (!shootMeBullets.empty())
+		{
+			stringstream ss;
+
+			const auto smb = shootMeBullets[0];
+			ss << "me: " << unit.position.x << " " << unit.position.y << "; bp: " << smb.bullet.position.x << " " <<
+				smb.bullet.position.y << "; bv: " << smb.bullet.velocity.x << " " << smb.bullet.velocity.y;
+
+			debug.draw(CustomData::Log(ss.str()));
+		}*/
+
+		if (std::get<1>(runawayAction) == 0)
+		{
+			const auto runawayDirection = std::get<0>(runawayAction);
+			const auto stopRunawayTick = std::get<2>(runawayAction);
+			strategy_.setRunaway(runawayDirection, stopRunawayTick - 1);
+
+			if (runawayDirection == GoUP)
 			{
-				stringstream ss;
-
-				const auto smb = shootMeBullets[0];
-				ss << "me: " << unit.position.x << " " << unit.position.y << "; bp: " << smb.bullet.position.x << " " <<
-					smb.bullet.position.y << "; bv: " << smb.bullet.velocity.x << " " << smb.bullet.velocity.y;
-
-				debug.draw(CustomData::Log(ss.str()));
-			}*/
-
-			if (std::get<1>(runawayAction) == 0)
-			{
-				const auto runawayDirection = std::get<0>(runawayAction);
-				const auto stopRunawayTick = std::get<2>(runawayAction);
-				strategy_.setRunaway(runawayDirection, stopRunawayTick - 1);
-
-				if (runawayDirection == GoUP)
-				{
-					action.jump = true;
-					action.jumpDown = false;
-					action.velocity = 0;
-				}
-				else if (runawayDirection == GoDOWN)
-				{
-					action.jump = false;
-					action.jumpDown = true;
-					action.velocity = 0;
-				}
-				else if (runawayDirection == GoLEFT)
-				{
-					action.jump = false;
-					action.jumpDown = false;
-					action.velocity = -INT_MAX;
-				}
-				else if (runawayDirection == GoRIGHT)
-				{
-					action.jump = false;
-					action.jumpDown = false;
-					action.velocity = INT_MAX;
-				}else
-				{
-					throw runtime_error("unknown runawayDirection 2");
-				}
-
-				return action;
+				action.jump = true;
+				action.jumpDown = false;
+				action.velocity = 0;
 			}
+			else if (runawayDirection == GoDOWN)
+			{
+				action.jump = false;
+				action.jumpDown = true;
+				action.velocity = 0;
+			}
+			else if (runawayDirection == GoLEFT)
+			{
+				action.jump = false;
+				action.jumpDown = false;
+				action.velocity = -INT_MAX;
+			}
+			else if (runawayDirection == GoRIGHT)
+			{
+				action.jump = false;
+				action.jumpDown = false;
+				action.velocity = INT_MAX;
+			}else
+			{
+				throw runtime_error("unknown runawayDirection 2");
+			}
+
+			return action;
 		}
+		
 	}
 
 
