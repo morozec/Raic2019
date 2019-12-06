@@ -123,55 +123,29 @@ std::map<Bullet, BulletSimulation> Strategy::getShootMeBullets(const Unit& me,
 }
 
 
-//TODO: упускаем случаи (например, пуля летит вверх, я иду вправо к ней)
 bool Strategy::isBulletMoveCrossUnitMove(
-	const Vec2Double& unitPos0, const Vec2Double& unitPos1,
-	const Vec2Double& bulletPos0, const Vec2Double& bulletPos1,
-	const Vec2Double& unitSize, double halfBulletSize)
+	const Vec2Double& unitPos, const Vec2Double& newUnitPos, const Vec2Double& unitSize,
+	const Vec2Double& bulletPos, const Vec2Double& newBulletPos, double halfBulletSize)
 {
-	const auto unitLeftDown0 = Vec2Double(unitPos0.x - unitSize.x / 2, unitPos0.y);
-	const auto unitRightDown0 = Vec2Double(unitPos0.x + unitSize.x / 2, unitPos0.y);
-	const auto unitLeftUp0 = Vec2Double(unitPos0.x - unitSize.x / 2, unitPos0.y + unitSize.y);
-	const auto unitRightUp0 = Vec2Double(unitPos0.x + unitSize.x / 2, unitPos0.y + unitSize.y);
+	Vec2Double unitPolygon[6];
+	Simulator::getPolygon(unitPos, newUnitPos, unitSize, unitPolygon);
 
-	const auto unitLeftDown1 = Vec2Double(unitPos1.x - unitSize.x / 2, unitPos1.y);
-	const auto unitRightDown1 = Vec2Double(unitPos1.x + unitSize.x / 2, unitPos1.y);
-	const auto unitLeftUp1 = Vec2Double(unitPos1.x - unitSize.x / 2, unitPos1.y + unitSize.y);
-	const auto unitRightUp1 = Vec2Double(unitPos1.x + unitSize.x / 2, unitPos1.y + unitSize.y);
+	Vec2Double bulletPolygon[6];
+	Simulator::getPolygon(bulletPos, newBulletPos, halfBulletSize, bulletPolygon);
 
-	const Segment unitSegments[] = {
-		Segment(unitLeftDown0, unitLeftUp0),
-		Segment(unitLeftUp0, unitRightUp0),
-		Segment(unitRightUp0, unitRightDown0),
-		Segment(unitRightDown0, unitLeftDown0),
+	Segment unitSegments[6];
+	for (int i = 0; i < 6; ++i)
+	{
+		const int endIndex = i < 5 ? i + 1 : 0;
+		unitSegments[i] = Segment(unitPolygon[i], unitPolygon[endIndex]);
+	}
 
-		Segment(unitLeftDown1, unitLeftUp1),
-		Segment(unitLeftUp1, unitRightUp1),
-		Segment(unitRightUp1, unitRightDown1),
-		Segment(unitRightDown1, unitLeftDown1),
-
-		Segment(unitLeftDown0, unitLeftDown1),
-		Segment(unitLeftUp0, unitLeftUp1),
-		Segment(unitRightUp0, unitRightUp1),
-		Segment(unitRightDown0, unitRightUp1)
-	};
-
-	const auto bulletLeftDown0 = Vec2Double(bulletPos0.x - halfBulletSize, bulletPos0.y - halfBulletSize);
-	const auto bulletLeftUp0 = Vec2Double(bulletPos0.x - halfBulletSize, bulletPos0.y + halfBulletSize);
-	const auto bulletRightUp0 = Vec2Double(bulletPos0.x + halfBulletSize, bulletPos0.y + halfBulletSize);
-	const auto bulletRightDown0 = Vec2Double(bulletPos0.x + halfBulletSize, bulletPos0.y - halfBulletSize);
-
-	const auto bulletLeftDown1 = Vec2Double(bulletPos1.x - halfBulletSize, bulletPos1.y - halfBulletSize);
-	const auto bulletLeftUp1 = Vec2Double(bulletPos1.x - halfBulletSize, bulletPos1.y + halfBulletSize);
-	const auto bulletRightUp1 = Vec2Double(bulletPos1.x + halfBulletSize, bulletPos1.y + halfBulletSize);
-	const auto bulletRightDown1 = Vec2Double(bulletPos1.x + halfBulletSize, bulletPos1.y - halfBulletSize);
-
-	const Segment bulletSegments[] = {
-		Segment(bulletLeftDown0, bulletLeftDown1),
-		Segment(bulletLeftUp0, bulletLeftUp1),
-		Segment(bulletRightUp0, bulletRightUp1),
-		Segment(bulletRightDown0, bulletRightDown1)
-	};
+	Segment bulletSegments[6];
+	for (int i = 0; i < 6; ++i)
+	{
+		const int endIndex = i < 5 ? i + 1 : 0;
+		bulletSegments[i] = Segment(bulletPolygon[i], bulletPolygon[endIndex]);
+	}	
 
 	for (const auto& us : unitSegments)
 	{
@@ -297,7 +271,12 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 					action.jump = false;
 
 					if (isBulletMoveCrossUnitMove(
-						jumpUnitPosition, newJumpUnitPosition, bulletPosition, newBulletPosition, me.size, halfBulletSize))
+						jumpUnitPosition,
+						newJumpUnitPosition,
+						me.size, 
+						bulletPosition,
+						newBulletPosition,
+						halfBulletSize))
 					{
 						canGoUp = false;
 					}else if (!exists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newJumpUnitPosition, me.size))
@@ -323,7 +302,12 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 					action.jumpDown = false;
 
 					if (isBulletMoveCrossUnitMove(
-						fallUnitPosition, newFallUnitPosition, bulletPosition, newBulletPosition, me.size, halfBulletSize))
+						fallUnitPosition,
+						newFallUnitPosition, 
+						me.size,
+						bulletPosition, 
+						newBulletPosition,
+						halfBulletSize))
 					{
 						canGoDown = false;
 					}
@@ -351,7 +335,12 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 					action.velocity = 0;
 
 					if (isBulletMoveCrossUnitMove(
-						goLeftUnitPosition, newGoLeftUnitPosition, bulletPosition, newBulletPosition, me.size, halfBulletSize))
+						goLeftUnitPosition, 
+						newGoLeftUnitPosition,
+						me.size,
+						bulletPosition,
+						newBulletPosition, 
+						halfBulletSize))
 					{
 						canGoLeft = false;
 					}
@@ -378,7 +367,12 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 					action.velocity = 0;
 
 					if (isBulletMoveCrossUnitMove(
-						goRightUnitPosition, newGoRightUnitPosition, bulletPosition, newBulletPosition, me.size, halfBulletSize))
+						goRightUnitPosition,
+						newGoRightUnitPosition,
+						me.size,
+						bulletPosition,
+						newBulletPosition,
+						halfBulletSize))
 					{
 						canGoRight = false;
 					}
@@ -494,9 +488,12 @@ bool Strategy::isSafeMove(
 		const auto unitInTimePosition = Simulator::getUnitInTimePosition(unit.position, unit.size, action, unitTime, game);			
 		
 		const auto cross = isBulletMoveCrossUnitMove(
-			unit.position, unitInTimePosition,
-			bullet.position, bulletInTimePosition,
-			unit.size, bullet.size / 2.0);
+			unit.position,
+			unitInTimePosition,
+			unit.size,
+			bullet.position,
+			bulletInTimePosition,
+			bullet.size / 2.0);
 		if (cross)
 		{
 			return false;

@@ -13,4 +13,6 @@ public:
 		  end(end)
 	{
 	}
+
+	Segment() = default;
 };

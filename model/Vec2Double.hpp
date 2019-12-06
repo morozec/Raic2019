@@ -15,4 +15,19 @@ public:
     std::string toString() const;
 };
 
+inline Vec2Double operator+(const Vec2Double& lhs, const Vec2Double& rhs)
+{
+	return { lhs.x + rhs.x, lhs.y + rhs.y };
+}
+
+inline Vec2Double operator-(const Vec2Double& lhs, const Vec2Double& rhs)
+{
+	return { lhs.x - rhs.x, lhs.y - rhs.y };
+}
+
+inline Vec2Double operator*(const Vec2Double& lhs, double c)
+{
+	return { lhs.x * c, lhs.y * c };
+}
+
 #endif

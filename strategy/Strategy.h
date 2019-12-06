@@ -19,9 +19,8 @@ public:
 	std::map<Bullet, BulletSimulation>  getShootMeBullets(const Unit& me, const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, const Game& game) const;
 	
 	static bool isBulletMoveCrossUnitMove(
-		const Vec2Double& unitPos0, const Vec2Double& unitPos1,
-		const Vec2Double& bulletPos0, const Vec2Double& bulletPos1,
-		const Vec2Double& unitSize, double halfBulletSize);
+		const Vec2Double& unitPos, const Vec2Double& newUnitPos, const Vec2Double& unitSize,
+		const Vec2Double& bulletPos, const Vec2Double& newBulletPos, double halfBulletSize);
 
 	std::tuple<RunawayDirection, int, int> getRunawayAction(
 		const Unit& me,

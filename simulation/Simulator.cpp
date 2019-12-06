@@ -589,6 +589,63 @@ Vec2Double Simulator::getUnitInTimePosition(
 	return { x, y };
 }
 
+void Simulator::getPolygon(const Vec2Double& unitPos, const Vec2Double& newUnitPos, const Vec2Double& unitSize, Vec2Double polygon[6])
+{
+	Vec2Double rect[4] = {
+		{unitPos.x + unitSize.x / 2, unitPos.y},
+		{unitPos.x - unitSize.x / 2, unitPos.y},
+		{unitPos.x - unitSize.x / 2, unitPos.y + unitSize.y},
+		{unitPos.x + unitSize.x / 2, unitPos.y + unitSize.y}
+	};
+	Vec2Double newRect[4] = {
+		{newUnitPos.x + unitSize.x / 2, newUnitPos.y},
+		{newUnitPos.x - unitSize.x / 2, newUnitPos.y},
+		{newUnitPos.x - unitSize.x / 2, newUnitPos.y + unitSize.y},
+		{newUnitPos.x + unitSize.x / 2, newUnitPos.y + unitSize.y}
+	};
+	getPolygon(rect, newRect, polygon);	
+}
+
+void Simulator::getPolygon(const Vec2Double& bulletPos, const Vec2Double& newBulletPos, double halfBulletSize,
+	Vec2Double polygon[6])
+{
+	Vec2Double rect[4] = {
+		{bulletPos.x + halfBulletSize, bulletPos.y - halfBulletSize},
+		{bulletPos.x - halfBulletSize, bulletPos.y - halfBulletSize},
+		{bulletPos.x - halfBulletSize, bulletPos.y + halfBulletSize},
+		{bulletPos.x + halfBulletSize, bulletPos.y + halfBulletSize}
+	};
+	Vec2Double newRect[4] = {
+		{newBulletPos.x + halfBulletSize, newBulletPos.y - halfBulletSize},
+		{newBulletPos.x - halfBulletSize, newBulletPos.y - halfBulletSize},
+		{newBulletPos.x - halfBulletSize, newBulletPos.y + halfBulletSize},
+		{newBulletPos.x + halfBulletSize, newBulletPos.y + halfBulletSize}
+	};
+	getPolygon(rect, newRect, polygon);
+}
+
+void Simulator::getPolygon(const Vec2Double rect[4], const Vec2Double newRect[4], Vec2Double polygon[6])
+{
+	int start;
+	const auto velocity = newRect[0] - rect[0];
+	if (velocity.x >= 0 && velocity.y >= 0) start = 0;
+	else if (velocity.x < 0 && velocity.y >= 0) start = 3;
+	else if (velocity.x >= 0 && velocity.y < 0) start = 1;
+	else start = 2;
+
+	for (int i = 0; i < 3; ++i)
+	{
+		const int index = (start + i) & 0b11;
+		polygon[i] = rect[index];
+	}
+
+	for (int i = 0; i < 3; ++i)
+	{
+		const int index = (start + i + 2) & 0b11;
+		polygon[i + 3] = rect[index] + velocity;
+	}
+}
+
 bool Simulator::isUnitOnWall(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game)
 {
 	const auto leftSideDownTile = game.level.tiles[size_t(unitPosition.x - unitSize.x / 2)][size_t(

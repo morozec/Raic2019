@@ -22,6 +22,10 @@ public:
 	//unit simulation	
 	static Vec2Double getUnitInTimePosition(
 		const Vec2Double& unitPosition, const Vec2Double& unitSize, const UnitAction& action, double time, const Game& game);
+	static void getPolygon(const Vec2Double& unitPos, const Vec2Double& newUnitPos, const Vec2Double& unitSize, Vec2Double polygon[6]);
+	static void getPolygon(const Vec2Double& bulletPos, const Vec2Double& newBulletPos, double halfBulletSize,
+		Vec2Double polygon[6]);
+	
 
 	//unit positioning
 	static bool isUnitOnWall(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game);
@@ -36,5 +40,7 @@ private:
 	static bool getBulletPointRectangleFirstCrossPoint(const Vec2Double& bulletPos, const Vec2Double& bulletVelocity,
 		double xLeft, double yDown, double xRight, double yUp,
 		Vec2Double& crossPoint, double& minDist2);
+
+	static inline void getPolygon(const Vec2Double rect[4], const Vec2Double newRect[4], Vec2Double polygon[6]);
 
 };
