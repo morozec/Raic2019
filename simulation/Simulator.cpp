@@ -6,6 +6,7 @@
 #include "../model/UnitAction.hpp"
 #include <algorithm>
 #include <climits>
+#include <cmath>
 
 
 bool Simulator::canGoThroughTile(const Tile& tile, bool jumpDown)
