@@ -202,17 +202,49 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	setAttackEnemyAction(unit, nearestEnemy->position, needGo, game, action);
 
 	tuple<RunawayDirection, int, int> runawayAction;
-
-	const auto isSafeMove = strategy_.isSafeMove(unit, action, enemyBulletsSimulation, game);
-	const auto shootMeBullets = strategy_.getShootMeBullets(unit, enemyBulletsSimulation, 0, action, game);
+	auto isSafeMove = strategy_.isSafeMove(unit, action, enemyBulletsSimulation, game);
 	
+
+	if (isSafeMove)
+	{
+		const auto actionUnitPosition = Simulator::getUnitInTimePosition(unit.position, unit.size, action, tickTime, game);
+		const auto actionShootMeBullets = strategy_.getShootMeBullets(unit, enemyBulletsSimulation, 1, action, game);
+
+		runawayAction = strategy_.getRunawayAction(
+			actionUnitPosition, unit.size, unit.playerId, actionShootMeBullets, enemyBulletsSimulation, 1,
+			true, true, true, true,
+			game);
+		isSafeMove = std::get<0>(runawayAction) != NoWAY;
+	}
+
 	if (!isSafeMove)
 	{
 		bool checkUp = true;
 		bool checkDown = true;
 		bool checkLeft = true;
 		bool checkRight = true;
-		
+
+		if (action.jump) checkUp = false;
+		else if (action.jumpDown) checkDown = false;
+		else if (action.velocity < -TOLERANCE) checkLeft = false;
+		else if (action.velocity > TOLERANCE) checkRight = false;
+
+		const auto shootMeBullets = strategy_.getShootMeBullets(unit, enemyBulletsSimulation, 0, action, game);
+		runawayAction = strategy_.getRunawayAction(
+			unit.position, unit.size, unit.playerId, shootMeBullets, enemyBulletsSimulation, 0,
+			checkUp, checkDown, checkLeft, checkRight,
+			game);
+	}
+
+	
+
+	/*bool checkUp = true;
+	bool checkDown = true;
+	bool checkLeft = true;
+	bool checkRight = true;
+	
+	if (!isSafeMove)
+	{		
 		if (action.jump) checkUp = false;
 		else if (action.jumpDown) checkDown = false;
 		else if (action.velocity < -TOLERANCE) checkLeft = false;
@@ -236,10 +268,10 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		{
 			runawayAction = strategy_.getRunawayAction(
 				unit.position, unit.size, unit.playerId, shootMeBullets, enemyBulletsSimulation, 0,
-				true, true, true, true,
+				checkUp, checkDown, checkLeft, checkRight,
 				game);
 		}
-	}	
+	}	*/
 	
 		
 		/*if (!action.jump && !action.jumpDown && abs(action.velocity) < TOLERANCE)

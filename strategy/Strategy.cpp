@@ -114,7 +114,7 @@ std::map<Bullet, int> Strategy::getShootMeBullets(
 			continue;
 		}
 		
-		for (int tick = 1; tick <= bulletCrossWallTick; ++tick)
+		for (int tick = 1; tick <= bulletCrossWallTick - addTicks; ++tick)
 		{
 			Vec2Double bulletInTimePosition;
 			const bool exists = Simulator::getBulletInTimePosition(
