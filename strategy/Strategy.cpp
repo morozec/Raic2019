@@ -217,6 +217,7 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 	const std::map<Bullet, int>& shootingMeBullets,	
 	const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, int addTicks,
 	bool checkUp, bool checkDown, bool checkLeft, bool checkRight,
+	bool canJump,
 	const Game& game) const
 {
 	if (addTicks != 0 && addTicks != 1) throw std::runtime_error("addTicks is not 0 or 1");
@@ -267,20 +268,14 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 		for (int stopGoTick = startGoTick + 1; stopGoTick < maxShootWallTick; ++stopGoTick)
 		{			
 			
-			auto canGoUp = checkUp && 
-				game.level.tiles[size_t(unitPosition.x - unitSize.x / 2)][size_t(unitPosition.y + unitSize.y + TOLERANCE)] != WALL &&
-				game.level.tiles[size_t(unitPosition.x + unitSize.x / 2)][size_t(unitPosition.y + unitSize.y + TOLERANCE)] != WALL;
-			auto canGoLeft = checkLeft &&
-				game.level.tiles[size_t(unitPosition.x - unitSize.x / 2 - TOLERANCE)][size_t(unitPosition.y)] != WALL &&
-				game.level.tiles[size_t(unitPosition.x - unitSize.x / 2 - TOLERANCE)][size_t(unitPosition.y + unitSize.y)] != WALL;
-			auto canGoRight = checkRight &&
-				game.level.tiles[size_t(unitPosition.x + unitSize.x / 2 + TOLERANCE)][size_t(unitPosition.y)] != WALL &&
-				game.level.tiles[size_t(unitPosition.x + unitSize.x / 2 + TOLERANCE)][size_t(unitPosition.y + unitSize.y)] != WALL;
-			auto canGoDown = checkDown && !Simulator::isUnitOnWall(unitPosition, unitSize, game);
+			auto canGoUp = checkUp;
+			auto canGoLeft = checkLeft;
+			auto canGoRight = checkRight;
+			auto canGoDown = checkDown;
 
 			//auto unitMoveTime = (stopGoTick - startGoTick) / game.properties.ticksPerSecond;
 						
-
+			//TODO: не симулировать юнита для каждой пули
 			for (const auto& bullet : game.bullets)
 			{
 				if (bullet.playerId == unitPlayerId) continue;
@@ -303,6 +298,7 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 				if (shootWallTick == 0) continue;//ударилась в стену на прошлый тик
 				
 				auto bulletPosition = bullet.position;
+				bool startedJump = false;
 				
 				for (int tick = 1; tick <= shootWallTick; ++tick)
 				{
@@ -320,14 +316,25 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 
 					//jump
 					if (canGoUp) {
-						if (tick > stopGoTick)
+						const auto thisTickCanJump = canJump && startGoTick == 0 ||
+							!Simulator::isUnitOnAir(jumpUnitPosition, unitSize, game) || 
+							startedJump;
+						if (!thisTickCanJump)
 						{
 							action.jump = false;
-						}
-						else if (tick > startGoTick)
+						}else
 						{
-							action.jump = true;
+							if (tick > stopGoTick)
+							{
+								action.jump = false;
+							}
+							else if (tick > startGoTick)
+							{
+								action.jump = true;
+								startedJump = true;
+							}
 						}
+						
 						const auto newJumpUnitPosition = Simulator::getUnitInTimePosition(
 							jumpUnitPosition, unitSize, action, unitTime, game);
 

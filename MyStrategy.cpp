@@ -154,16 +154,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	
 	if (strategy_.getStopRunawayTick() == 0)
 	{
-		const auto runawayDirection = strategy_.getRunawayDirection();
 		strategy_.setRunaway(GoNONE, -1);
-		
-		if (runawayDirection == GoUP)
-		{
-			action.jump = false;
-			action.jumpDown = false;
-			action.velocity = 0;
-			return action;
-		}
 	}
 	else if (strategy_.getStopRunawayTick() > 0)
 	{
@@ -209,12 +200,13 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	{
 		const auto actionUnitPosition = Simulator::getUnitInTimePosition(unit.position, unit.size, action, tickTime, game);
 		const auto actionShootMeBullets = strategy_.getShootMeBullets(unit, enemyBulletsSimulation, 1, action, game);
-		const auto checkUp = unit.jumpState.canJump || 			
-			Simulator::isUnitOnWall(actionUnitPosition, unit.size, game);
+		const auto canJump = action.jump ||
+			!Simulator::isUnitOnAir(actionUnitPosition, unit.size, game);
 
 		runawayAction = strategy_.getRunawayAction(
 			actionUnitPosition, unit.size, unit.playerId, actionShootMeBullets, enemyBulletsSimulation, 1,
-			checkUp, true, true, true,
+			true, true, true, true,
+			canJump,
 			game);
 		isSafeMove = std::get<0>(runawayAction) != NoWAY;		
 	}
@@ -237,10 +229,11 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 		const auto shootMeBullets = strategy_.getShootMeBullets(unit, enemyBulletsSimulation, 0, action, game);
 		auto canJump = unit.jumpState.canJump ||
-			Simulator::isUnitOnWall(unit.position, unit.size, game);
+			!Simulator::isUnitOnAir(unit.position, unit.size, game);
 		runawayAction = strategy_.getRunawayAction(
 			unit.position, unit.size, unit.playerId, shootMeBullets, enemyBulletsSimulation, 0,
-			checkUp && canJump, checkDown, checkLeft, checkRight,
+			checkUp, checkDown, checkLeft, checkRight,
+			canJump,
 			game);
 		if (std::get<0>(runawayAction) != NoWAY)
 		{

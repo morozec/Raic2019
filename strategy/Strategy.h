@@ -30,6 +30,7 @@ public:
 		const std::map<Bullet, int>& shootingMeBullets,
 		const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, int addTicks,
 		bool checkUp, bool checkDown, bool checkLeft, bool checkRight,
+		bool canJump,
 		const Game& game) const;
 
 	static bool isSafeMove(const Unit& unit, const UnitAction& action, const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, const Game& game);
