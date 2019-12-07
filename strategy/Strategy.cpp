@@ -211,7 +211,7 @@ bool Strategy::isBulletMoveCrossUnitMove(
 }
 
 
-
+//TODO: учесть максимальное время прыжка
 std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 	const Vec2Double& unitPosition, const Vec2Double& unitSize, int unitPlayerId,
 	const std::map<Bullet, int>& shootingMeBullets,	
@@ -266,7 +266,7 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 
 		for (int stopGoTick = startGoTick + 1; stopGoTick < maxShootWallTick; ++stopGoTick)
 		{			
-			//TODO: проверить jumpState.canJump
+			
 			auto canGoUp = checkUp && 
 				game.level.tiles[size_t(unitPosition.x - unitSize.x / 2)][size_t(unitPosition.y + unitSize.y + TOLERANCE)] != WALL &&
 				game.level.tiles[size_t(unitPosition.x + unitSize.x / 2)][size_t(unitPosition.y + unitSize.y + TOLERANCE)] != WALL;

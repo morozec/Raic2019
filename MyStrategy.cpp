@@ -209,15 +209,21 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	{
 		const auto actionUnitPosition = Simulator::getUnitInTimePosition(unit.position, unit.size, action, tickTime, game);
 		const auto actionShootMeBullets = strategy_.getShootMeBullets(unit, enemyBulletsSimulation, 1, action, game);
+		const auto checkUp = unit.jumpState.canJump || 			
+			Simulator::isUnitOnWall(actionUnitPosition, unit.size, game);
 
 		runawayAction = strategy_.getRunawayAction(
 			actionUnitPosition, unit.size, unit.playerId, actionShootMeBullets, enemyBulletsSimulation, 1,
-			true, true, true, true,
+			checkUp, true, true, true,
 			game);
-		isSafeMove = std::get<0>(runawayAction) != NoWAY;
+		isSafeMove = std::get<0>(runawayAction) != NoWAY;		
 	}
 
-	if (!isSafeMove)
+	if (isSafeMove) { //увеличиваем время на 1, т.к. расчет runawayAction был на тик вперед
+		std::get<1>(runawayAction) +=1;
+		std::get<2>(runawayAction) +=1;
+	}
+	else
 	{
 		bool checkUp = true;
 		bool checkDown = true;
@@ -230,9 +236,11 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		else if (action.velocity > TOLERANCE) checkRight = false;
 
 		const auto shootMeBullets = strategy_.getShootMeBullets(unit, enemyBulletsSimulation, 0, action, game);
+		auto canJump = unit.jumpState.canJump ||
+			Simulator::isUnitOnWall(unit.position, unit.size, game);
 		runawayAction = strategy_.getRunawayAction(
 			unit.position, unit.size, unit.playerId, shootMeBullets, enemyBulletsSimulation, 0,
-			checkUp, checkDown, checkLeft, checkRight,
+			checkUp && canJump, checkDown, checkLeft, checkRight,
 			game);
 	}
 
