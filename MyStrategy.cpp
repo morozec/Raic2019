@@ -223,7 +223,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		std::get<1>(runawayAction) +=1;
 		std::get<2>(runawayAction) +=1;
 	}
-	else
+	else//идти на врага нельзя. пробуем стоять
 	{
 		bool checkUp = true;
 		bool checkDown = true;
@@ -242,6 +242,12 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			unit.position, unit.size, unit.playerId, shootMeBullets, enemyBulletsSimulation, 0,
 			checkUp && canJump, checkDown, checkLeft, checkRight,
 			game);
+		if (std::get<0>(runawayAction) != NoWAY)
+		{
+			action.jump = false;
+			action.jumpDown = false;
+			action.velocity = 0;
+		}
 	}
 
 	
