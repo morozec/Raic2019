@@ -588,8 +588,8 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 
 				if ((!canGoUp || upDamage >= minShootMeDamage) &&
 					(!canGoDown || downDamage >= minShootMeDamage) &&
-					(!canGoLeft && leftDamage >= minShootMeDamage) &&
-					(!canGoRight && rightDamage >= minShootMeDamage))
+					(!canGoLeft || leftDamage >= minShootMeDamage) &&
+					(!canGoRight || rightDamage >= minShootMeDamage))
 					break;
 			}
 
