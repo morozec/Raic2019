@@ -355,7 +355,11 @@ BulletSimulation Simulator::getBulletSimulation(const Vec2Double& bulletPosition
 //TODO: после конца прыжка или удара о потолок начинается падение
 Vec2Double Simulator::getUnitInTimePosition(
 	const Vec2Double& unitPosition, const Vec2Double& unitSize,  const UnitAction& action, double time, const Game& game)
-{	
+{
+	if (!action.jump && !action.jumpDown && abs(action.velocity) < TOLERANCE &&
+		!isUnitOnAir(unitPosition, unitSize, game))
+		return unitPosition;
+	
 	auto x = unitPosition.x;
 	auto y = unitPosition.y;	
 
