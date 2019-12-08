@@ -25,7 +25,7 @@ public:
 		const Vec2Double& unitPos, const Vec2Double& newUnitPos, const Vec2Double& unitSize,
 		const Vec2Double& bulletPos, const Vec2Double& newBulletPos, double halfBulletSize);
 
-	std::tuple<RunawayDirection, int, int> getRunawayAction(
+	std::tuple<RunawayDirection, int, int, int> getRunawayAction(
 		const Vec2Double& unitPosition, const Vec2Double& unitSize, int unitPlayerId,
 		const std::map<Bullet, int>& shootingMeBullets,
 		const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, int addTicks,

@@ -192,7 +192,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 	setAttackEnemyAction(unit, nearestEnemy->position, needGo, game, action);
 
-	tuple<RunawayDirection, int, int> runawayAction;
+	tuple<RunawayDirection, int, int, int> runawayAction;
 	auto isSafeMove = strategy_.isSafeMove(unit, action, enemyBulletsSimulation, game);
 	
 
@@ -210,14 +210,15 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			canJump,
 			game);
 
-		const auto runawayDirection = std::get<0>(runawayAction);
+		const auto minDamage = std::get<3>(runawayAction);
 		
-		if (runawayDirection != NoWAY)
+		if (minDamage == 0)
 		{
 			debug.draw(CustomData::Log(
 				to_string(std::get<0>(runawayAction)) + " " +
 				to_string(std::get<1>(runawayAction) + 1) + " " +
-				to_string(std::get<2>(runawayAction) + 1) + "\n"));
+				to_string(std::get<2>(runawayAction) + 1) + " " +
+				to_string(std::get<3>(runawayAction)) + "\n"));
 			
 			return action;
 			//
@@ -261,7 +262,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	debug.draw(CustomData::Log(
 		to_string(std::get<0>(runawayAction)) + " " +
 		to_string(std::get<1>(runawayAction)) + " " +
-		to_string(std::get<2>(runawayAction)) + "\n"));
+		to_string(std::get<2>(runawayAction)) + " " +
+		to_string(std::get<3>(runawayAction)) + "\n"));
 
 	const auto runawayDirection = std::get<0>(runawayAction);
 	const auto startRunawayTick = std::get<1>(runawayAction);
