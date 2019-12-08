@@ -464,54 +464,6 @@ std::tuple<RunawayDirection, int, int> Strategy::getRunawayAction(
 					if (!canGoUp && !canGoDown && !canGoLeft && !canGoRight) break;
 				}
 
-				
-				
-
-				/*if (stopGoTick > killGoUpTick)
-				{
-					canGoUp = false;
-				}
-				else if (canGoUp && isBulletShootJumpingUnit(
-					bullet, me, startGoTick, stopGoTick, enemyBulletsShootWallTimes.at(bullet), game, killGoUpTick))
-				{
-					canGoUp = false;
-				}
-
-				if (stopGoTick > killGoRightTick)
-				{
-					canGoRight = false;
-				}
-				else if (canGoRight && isBulletShootGoSideUnit(
-					bullet, me, startGoTick, stopGoTick, enemyBulletsShootWallTimes.at(bullet), 1, game,
-					killGoRightTick))
-				{
-					canGoRight = false;
-				}
-
-				if (stopGoTick > killGoLeftTick)
-				{
-					canGoLeft = false;
-				}
-				else if (canGoLeft && isBulletShootGoSideUnit(
-					bullet, me, startGoTick, stopGoTick, enemyBulletsShootWallTimes.at(bullet), -1, game,
-					killGoLeftTick))
-				{
-					canGoLeft = false;
-				}
-
-				if (!isOnLadder && !isOnPlatform || stopGoTick > killGoDownTick)
-				{
-					canGoDown = false;
-				}
-				else if (canGoDown && isBulletShootFallingUnit(
-					bullet, me, startGoTick, isOnLadder ? stopGoTick : -1, enemyBulletsShootWallTimes.at(bullet), game,
-					killGoDownTick))
-				{
-					canGoDown = false;
-				}
-
-				if (!canGoUp && !canGoLeft && !canGoRight && !canGoDown) break;*/
-
 				if (!canGoUp && !canGoDown && !canGoLeft && !canGoRight) break;
 			}
 
