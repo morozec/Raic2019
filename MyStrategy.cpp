@@ -200,6 +200,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	{
 		const auto actionUnitPosition = Simulator::getUnitInTimePosition(unit.position, unit.size, action, tickTime, game);
 		const auto actionShootMeBullets = strategy_.getShootMeBullets(unit, enemyBulletsSimulation, 1, action, game);
+		//TODO: нормально проверить возможность прыжка
 		const auto canJump = action.jump ||
 			!Simulator::isUnitOnAir(actionUnitPosition, unit.size, game);
 
@@ -236,6 +237,11 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	else if (action.jumpDown) checkDown = false;
 	else if (action.velocity < -TOLERANCE) checkLeft = false;
 	else if (action.velocity > TOLERANCE) checkRight = false;
+
+	// выжидаем тик начала движения, не делая ничего
+	action.jump = false;
+	action.jumpDown = false;
+	action.velocity = 0;
 
 	const auto shootMeBullets = strategy_.getShootMeBullets(unit, enemyBulletsSimulation, 0, action, game);
 	auto canJump = unit.jumpState.canJump ||
@@ -287,15 +293,6 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		else 
 		{
 			throw runtime_error("unknown runawayDirection 2");
-		}
-	}
-	else
-	{
-		if (runawayDirection == NoWAY || runawayDirection == GoNONE)
-		{
-			action.jump = false;
-			action.jumpDown = false;
-			action.velocity = 0;
 		}
 	}	
 	
