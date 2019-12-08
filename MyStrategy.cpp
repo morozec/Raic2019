@@ -214,6 +214,11 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		
 		if (runawayDirection != NoWAY)
 		{
+			debug.draw(CustomData::Log(
+				to_string(std::get<0>(runawayAction)) + " " +
+				to_string(std::get<1>(runawayAction) + 1) + " " +
+				to_string(std::get<2>(runawayAction) + 1) + "\n"));
+			
 			return action;
 			//
 			//isSafeMove = true;
