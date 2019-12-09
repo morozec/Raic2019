@@ -73,7 +73,7 @@ std::map<Bullet, BulletSimulation> Strategy::getEnemyBulletsSimulation(const Gam
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	for (const auto& bullet: game.bullets)
 	{
-		if (bullet.playerId == meId) continue;
+		if (bullet.playerId == meId && bullet.explosionParams == nullptr) continue;
 		auto simulation = Simulator::getBulletSimulation(bullet.position, bullet.velocity, bullet.size / 2, game);
 		const auto shootWallTick = static_cast<int>(ceil(simulation.targetCrossTime * game.properties.ticksPerSecond));
 		std::map<int, Vec2Double> bulletPositions;
@@ -111,14 +111,14 @@ std::map<Bullet, int> Strategy::getShootMeBullets(
 	action.jump = false;
 	action.jumpDown = false;
 
-	for (const auto& bullet:game.bullets)
+	for (const auto& item:enemyBulletsSimulations)
 	{
-		if (bullet.playerId == me.playerId) continue;
-
-		std::map<int, Vec2Double> bulletPositions;
-		bulletPositions[0] = bullet.position;
+		const auto& bullet = item.first;
+		const auto& bulletSimulation = item.second;
 		
-		const auto bulletSimulation = enemyBulletsSimulations.at(bullet);
+		std::map<int, Vec2Double> bulletPositions;
+		bulletPositions[0] = bullet.position;		
+	
 		const auto bulletCrossWallTime = bulletSimulation.targetCrossTime;
 		const int bulletCrossWallTick = static_cast<int>(ceil(bulletCrossWallTime*game.properties.ticksPerSecond));
 
@@ -147,7 +147,7 @@ std::map<Bullet, int> Strategy::getShootMeBullets(
 						Simulator::getUnitInTimePosition(mePositions.at(tick - 1), me.size, action, tickTime, game);
 					mePositions[tick] = unitInTimePosition;
 				}
-				const bool isShooting = isBulletMoveCrossUnitMove(
+				const bool isShooting = bullet.playerId != me.playerId && isBulletMoveCrossUnitMove(
 					mePositions.at(tick - 1), unitInTimePosition, me.size,
 					bulletPositions[tick - 1], bulletInTimePosition, bullet.size / 2.0);
 				if (isShooting)
@@ -162,7 +162,7 @@ std::map<Bullet, int> Strategy::getShootMeBullets(
 				const auto thisTickBulletTime = bulletSimulation.targetCrossTime - (tick - 1) * tickTime;
 				const auto unitInTimePosition =
 					Simulator::getUnitInTimePosition(mePositions.at(tick - 1), me.size, action, thisTickBulletTime, game);
-				auto isShooting = isBulletMoveCrossUnitMove(
+				auto isShooting = bullet.playerId != me.playerId && isBulletMoveCrossUnitMove(
 					mePositions.at(tick - 1), unitInTimePosition, me.size,
 					bulletPositions[tick - 1], bulletInTimePosition, bullet.size / 2.0);
 				if (!isShooting)
@@ -325,9 +325,9 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 			std::map<Bullet, bool> gotLeftBullets;
 			std::map<Bullet, bool> gotRightBullets;
 
-			for (const auto& bullet : game.bullets)
+			for (const auto& item : enemyBulletsSimulations)
 			{
-				if (bullet.playerId == unitPlayerId) continue;
+				const auto& bullet = item.first;				
 				gotUpBullets[bullet] = false;
 				gotDownBullets[bullet] = false;
 				gotLeftBullets[bullet] = false;
@@ -430,12 +430,11 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 				else
 				{
 					//const auto bulletTime = (tick + addTicks) / game.properties.ticksPerSecond;
-					for (const auto& bullet : game.bullets)
+					for (const auto& item : enemyBulletsSimulations)
 					{
-						if (bullet.playerId == unitPlayerId) continue;
-
-						const auto& bulletSimulation = enemyBulletsSimulations.at(bullet);
-
+						const auto& bullet = item.first;
+						const auto& bulletSimulation = item.second;
+						
 						const auto bulletCrossWallCenter = Vec2Double(
 							bullet.position.x + bullet.velocity.x * bulletSimulation.targetCrossTime,
 							bullet.position.y + bullet.velocity.y * bulletSimulation.targetCrossTime
@@ -480,7 +479,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 
 							action.jump = false;
 
-							if (isBulletMoveCrossUnitMove(
+							if (bullet.playerId != unitPlayerId && isBulletMoveCrossUnitMove(
 								jumpUnitPosition,
 								newJumpUnitPosition,
 								unitSize,
@@ -522,7 +521,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 
 							action.jumpDown = false;
 
-							if (isBulletMoveCrossUnitMove(
+							if (bullet.playerId != unitPlayerId && isBulletMoveCrossUnitMove(
 								fallUnitPosition,
 								newFallUnitPosition,
 								unitSize,
@@ -564,7 +563,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 
 							action.velocity = 0;
 
-							if (isBulletMoveCrossUnitMove(
+							if (bullet.playerId != unitPlayerId && isBulletMoveCrossUnitMove(
 								goLeftUnitPosition,
 								newGoLeftUnitPosition,
 								unitSize,
@@ -606,7 +605,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 
 							action.velocity = 0;
 
-							if (isBulletMoveCrossUnitMove(
+							if (bullet.playerId != unitPlayerId && isBulletMoveCrossUnitMove(
 								goRightUnitPosition,
 								newGoRightUnitPosition,
 								unitSize,
@@ -1002,13 +1001,13 @@ bool Strategy::isSafeMove(
 	const Unit& unit, const UnitAction& action, const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, const Game& game)
 {
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
-	for (const auto& bullet : game.bullets)
+	for (const auto& item : enemyBulletsSimulations)
 	{
-		if (bullet.playerId == unit.playerId) continue;
-
+		const auto& bullet = item.first;
+		const auto& bulletSimulation = item.second;
+		
 		double unitTime = tickTime;
-
-		const auto bulletSimulation = enemyBulletsSimulations.at(bullet);
+		
 		Vec2Double bulletInTimePosition;
 		const auto exists = Simulator::getBulletInTimePosition(
 			bullet, tickTime, bulletSimulation, game, bulletInTimePosition);
@@ -1019,7 +1018,7 @@ bool Strategy::isSafeMove(
 
 		const auto unitInTimePosition = Simulator::getUnitInTimePosition(unit.position, unit.size, action, unitTime, game);			
 		
-		const auto cross = isBulletMoveCrossUnitMove(
+		const auto cross = bullet.playerId != unit.playerId && isBulletMoveCrossUnitMove(
 			unit.position,
 			unitInTimePosition,
 			unit.size,
