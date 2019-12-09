@@ -3,8 +3,6 @@
 #include <climits>
 #include <map>
 #include <tuple>
-#include <time.h>
-
 #include <sstream>
 #include "common/Helper.h"
 #include "mathcalc/MathHelper.h"
@@ -204,16 +202,12 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		//TODO: нормально проверить возможность прыжка
 		const auto canJump = action.jump ||
 			!Simulator::isUnitOnAir(actionUnitPosition, unit.size, game);
-
-		clock_t tStart = clock();
-
+		
 		runawayAction = strategy_.getRunawayAction(
 			actionUnitPosition, unit.size, unit.playerId, actionShootMeBullets, enemyBulletsSimulation, 1,
 			true, true, true, true,
 			canJump,
-			game);
-
-		const auto t = (double)(clock() - tStart) / CLOCKS_PER_SEC;
+			game);	
 
 		const auto minDamage = std::get<3>(runawayAction);
 		
