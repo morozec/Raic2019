@@ -199,8 +199,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	{
 		const auto actionUnitPosition = Simulator::getUnitInTimePosition(unit.position, unit.size, action, tickTime, game);
 		const auto actionShootMeBullets = strategy_.getShootMeBullets(unit, enemyBulletsSimulation, 1, action, game);
-		//TODO: нормально проверить возможность прыжка
-		const auto canJump = action.jump ||
+		//могу прыгнуть и прыгаю на этом тике или могу прыгнуть на следующем тике
+		const auto canJump = unit.jumpState.canJump && !Simulator::isUnitOnAir(unit.position, unit.size, game) && action.jump ||
 			!Simulator::isUnitOnAir(actionUnitPosition, unit.size, game);
 		
 		runawayAction = strategy_.getRunawayAction(
