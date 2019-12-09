@@ -70,10 +70,23 @@ double Strategy::getShootEnemyProbability(const Unit& me, const Unit& enemy, con
 std::map<Bullet, BulletSimulation> Strategy::getEnemyBulletsSimulation(const Game& game, int meId)
 {
 	std::map<Bullet, BulletSimulation> simulations;
+	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	for (const auto& bullet: game.bullets)
 	{
 		if (bullet.playerId == meId) continue;
-		const auto simulation = Simulator::getBulletSimulation(bullet.position, bullet.velocity, bullet.size / 2, game);
+		auto simulation = Simulator::getBulletSimulation(bullet.position, bullet.velocity, bullet.size / 2, game);
+		const auto shootWallTick = static_cast<int>(ceil(simulation.targetCrossTime * game.properties.ticksPerSecond));
+		std::map<int, Vec2Double> bulletPositions;
+		bulletPositions[0] = bullet.position;
+
+		for (int i = 1; i <= shootWallTick; ++i)
+		{
+			Vec2Double position;
+			const auto exists = Simulator::getBulletInTimePosition(bullet, tickTime, simulation, game, position);
+			bulletPositions[exists ? i : -1] = position;
+		}
+		
+		simulation.bulletPositions = bulletPositions;
 		simulations[bullet] = simulation;
 	}
 	return simulations;
