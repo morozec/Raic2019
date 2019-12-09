@@ -70,10 +70,23 @@ double Strategy::getShootEnemyProbability(const Unit& me, const Unit& enemy, con
 std::map<Bullet, BulletSimulation> Strategy::getEnemyBulletsSimulation(const Game& game, int meId)
 {
 	std::map<Bullet, BulletSimulation> simulations;
+	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	for (const auto& bullet: game.bullets)
 	{
 		if (bullet.playerId == meId) continue;
-		const auto simulation = Simulator::getBulletSimulation(bullet.position, bullet.velocity, bullet.size / 2, game);
+		auto simulation = Simulator::getBulletSimulation(bullet.position, bullet.velocity, bullet.size / 2, game);
+		const auto shootWallTick = static_cast<int>(ceil(simulation.targetCrossTime * game.properties.ticksPerSecond));
+		std::map<int, Vec2Double> bulletPositions;
+		bulletPositions[0] = bullet.position;
+
+		for (int i = 1; i <= shootWallTick; ++i)
+		{
+			Vec2Double position;
+			const auto exists = Simulator::getBulletInTimePosition(bullet, tickTime * i, simulation, game, position);
+			bulletPositions[exists ? i : -1] = position;
+		}
+		
+		simulation.bulletPositions = bulletPositions;
 		simulations[bullet] = simulation;
 	}
 	return simulations;
@@ -140,6 +153,7 @@ std::map<Bullet, int> Strategy::getShootMeBullets(
 				if (isShooting)
 				{
 					shootMeBullets[bullet] = tick;
+					break;
 				}
 			}
 			else
@@ -165,8 +179,8 @@ std::map<Bullet, int> Strategy::getShootMeBullets(
 				if (isShooting)
 				{
 					shootMeBullets[bullet] = tick;
-				}
-				
+					break;
+				}				
 			}			
 		}
 				
@@ -248,6 +262,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 			minShootMeTick = smb.second;
 		}
 	}
+	
 
 	double maxShootWallTime = 0;
 	for (const auto& item : enemyBulletsSimulations)
@@ -266,7 +281,16 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 	action.jumpDown = false;
 	action.velocity = false;
 
-	
+	std::map<int, int> beforeStartGoUpDamage;
+	std::map<int, int> beforeStartGoDownDamage;
+	std::map<int, int> beforeStartGoLeftDamage;
+	std::map<int, int> beforeStartGoRightDamage;
+
+	std::map<int, std::map<int, int>> beforeStopGoUpDamage;
+	std::map<int, std::map<int, int>> beforeStopGoDownDamage;
+	std::map<int, std::map<int, int>> beforeStopGoLeftDamage;
+	std::map<int, std::map<int, int>> beforeStopGoRightDamage;
+		
 
 	for (int startGoTick = minShootMeTick - 1; startGoTick >= 0; startGoTick--)
 	{	
@@ -280,6 +304,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 		{			
 			auto canGoUp = checkUp;
 			auto upDamage = 0;
+			bool startedJump = false;
 			
 			auto canGoLeft = checkLeft;
 			auto leftDamage = 0;
@@ -290,238 +315,358 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 			auto canGoDown = checkDown;
 			auto downDamage = 0;
 
-			//auto unitMoveTime = (stopGoTick - startGoTick) / game.properties.ticksPerSecond;
-						
-			//TODO: не симулировать юнита для каждой пули
+			auto jumpUnitPosition = unitPosition;
+			auto fallUnitPosition = unitPosition;
+			auto goLeftUnitPosition = unitPosition;
+			auto goRightUnitPosition = unitPosition;
+
+			std::map<Bullet, bool> gotUpBullets;
+			std::map<Bullet, bool> gotDownBullets;
+			std::map<Bullet, bool> gotLeftBullets;
+			std::map<Bullet, bool> gotRightBullets;
+
 			for (const auto& bullet : game.bullets)
 			{
 				if (bullet.playerId == unitPlayerId) continue;
+				gotUpBullets[bullet] = false;
+				gotDownBullets[bullet] = false;
+				gotLeftBullets[bullet] = false;
+				gotRightBullets[bullet] = false;
+			}
 
-				bool gotUpBullet = false;
-				bool gotDownBullet = false;
-				bool gotLeftBullet = false;
-				bool gotRightBullet = false;
-
-				const auto bulletSimulation = enemyBulletsSimulations.at(bullet);
-
-				const auto bulletCrossWallCenter = Vec2Double(
-					bullet.position.x + bullet.velocity.x * bulletSimulation.targetCrossTime,
-					bullet.position.y + bullet.velocity.y * bulletSimulation.targetCrossTime
-				);
-
-				const auto halfBulletSize = bullet.size / 2;
-				auto jumpUnitPosition = unitPosition;
-				auto fallUnitPosition = unitPosition;
-				auto goLeftUnitPosition = unitPosition;
-				auto goRightUnitPosition = unitPosition;
+			for (int tick = 1; tick <= maxShootWallTick; ++tick)
+			{
+				auto thisTickUpDamage = 0;
+				auto thisTickDownDamage = 0;
+				auto thisTickLeftDamage = 0;
+				auto thisTickRightDamage = 0;
 				
-				auto shootWallTick = static_cast<int>(ceil(bulletSimulation.targetCrossTime * game.properties.ticksPerSecond));
-				shootWallTick -= addTicks;
-				if (shootWallTick == 0) continue;//ударилась в стену на прошлый тик
+				//jump
+				const auto thisTickCanJump = canJump && startGoTick == 0 ||
+					!Simulator::isUnitOnAir(jumpUnitPosition, unitSize, game) ||
+					startedJump;
 				
-				auto bulletPosition = bullet.position;
-				bool startedJump = false;
-				
-				for (int tick = 1; tick <= shootWallTick; ++tick)
+				if (!thisTickCanJump)
 				{
-					const auto bulletTime = (tick + addTicks) / game.properties.ticksPerSecond;
-					Vec2Double newBulletPosition;
-					auto unitTime = tickTime;
-
-					
-					auto exists = Simulator::getBulletInTimePosition(
-						bullet, bulletTime, bulletSimulation, game, newBulletPosition);
-					if (!exists)
+					action.jump = false;
+				}
+				else
+				{
+					if (tick > stopGoTick)
 					{
-						unitTime = bulletSimulation.targetCrossTime - (bulletTime - tickTime);
-					}				
+						action.jump = false;
+					}
+					else if (tick > startGoTick)
+					{
+						action.jump = true;
+						startedJump = true;
+					}
+				}
+				const auto thisTickJumpUnitPosition = Simulator::getUnitInTimePosition(
+					jumpUnitPosition, unitSize, action, tickTime, game);
+				action.jump = false;				
+				
+				//fall
+				if (tick > stopGoTick)
+				{
+					action.jumpDown = false;
+				}
+				else if (tick > startGoTick)
+				{
+					action.jumpDown = true;
+				}
+				const auto thisTickFallUnitPosition = Simulator::getUnitInTimePosition(
+					fallUnitPosition, unitSize, action, tickTime, game);
+				action.jumpDown = false;
 
-					//jump
-					if (canGoUp && !gotUpBullet) {
-						const auto thisTickCanJump = canJump && startGoTick == 0 ||
-							!Simulator::isUnitOnAir(jumpUnitPosition, unitSize, game) || 
-							startedJump;
-						if (!thisTickCanJump)
-						{
-							action.jump = false;
-						}else
-						{
-							if (tick > stopGoTick)
+				//left
+				if (tick > stopGoTick)
+				{
+					action.velocity = 0;
+				}
+				else if (tick > startGoTick)
+				{
+					action.velocity = -INT_MAX;
+				}
+				const auto thisTickGoLeftUnitPosition = Simulator::getUnitInTimePosition(
+					goLeftUnitPosition, unitSize, action, tickTime, game);
+				action.velocity = 0;
+
+				//right
+				if (tick > stopGoTick)
+				{
+					action.velocity = 0;
+				}
+				else if (tick > startGoTick)
+				{
+					action.velocity = INT_MAX;
+				}
+				const auto thisTickGoRightUnitPosition = Simulator::getUnitInTimePosition(
+					goRightUnitPosition, unitSize, action, tickTime, game);
+				action.velocity = 0;
+
+				if (tick <= startGoTick && 
+					beforeStartGoUpDamage.count(tick) > 0 && 
+					beforeStartGoDownDamage.count(tick) > 0 && 
+					beforeStartGoLeftDamage.count(tick) > 0 && 
+					beforeStartGoRightDamage.count(tick) > 0)
+				{
+					thisTickUpDamage = beforeStartGoUpDamage[tick];
+					thisTickDownDamage = beforeStartGoDownDamage[tick];
+					thisTickLeftDamage = beforeStartGoLeftDamage[tick];
+					thisTickRightDamage = beforeStartGoRightDamage[tick];
+				}
+				else if (tick <= stopGoTick && tick > startGoTick && 
+					beforeStopGoUpDamage.count(tick) > 0 && beforeStopGoUpDamage[tick].count(startGoTick) > 0 &&
+					beforeStopGoDownDamage.count(tick) > 0 && beforeStopGoDownDamage[tick].count(startGoTick) > 0 &&
+					beforeStopGoLeftDamage.count(tick) > 0 && beforeStopGoLeftDamage[tick].count(startGoTick) > 0 &&
+					beforeStopGoRightDamage.count(tick) > 0 && beforeStopGoRightDamage[tick].count(startGoTick) > 0)
+				{
+					thisTickUpDamage = beforeStopGoUpDamage[tick][startGoTick];
+					thisTickDownDamage = beforeStopGoDownDamage[tick][startGoTick];
+					thisTickLeftDamage = beforeStopGoLeftDamage[tick][startGoTick];
+					thisTickRightDamage = beforeStopGoRightDamage[tick][startGoTick];
+				}
+				else
+				{
+					//const auto bulletTime = (tick + addTicks) / game.properties.ticksPerSecond;
+					for (const auto& bullet : game.bullets)
+					{
+						if (bullet.playerId == unitPlayerId) continue;
+
+						const auto& bulletSimulation = enemyBulletsSimulations.at(bullet);
+
+						const auto bulletCrossWallCenter = Vec2Double(
+							bullet.position.x + bullet.velocity.x * bulletSimulation.targetCrossTime,
+							bullet.position.y + bullet.velocity.y * bulletSimulation.targetCrossTime
+						);
+						const auto halfBulletSize = bullet.size / 2;
+
+						auto shootWallTick = static_cast<int>(ceil(bulletSimulation.targetCrossTime * game.properties.ticksPerSecond));
+						if (shootWallTick < tick + addTicks) continue;//ударилась в стену раньше
+
+						
+						const auto bulletExists = bulletSimulation.bulletPositions.count(tick + addTicks) > 0;
+						const auto notExistsUnitTime = bulletSimulation.targetCrossTime - (tick + addTicks - 1) / game.properties.ticksPerSecond;
+						const auto& prevTickBulletPosition = bulletSimulation.bulletPositions.at(tick + addTicks - 1);
+						const auto& thisTickBulletPosition = bulletSimulation.bulletPositions.at( bulletExists ? tick + addTicks : -1);
+
+						//jump
+						if (canGoUp && !gotUpBullets[bullet]) {
+							if (!thisTickCanJump)
 							{
 								action.jump = false;
 							}
-							else if (tick > startGoTick)
+							else
 							{
-								action.jump = true;
-								startedJump = true;
+								if (tick > stopGoTick)
+								{
+									action.jump = false;
+								}
+								else if (tick > startGoTick)
+								{
+									action.jump = true;
+									startedJump = true;
+								}
+							}
+
+							const auto newJumpUnitPosition = bulletExists ? thisTickJumpUnitPosition :
+								Simulator::getUnitInTimePosition(
+									jumpUnitPosition,
+									unitSize,
+									action,
+									notExistsUnitTime,
+									game);
+
+							action.jump = false;
+
+							if (isBulletMoveCrossUnitMove(
+								jumpUnitPosition,
+								newJumpUnitPosition,
+								unitSize,
+								prevTickBulletPosition,
+								thisTickBulletPosition,
+								halfBulletSize))
+							{
+								//canGoUp = false;
+								thisTickUpDamage += bullet.damage;
+								gotUpBullets[bullet] = true;
+							}
+							else if (!bulletExists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newJumpUnitPosition, unitSize))
+							{
+								//пуля ударится о стену. надо проверить взрыв
+								//canGoUp = false;
+								thisTickUpDamage += bullet.damage;
+								gotUpBullets[bullet] = true;
 							}
 						}
-						
-						const auto newJumpUnitPosition = Simulator::getUnitInTimePosition(
-							jumpUnitPosition, unitSize, action, unitTime, game);
 
-						action.jump = false;
 
-						if (isBulletMoveCrossUnitMove(
-							jumpUnitPosition,
-							newJumpUnitPosition,
-							unitSize,
-							bulletPosition,
-							newBulletPosition,
-							halfBulletSize))
-						{
-							//canGoUp = false;
-							upDamage += bullet.damage;
-							gotUpBullet = true;
-						}
-						else if (!exists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newJumpUnitPosition, unitSize))
-						{
-							//пуля ударится о стену. надо проверить взрыв
-							//canGoUp = false;
-							upDamage += bullet.damage;
-							gotUpBullet = true;
-						}
-						jumpUnitPosition = newJumpUnitPosition;
-					}
+						//fall
+						if (canGoDown && !gotDownBullets[bullet]) {
+							if (tick > stopGoTick)
+							{
+								action.jumpDown = false;
+							}
+							else if (tick > startGoTick)
+							{
+								action.jumpDown = true;
+							}
+							const auto newFallUnitPosition = bulletExists ? thisTickFallUnitPosition :
+								Simulator::getUnitInTimePosition(
+									fallUnitPosition,
+									unitSize,
+									action,
+									notExistsUnitTime,
+									game);
 
-					//fall
-					if (canGoDown && !gotDownBullet) {
-						if (tick > stopGoTick)
-						{
 							action.jumpDown = false;
-						}
-						else if (tick > startGoTick)
-						{
-							action.jumpDown = true;
-						}
-						const auto newFallUnitPosition = Simulator::getUnitInTimePosition(
-							fallUnitPosition, unitSize, action, unitTime, game);
 
-						action.jumpDown = false;
-
-						if (isBulletMoveCrossUnitMove(
-							fallUnitPosition,
-							newFallUnitPosition,
-							unitSize,
-							bulletPosition,
-							newBulletPosition,
-							halfBulletSize))
-						{
-							//canGoDown = false;
-							downDamage += bullet.damage;
-							gotDownBullet = true;
+							if (isBulletMoveCrossUnitMove(
+								fallUnitPosition,
+								newFallUnitPosition,
+								unitSize,
+								prevTickBulletPosition,
+								thisTickBulletPosition,
+								halfBulletSize))
+							{
+								//canGoDown = false;
+								thisTickDownDamage += bullet.damage;
+								gotDownBullets[bullet] = true;
+							}
+							else if (!bulletExists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newFallUnitPosition, unitSize))
+							{
+								//пуля ударится о стену. надо проверить взрыв
+								//canGoDown = false;
+								thisTickDownDamage += bullet.damage;
+								gotDownBullets[bullet] = true;
+							}
 						}
-						else if (!exists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newFallUnitPosition, unitSize))
-						{
-							//пуля ударится о стену. надо проверить взрыв
-							//canGoDown = false;
-							downDamage += bullet.damage;
-							gotDownBullet = true;
-						}
-						fallUnitPosition = newFallUnitPosition;
-					}
 
-					//left
-					if (canGoLeft && !gotLeftBullet)
-					{
-						if (tick > stopGoTick)
+						//left
+						if (canGoLeft && !gotLeftBullets[bullet])
 						{
+							if (tick > stopGoTick)
+							{
+								action.velocity = 0;
+							}
+							else if (tick > startGoTick)
+							{
+								action.velocity = -INT_MAX;
+							}
+							const auto newGoLeftUnitPosition = bulletExists ? thisTickGoLeftUnitPosition :
+								Simulator::getUnitInTimePosition(
+									goLeftUnitPosition,
+									unitSize,
+									action,
+									notExistsUnitTime,
+									game);
+
 							action.velocity = 0;
-						}
-						else if (tick > startGoTick)
-						{
-							action.velocity = -INT_MAX;
-						}
-						const auto newGoLeftUnitPosition = Simulator::getUnitInTimePosition(
-							goLeftUnitPosition, unitSize, action, unitTime, game);
 
-						action.velocity = 0;
-
-						if (isBulletMoveCrossUnitMove(
-							goLeftUnitPosition,
-							newGoLeftUnitPosition,
-							unitSize,
-							bulletPosition,
-							newBulletPosition,
-							halfBulletSize))
-						{
-							//canGoLeft = false;
-							leftDamage += bullet.damage;
-							gotLeftBullet = true;
+							if (isBulletMoveCrossUnitMove(
+								goLeftUnitPosition,
+								newGoLeftUnitPosition,
+								unitSize,
+								prevTickBulletPosition,
+								thisTickBulletPosition,
+								halfBulletSize))
+							{
+								//canGoLeft = false;
+								thisTickLeftDamage += bullet.damage;
+								gotLeftBullets[bullet] = true;
+							}
+							else if (!bulletExists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newGoLeftUnitPosition, unitSize))
+							{
+								//пуля ударится о стену. надо проверить взрыв
+								//canGoLeft = false;
+								thisTickLeftDamage += bullet.damage;
+								gotLeftBullets[bullet] = true;
+							}
 						}
-						else if (!exists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newGoLeftUnitPosition, unitSize))
-						{
-							//пуля ударится о стену. надо проверить взрыв
-							//canGoLeft = false;
-							leftDamage += bullet.damage;
-							gotLeftBullet = true;
-						}
-						goLeftUnitPosition = newGoLeftUnitPosition;
-					}
 
-					//right
-					if (canGoRight && !gotRightBullet)
-					{
-						if (tick > stopGoTick)
+						//right
+						if (canGoRight && !gotRightBullets[bullet])
 						{
+							if (tick > stopGoTick)
+							{
+								action.velocity = 0;
+							}
+							else if (tick > startGoTick)
+							{
+								action.velocity = INT_MAX;
+							}
+							const auto newGoRightUnitPosition = bulletExists ? thisTickGoRightUnitPosition :
+								Simulator::getUnitInTimePosition(
+									goRightUnitPosition,
+									unitSize,
+									action,
+									notExistsUnitTime,
+									game);
+
 							action.velocity = 0;
-						}
-						else if (tick > startGoTick)
-						{
-							action.velocity = INT_MAX;
-						}
-						const auto newGoRightUnitPosition = Simulator::getUnitInTimePosition(
-							goRightUnitPosition, unitSize, action, unitTime, game);
 
-						action.velocity = 0;
+							if (isBulletMoveCrossUnitMove(
+								goRightUnitPosition,
+								newGoRightUnitPosition,
+								unitSize,
+								prevTickBulletPosition,
+								thisTickBulletPosition,
+								halfBulletSize))
+							{
+								//canGoRight = false;
+								thisTickRightDamage += bullet.damage;
+								gotRightBullets[bullet] = true;
+							}
+							else if (!bulletExists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newGoRightUnitPosition, unitSize))
+							{
+								//пуля ударится о стену. надо проверить взрыв
+								//canGoRight = false;
+								thisTickRightDamage += bullet.damage;
+								gotRightBullets[bullet] = true;
+							}
+						}
 
-						if (isBulletMoveCrossUnitMove(
-							goRightUnitPosition,
-							newGoRightUnitPosition,
-							unitSize,
-							bulletPosition,
-							newBulletPosition,
-							halfBulletSize))
-						{
-							//canGoRight = false;
-							rightDamage += bullet.damage;
-							gotRightBullet = true;
-						}
-						else if (!exists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newGoRightUnitPosition, unitSize))
-						{
-							//пуля ударится о стену. надо проверить взрыв
-							//canGoRight = false;
-							rightDamage += bullet.damage;
-							gotRightBullet = true;
-						}
-						goRightUnitPosition = newGoRightUnitPosition;
+					}
+					if (tick <= startGoTick) {
+						beforeStartGoUpDamage[tick] = thisTickUpDamage;
+						beforeStartGoDownDamage[tick] = thisTickDownDamage;
+						beforeStartGoLeftDamage[tick] = thisTickLeftDamage;
+						beforeStartGoRightDamage[tick] = thisTickRightDamage;
+					}
+					else if (tick <= stopGoTick && tick > startGoTick)
+					{
+						beforeStopGoUpDamage[tick][startGoTick] = thisTickUpDamage;
+						beforeStopGoDownDamage[tick][startGoTick] = thisTickDownDamage;
+						beforeStopGoLeftDamage[tick][startGoTick] = thisTickLeftDamage;
+						beforeStopGoRightDamage[tick][startGoTick] = thisTickRightDamage;
 					}
 					
-					
-					bulletPosition = newBulletPosition;						
-					/*if (!canGoUp && !canGoDown && !canGoLeft && !canGoRight) break;*/
-					if ((!canGoUp || upDamage >= minShootMeDamage) && 
-						(!canGoDown || downDamage >= minShootMeDamage) &&
-						(!canGoLeft && leftDamage >= minShootMeDamage) && 
-						(!canGoRight && rightDamage >= minShootMeDamage))
-						break;
 				}
+				jumpUnitPosition = thisTickJumpUnitPosition;
+				fallUnitPosition = thisTickFallUnitPosition;
+				goLeftUnitPosition = thisTickGoLeftUnitPosition;
+				goRightUnitPosition = thisTickGoRightUnitPosition;
+				
+				upDamage += thisTickUpDamage;
+				downDamage += thisTickDownDamage;
+				leftDamage += thisTickLeftDamage;
+				rightDamage += thisTickRightDamage;
 
-				/*if (!canGoUp && !canGoDown && !canGoLeft && !canGoRight) break;*/
 				if ((!canGoUp || upDamage >= minShootMeDamage) &&
 					(!canGoDown || downDamage >= minShootMeDamage) &&
-					(!canGoLeft && leftDamage >= minShootMeDamage) &&
-					(!canGoRight && rightDamage >= minShootMeDamage))
+					(!canGoLeft || leftDamage >= minShootMeDamage) &&
+					(!canGoRight || rightDamage >= minShootMeDamage))
 					break;
 			}
 
-			if (canGoUp && upDamage == 0) 
+			if (canGoUp && upDamage == 0)
 				return std::make_tuple(GoUP, startGoTick, stopGoTick, 0);
-			if (canGoDown && downDamage == 0) 
+			if (canGoDown && downDamage == 0)
 				return std::make_tuple(GoDOWN, startGoTick, stopGoTick, 0);
-			if (canGoLeft && leftDamage == 0) 
+			if (canGoLeft && leftDamage == 0)
 				return std::make_tuple(GoLEFT, startGoTick, stopGoTick, 0);
-			if (canGoRight && rightDamage == 0) 
+			if (canGoRight && rightDamage == 0)
 				return std::make_tuple(GoRIGHT, startGoTick, stopGoTick, 0);
 
 			if (canGoUp && upDamage < minShootMeDamage)
@@ -552,6 +697,274 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 				bestStartGoTick = startGoTick;
 				bestStopGoTick = stopGoTick;
 			}
+
+						
+			////TODO: не симулировать юнита для каждой пули
+			//for (const auto& bullet : game.bullets)
+			//{
+			//	if (bullet.playerId == unitPlayerId) continue;
+
+			//	bool gotUpBullet = false;
+			//	bool gotDownBullet = false;
+			//	bool gotLeftBullet = false;
+			//	bool gotRightBullet = false;
+
+			//	const auto bulletSimulation = enemyBulletsSimulations.at(bullet);
+
+			//	const auto bulletCrossWallCenter = Vec2Double(
+			//		bullet.position.x + bullet.velocity.x * bulletSimulation.targetCrossTime,
+			//		bullet.position.y + bullet.velocity.y * bulletSimulation.targetCrossTime
+			//	);
+
+			//	const auto halfBulletSize = bullet.size / 2;
+			//	auto jumpUnitPosition = unitPosition;
+			//	auto fallUnitPosition = unitPosition;
+			//	auto goLeftUnitPosition = unitPosition;
+			//	auto goRightUnitPosition = unitPosition;
+			//	
+			//	auto shootWallTick = static_cast<int>(ceil(bulletSimulation.targetCrossTime * game.properties.ticksPerSecond));
+			//	shootWallTick -= addTicks;
+			//	if (shootWallTick == 0) continue;//ударилась в стену на прошлый тик
+			//	
+			//	auto bulletPosition = bullet.position;
+			//	bool startedJump = false;
+			//	
+			//	for (int tick = 1; tick <= shootWallTick; ++tick)
+			//	{
+			//		const auto bulletTime = (tick + addTicks) / game.properties.ticksPerSecond;
+			//		Vec2Double newBulletPosition;
+			//		auto unitTime = tickTime;
+
+			//		
+			//		auto exists = Simulator::getBulletInTimePosition(
+			//			bullet, bulletTime, bulletSimulation, game, newBulletPosition);
+			//		if (!exists)
+			//		{
+			//			unitTime = bulletSimulation.targetCrossTime - (bulletTime - tickTime);
+			//		}				
+
+			//		//jump
+			//		if (canGoUp && !gotUpBullet) {
+			//			const auto thisTickCanJump = canJump && startGoTick == 0 ||
+			//				!Simulator::isUnitOnAir(jumpUnitPosition, unitSize, game) || 
+			//				startedJump;
+			//			if (!thisTickCanJump)
+			//			{
+			//				action.jump = false;
+			//			}else
+			//			{
+			//				if (tick > stopGoTick)
+			//				{
+			//					action.jump = false;
+			//				}
+			//				else if (tick > startGoTick)
+			//				{
+			//					action.jump = true;
+			//					startedJump = true;
+			//				}
+			//			}
+			//			
+			//			const auto newJumpUnitPosition = Simulator::getUnitInTimePosition(
+			//				jumpUnitPosition, unitSize, action, unitTime, game);
+
+			//			action.jump = false;
+
+			//			if (isBulletMoveCrossUnitMove(
+			//				jumpUnitPosition,
+			//				newJumpUnitPosition,
+			//				unitSize,
+			//				bulletPosition,
+			//				newBulletPosition,
+			//				halfBulletSize))
+			//			{
+			//				//canGoUp = false;
+			//				upDamage += bullet.damage;
+			//				gotUpBullet = true;
+			//			}
+			//			else if (!exists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newJumpUnitPosition, unitSize))
+			//			{
+			//				//пуля ударится о стену. надо проверить взрыв
+			//				//canGoUp = false;
+			//				upDamage += bullet.damage;
+			//				gotUpBullet = true;
+			//			}
+			//			jumpUnitPosition = newJumpUnitPosition;
+			//		}
+
+			//		//fall
+			//		if (canGoDown && !gotDownBullet) {
+			//			if (tick > stopGoTick)
+			//			{
+			//				action.jumpDown = false;
+			//			}
+			//			else if (tick > startGoTick)
+			//			{
+			//				action.jumpDown = true;
+			//			}
+			//			const auto newFallUnitPosition = Simulator::getUnitInTimePosition(
+			//				fallUnitPosition, unitSize, action, unitTime, game);
+
+			//			action.jumpDown = false;
+
+			//			if (isBulletMoveCrossUnitMove(
+			//				fallUnitPosition,
+			//				newFallUnitPosition,
+			//				unitSize,
+			//				bulletPosition,
+			//				newBulletPosition,
+			//				halfBulletSize))
+			//			{
+			//				//canGoDown = false;
+			//				downDamage += bullet.damage;
+			//				gotDownBullet = true;
+			//			}
+			//			else if (!exists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newFallUnitPosition, unitSize))
+			//			{
+			//				//пуля ударится о стену. надо проверить взрыв
+			//				//canGoDown = false;
+			//				downDamage += bullet.damage;
+			//				gotDownBullet = true;
+			//			}
+			//			fallUnitPosition = newFallUnitPosition;
+			//		}
+
+			//		//left
+			//		if (canGoLeft && !gotLeftBullet)
+			//		{
+			//			if (tick > stopGoTick)
+			//			{
+			//				action.velocity = 0;
+			//			}
+			//			else if (tick > startGoTick)
+			//			{
+			//				action.velocity = -INT_MAX;
+			//			}
+			//			const auto newGoLeftUnitPosition = Simulator::getUnitInTimePosition(
+			//				goLeftUnitPosition, unitSize, action, unitTime, game);
+
+			//			action.velocity = 0;
+
+			//			if (isBulletMoveCrossUnitMove(
+			//				goLeftUnitPosition,
+			//				newGoLeftUnitPosition,
+			//				unitSize,
+			//				bulletPosition,
+			//				newBulletPosition,
+			//				halfBulletSize))
+			//			{
+			//				//canGoLeft = false;
+			//				leftDamage += bullet.damage;
+			//				gotLeftBullet = true;
+			//			}
+			//			else if (!exists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newGoLeftUnitPosition, unitSize))
+			//			{
+			//				//пуля ударится о стену. надо проверить взрыв
+			//				//canGoLeft = false;
+			//				leftDamage += bullet.damage;
+			//				gotLeftBullet = true;
+			//			}
+			//			goLeftUnitPosition = newGoLeftUnitPosition;
+			//		}
+
+			//		//right
+			//		if (canGoRight && !gotRightBullet)
+			//		{
+			//			if (tick > stopGoTick)
+			//			{
+			//				action.velocity = 0;
+			//			}
+			//			else if (tick > startGoTick)
+			//			{
+			//				action.velocity = INT_MAX;
+			//			}
+			//			const auto newGoRightUnitPosition = Simulator::getUnitInTimePosition(
+			//				goRightUnitPosition, unitSize, action, unitTime, game);
+
+			//			action.velocity = 0;
+
+			//			if (isBulletMoveCrossUnitMove(
+			//				goRightUnitPosition,
+			//				newGoRightUnitPosition,
+			//				unitSize,
+			//				bulletPosition,
+			//				newBulletPosition,
+			//				halfBulletSize))
+			//			{
+			//				//canGoRight = false;
+			//				rightDamage += bullet.damage;
+			//				gotRightBullet = true;
+			//			}
+			//			else if (!exists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newGoRightUnitPosition, unitSize))
+			//			{
+			//				//пуля ударится о стену. надо проверить взрыв
+			//				//canGoRight = false;
+			//				rightDamage += bullet.damage;
+			//				gotRightBullet = true;
+			//			}
+			//			goRightUnitPosition = newGoRightUnitPosition;
+			//		}
+			//		
+			//		
+			//		bulletPosition = newBulletPosition;						
+			//		/*if (!canGoUp && !canGoDown && !canGoLeft && !canGoRight) break;*/
+			//		if ((!canGoUp || upDamage >= minShootMeDamage) && 
+			//			(!canGoDown || downDamage >= minShootMeDamage) &&
+			//			(!canGoLeft && leftDamage >= minShootMeDamage) && 
+			//			(!canGoRight && rightDamage >= minShootMeDamage))
+			//			break;
+			//	}
+
+			//	/*if (!canGoUp && !canGoDown && !canGoLeft && !canGoRight) break;*/
+			//	if ((!canGoUp || upDamage >= minShootMeDamage) &&
+			//		(!canGoDown || downDamage >= minShootMeDamage) &&
+			//		(!canGoLeft && leftDamage >= minShootMeDamage) &&
+			//		(!canGoRight && rightDamage >= minShootMeDamage))
+			//		break;
+			//}
+
+			//if (canGoUp && upDamage == 0) 
+			//	return std::make_tuple(GoUP, startGoTick, stopGoTick, 0);
+			//if (canGoDown && downDamage == 0) 
+			//	return std::make_tuple(GoDOWN, startGoTick, stopGoTick, 0);
+			//if (canGoLeft && leftDamage == 0) 
+			//	return std::make_tuple(GoLEFT, startGoTick, stopGoTick, 0);
+			//if (canGoRight && rightDamage == 0) 
+			//	return std::make_tuple(GoRIGHT, startGoTick, stopGoTick, 0);
+
+			//if (canGoUp && upDamage < minShootMeDamage)
+			//{
+			//	minShootMeDamage = upDamage;
+			//	bestRunAwayDirection = GoUP;
+			//	bestStartGoTick = startGoTick;
+			//	bestStopGoTick = stopGoTick;
+			//}
+			//if (canGoDown && downDamage < minShootMeDamage)
+			//{
+			//	minShootMeDamage = downDamage;
+			//	bestRunAwayDirection = GoDOWN;
+			//	bestStartGoTick = startGoTick;
+			//	bestStopGoTick = stopGoTick;
+			//}
+			//if (canGoLeft && leftDamage < minShootMeDamage)
+			//{
+			//	minShootMeDamage = leftDamage;
+			//	bestRunAwayDirection = GoLEFT;
+			//	bestStartGoTick = startGoTick;
+			//	bestStopGoTick = stopGoTick;
+			//}
+			//if (canGoRight && rightDamage < minShootMeDamage)
+			//{
+			//	minShootMeDamage = rightDamage;
+			//	bestRunAwayDirection = GoRIGHT;
+			//	bestStartGoTick = startGoTick;
+			//	bestStopGoTick = stopGoTick;
+			//}
+
+
+
+
+
+			
 
 			/*if (curDamage == 0) {
 				if (canGoUp)

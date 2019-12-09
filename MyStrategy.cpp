@@ -3,7 +3,6 @@
 #include <climits>
 #include <map>
 #include <tuple>
-
 #include <sstream>
 #include "common/Helper.h"
 #include "mathcalc/MathHelper.h"
@@ -203,12 +202,12 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		//TODO: нормально проверить возможность прыжка
 		const auto canJump = action.jump ||
 			!Simulator::isUnitOnAir(actionUnitPosition, unit.size, game);
-
+		
 		runawayAction = strategy_.getRunawayAction(
 			actionUnitPosition, unit.size, unit.playerId, actionShootMeBullets, enemyBulletsSimulation, 1,
 			true, true, true, true,
 			canJump,
-			game);
+			game);	
 
 		const auto minDamage = std::get<3>(runawayAction);
 		

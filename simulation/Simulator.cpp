@@ -348,6 +348,8 @@ BulletSimulation Simulator::getBulletSimulation(const Vec2Double& bulletPosition
 
 	const auto shootWallTime = MathHelper::getVectorLength(bulletWallCrossCorner, wallCrossPoint) /
 		MathHelper::getVectorLength(bulletVelocity);
+	const auto shootWallTick = static_cast<int>(ceil(shootWallTime * game.properties.ticksPerSecond));	
+	
 	return { wallCrossPoint, bulletWallCrossCorner, shootWallTime };
 }
 

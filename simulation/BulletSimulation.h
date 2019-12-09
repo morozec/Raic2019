@@ -1,5 +1,6 @@
 #pragma once
 #include "../model/Bullet.hpp"
+#include <map>
 
 struct BulletSimulation
 {
@@ -7,6 +8,8 @@ struct BulletSimulation
 	Vec2Double targetCrossPoint;
 	Vec2Double bulletCrossCorner;
 	double targetCrossTime;
+
+	std::map<int, Vec2Double> bulletPositions;
 
 	BulletSimulation(): targetCrossTime(0)
 	{
