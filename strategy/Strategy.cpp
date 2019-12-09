@@ -82,7 +82,7 @@ std::map<Bullet, BulletSimulation> Strategy::getEnemyBulletsSimulation(const Gam
 		for (int i = 1; i <= shootWallTick; ++i)
 		{
 			Vec2Double position;
-			const auto exists = Simulator::getBulletInTimePosition(bullet, tickTime, simulation, game, position);
+			const auto exists = Simulator::getBulletInTimePosition(bullet, tickTime * i, simulation, game, position);
 			bulletPositions[exists ? i : -1] = position;
 		}
 		
@@ -153,6 +153,7 @@ std::map<Bullet, int> Strategy::getShootMeBullets(
 				if (isShooting)
 				{
 					shootMeBullets[bullet] = tick;
+					break;
 				}
 			}
 			else
@@ -178,8 +179,8 @@ std::map<Bullet, int> Strategy::getShootMeBullets(
 				if (isShooting)
 				{
 					shootMeBullets[bullet] = tick;
-				}
-				
+					break;
+				}				
 			}			
 		}
 				
@@ -400,10 +401,10 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 				action.velocity = 0;
 
 				if (tick <= startGoTick && 
-					(!canGoUp || beforeStartGoUpDamage.count(tick) > 0) && 
-					(!canGoDown || beforeStartGoDownDamage.count(tick) > 0) && 
-					(!canGoLeft || beforeStartGoLeftDamage.count(tick) > 0) && 
-					(!canGoRight || beforeStartGoRightDamage.count(tick) > 0))
+					beforeStartGoUpDamage.count(tick) > 0 && 
+					beforeStartGoDownDamage.count(tick) > 0 && 
+					beforeStartGoLeftDamage.count(tick) > 0 && 
+					beforeStartGoRightDamage.count(tick) > 0)
 				{
 					thisTickUpDamage = beforeStartGoUpDamage[tick];
 					jumpUnitPosition = thisTickJumpUnitPosition;
@@ -433,8 +434,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 						const auto halfBulletSize = bullet.size / 2;
 
 						auto shootWallTick = static_cast<int>(ceil(bulletSimulation.targetCrossTime * game.properties.ticksPerSecond));
-						shootWallTick -= addTicks;
-						if (shootWallTick <= 0) continue;//ударилась в стену раньше
+						if (shootWallTick < tick + addTicks) continue;//ударилась в стену раньше
 
 						
 						const auto bulletExists = bulletSimulation.bulletPositions.count(tick + addTicks) > 0;
@@ -623,10 +623,12 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 						}
 
 					}
-					beforeStartGoUpDamage[tick] = thisTickUpDamage;
-					beforeStartGoDownDamage[tick] = thisTickDownDamage;
-					beforeStartGoLeftDamage[tick] = thisTickLeftDamage;
-					beforeStartGoRightDamage[tick] = thisTickRightDamage;
+					if (tick <= startGoTick) {
+						beforeStartGoUpDamage[tick] = thisTickUpDamage;
+						beforeStartGoDownDamage[tick] = thisTickDownDamage;
+						beforeStartGoLeftDamage[tick] = thisTickLeftDamage;
+						beforeStartGoRightDamage[tick] = thisTickRightDamage;
+					}
 				}
 				upDamage += thisTickUpDamage;
 				downDamage += thisTickDownDamage;
