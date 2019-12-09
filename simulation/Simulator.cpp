@@ -360,9 +360,13 @@ Vec2Double Simulator::getUnitInTimePosition(
 	JumpState& jumpState,
 	const Game& game)
 {
+	//TODO: учет и обновление jumpState
+	
 	if (!action.jump && !action.jumpDown && abs(action.velocity) < TOLERANCE &&
 		!isUnitOnAir(unitPosition, unitSize, game))
 		return unitPosition;
+
+	const auto isJumpPad = jumpState.canJump && !jumpState.canCancel;
 	
 	auto x = unitPosition.x;
 	auto y = unitPosition.y;	
@@ -372,7 +376,7 @@ Vec2Double Simulator::getUnitInTimePosition(
 		std::max(action.velocity, -game.properties.unitMaxHorizontalSpeed);
 
 	double actionVelocityY;
-	if (jumpState.canJump && !jumpState.canCancel) //прыжок с батута
+	if (isJumpPad) //прыжок с батута
 	{
 		actionVelocityY = game.properties.jumpPadJumpSpeed;
 	}
@@ -384,11 +388,11 @@ Vec2Double Simulator::getUnitInTimePosition(
 	auto velocityX = actionVelocityX;
 	auto velocityY = 0;
 
-	if (jumpState.canJump && !jumpState.canCancel)
+	if (isJumpPad)
 	{
 		velocityY = game.properties.jumpPadJumpSpeed;
 	}
-	if (action.jump)
+	else if (action.jump)
 	{
 		velocityY = game.properties.unitJumpSpeed;
 	}
@@ -525,7 +529,34 @@ Vec2Double Simulator::getUnitInTimePosition(
 		}
 	}
 
-	else//canGoAction
+	else if (isJumpFinished)
+	{	
+		const auto jumpMicroTicksCount = static_cast<int> (ceil(jumpState.maxTime / microTickTime));
+		const auto fallMicroTicksCount = microTicksCount - jumpMicroTicksCount;
+		
+		for (int j = 0; j < jumpMicroTicksCount; ++j)
+		{
+			x += velocityX * microTickTime;
+			y += velocityY * microTickTime;
+		}
+
+		velocityY = -game.properties.unitFallSpeed;
+		for (int j = 0; j < fallMicroTicksCount; ++j)
+		{
+			x += velocityX * microTickTime;
+			y += velocityY * microTickTime;
+		}
+
+		//переводим jumpState в состояние падения
+		jumpState.canJump = false;
+		jumpState.speed = 0;
+		jumpState.maxTime = 0;
+		jumpState.canCancel = false;
+
+		return { x, y };
+	}
+
+	else // canGoAction
 	{
 		/*auto tickVelocityX = actionVelocityX;
 		auto tickVelocityY = actionVelocityY;*/
