@@ -383,7 +383,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 				{
 					action.velocity = -INT_MAX;
 				}
-				const auto thiTickGoLeftUnitPosition = Simulator::getUnitInTimePosition(
+				const auto thisTickGoLeftUnitPosition = Simulator::getUnitInTimePosition(
 					goLeftUnitPosition, unitSize, action, tickTime, game);
 				action.velocity = 0;
 
@@ -407,16 +407,9 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 					beforeStartGoRightDamage.count(tick) > 0)
 				{
 					thisTickUpDamage = beforeStartGoUpDamage[tick];
-					jumpUnitPosition = thisTickJumpUnitPosition;
-
 					thisTickDownDamage = beforeStartGoDownDamage[tick];
-					fallUnitPosition = thisTickFallUnitPosition;
-
 					thisTickLeftDamage = beforeStartGoLeftDamage[tick];
-					goLeftUnitPosition = thiTickGoLeftUnitPosition;
-
 					thisTickRightDamage = beforeStartGoRightDamage[tick];
-					goRightUnitPosition = thisTickGoRightUnitPosition;
 				}
 				else
 				{
@@ -490,7 +483,6 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 								thisTickUpDamage += bullet.damage;
 								gotUpBullets[bullet] = true;
 							}
-							jumpUnitPosition = newJumpUnitPosition;
 						}
 
 
@@ -533,7 +525,6 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 								thisTickDownDamage += bullet.damage;
 								gotDownBullets[bullet] = true;
 							}
-							fallUnitPosition = newFallUnitPosition;
 						}
 
 						//left
@@ -547,7 +538,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 							{
 								action.velocity = -INT_MAX;
 							}
-							const auto newGoLeftUnitPosition = bulletExists ? thiTickGoLeftUnitPosition :
+							const auto newGoLeftUnitPosition = bulletExists ? thisTickGoLeftUnitPosition :
 								Simulator::getUnitInTimePosition(
 									goLeftUnitPosition,
 									unitSize,
@@ -576,7 +567,6 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 								thisTickLeftDamage += bullet.damage;
 								gotLeftBullets[bullet] = true;
 							}
-							goLeftUnitPosition = newGoLeftUnitPosition;
 						}
 
 						//right
@@ -619,7 +609,6 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 								thisTickRightDamage += bullet.damage;
 								gotRightBullets[bullet] = true;
 							}
-							goRightUnitPosition = newGoRightUnitPosition;
 						}
 
 					}
@@ -630,6 +619,11 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 						beforeStartGoRightDamage[tick] = thisTickRightDamage;
 					}
 				}
+				jumpUnitPosition = thisTickJumpUnitPosition;
+				fallUnitPosition = thisTickFallUnitPosition;
+				goLeftUnitPosition = thisTickGoLeftUnitPosition;
+				goRightUnitPosition = thisTickGoRightUnitPosition;
+				
 				upDamage += thisTickUpDamage;
 				downDamage += thisTickDownDamage;
 				leftDamage += thisTickLeftDamage;
