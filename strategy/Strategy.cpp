@@ -67,14 +67,40 @@ double Strategy::getShootEnemyProbability(const Unit& me, const Unit& enemy, con
 	return shootingCount * 1.0 / (2 * ANGLE_SPLIT_COUNT + 1.0);
 }
 
-std::map<Bullet, BulletSimulation> Strategy::getEnemyBulletsSimulation(const Game& game, int meId)
+std::map<Bullet, BulletSimulation> Strategy::getEnemyBulletsSimulation(const Game& game, int mePlayerId)
 {
 	std::map<Bullet, BulletSimulation> simulations;
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	for (const auto& bullet: game.bullets)
 	{
-		if (bullet.playerId == meId && bullet.explosionParams == nullptr) continue;
+		if (bullet.playerId == mePlayerId && bullet.explosionParams == nullptr) continue;
 		auto simulation = Simulator::getBulletSimulation(bullet.position, bullet.velocity, bullet.size / 2, game);
+
+		if (bullet.playerId == mePlayerId)//проверим пулю на столкновение с врагом
+		{
+			for (const auto& unit: game.units)
+			{
+				if (unit.playerId == mePlayerId) continue;
+
+				Vec2Double crossPoint;
+				Vec2Double bulletCorner;
+				const auto isShooting = Simulator::getBulletRectangleFirstCrossPoint(
+					bullet.position, bullet.velocity, bullet.size / 2,
+					unit.position.x - unit.size.x / 2, unit.position.y, unit.position.x + unit.size.x / 2, unit.position.y + unit.size.y,
+					crossPoint, bulletCorner);
+				if (!isShooting) continue; //промахнемся
+				
+				if (MathHelper::getVectorLength2(bulletCorner, crossPoint) >
+					MathHelper::getVectorLength2(simulation.bulletCrossCorner, simulation.targetCrossPoint))
+					continue; //пуля раньше ударится в стену
+
+				simulation.targetCrossPoint = crossPoint;
+				simulation.bulletCrossCorner = bulletCorner;
+				simulation.targetCrossTime = MathHelper::getVectorLength(bulletCorner, crossPoint) /
+					MathHelper::getVectorLength(bullet.velocity);
+			}
+		}
+		
 		const auto shootWallTick = static_cast<int>(ceil(simulation.targetCrossTime * game.properties.ticksPerSecond));
 		std::map<int, Vec2Double> bulletPositions;
 		bulletPositions[0] = bullet.position;

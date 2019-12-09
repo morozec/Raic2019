@@ -15,7 +15,7 @@ public:
 	double getShootEnemyProbability(const Unit& me, const Unit& enemy, const Game& game, double spread,
 		Debug* debug = nullptr) const;
 
-	static std::map<Bullet, BulletSimulation> getEnemyBulletsSimulation(const Game& game, int meId);
+	static std::map<Bullet, BulletSimulation> getEnemyBulletsSimulation(const Game& game, int mePlayerId);
 	std::map<Bullet, int>  getShootMeBullets(
 		const Unit& me, 
 		const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, int addTicks, const UnitAction& unitAction,
