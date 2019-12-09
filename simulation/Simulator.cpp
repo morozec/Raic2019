@@ -433,7 +433,9 @@ Vec2Double Simulator::getUnitInTimePosition(
 		}
 	}
 
-	if (canGoThrough && !canGoAction)
+	bool isJumpFinished = jumpState.canJump && jumpState.maxTime < time;
+
+	if (canGoThrough && !canGoAction && !isJumpFinished)
 	{
 		x = nextX;
 		y = nextY;
