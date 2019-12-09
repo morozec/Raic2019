@@ -285,6 +285,11 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 	std::map<int, int> beforeStartGoDownDamage;
 	std::map<int, int> beforeStartGoLeftDamage;
 	std::map<int, int> beforeStartGoRightDamage;
+
+	std::map<int, std::map<int, int>> beforeStopGoUpDamage;
+	std::map<int, std::map<int, int>> beforeStopGoDownDamage;
+	std::map<int, std::map<int, int>> beforeStopGoLeftDamage;
+	std::map<int, std::map<int, int>> beforeStopGoRightDamage;
 		
 
 	for (int startGoTick = minShootMeTick - 1; startGoTick >= 0; startGoTick--)
@@ -410,6 +415,17 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 					thisTickDownDamage = beforeStartGoDownDamage[tick];
 					thisTickLeftDamage = beforeStartGoLeftDamage[tick];
 					thisTickRightDamage = beforeStartGoRightDamage[tick];
+				}
+				else if (tick <= stopGoTick && tick > startGoTick && 
+					beforeStopGoUpDamage.count(tick) > 0 && beforeStopGoUpDamage[tick].count(startGoTick) > 0 &&
+					beforeStopGoDownDamage.count(tick) > 0 && beforeStopGoDownDamage[tick].count(startGoTick) > 0 &&
+					beforeStopGoLeftDamage.count(tick) > 0 && beforeStopGoLeftDamage[tick].count(startGoTick) > 0 &&
+					beforeStopGoRightDamage.count(tick) > 0 && beforeStopGoRightDamage[tick].count(startGoTick) > 0)
+				{
+					thisTickUpDamage = beforeStopGoUpDamage[tick][startGoTick];
+					thisTickDownDamage = beforeStopGoDownDamage[tick][startGoTick];
+					thisTickLeftDamage = beforeStopGoLeftDamage[tick][startGoTick];
+					thisTickRightDamage = beforeStopGoRightDamage[tick][startGoTick];
 				}
 				else
 				{
@@ -618,6 +634,14 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 						beforeStartGoLeftDamage[tick] = thisTickLeftDamage;
 						beforeStartGoRightDamage[tick] = thisTickRightDamage;
 					}
+					else if (tick <= stopGoTick && tick > startGoTick)
+					{
+						beforeStopGoUpDamage[tick][startGoTick] = thisTickUpDamage;
+						beforeStopGoDownDamage[tick][startGoTick] = thisTickDownDamage;
+						beforeStopGoLeftDamage[tick][startGoTick] = thisTickLeftDamage;
+						beforeStopGoRightDamage[tick][startGoTick] = thisTickRightDamage;
+					}
+					
 				}
 				jumpUnitPosition = thisTickJumpUnitPosition;
 				fallUnitPosition = thisTickFallUnitPosition;
