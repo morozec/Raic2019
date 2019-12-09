@@ -356,7 +356,9 @@ BulletSimulation Simulator::getBulletSimulation(const Vec2Double& bulletPosition
 
 //TODO: после конца прыжка или удара о потолок начинается падение
 Vec2Double Simulator::getUnitInTimePosition(
-	const Vec2Double& unitPosition, const Vec2Double& unitSize,  const UnitAction& action, double time, const Game& game)
+	const Vec2Double& unitPosition, const Vec2Double& unitSize, const UnitAction& action, double time,
+	JumpState& jumpState,
+	const Game& game)
 {
 	if (!action.jump && !action.jumpDown && abs(action.velocity) < TOLERANCE &&
 		!isUnitOnAir(unitPosition, unitSize, game))
@@ -369,10 +371,23 @@ Vec2Double Simulator::getUnitInTimePosition(
 		std::min(action.velocity, game.properties.unitMaxHorizontalSpeed) :
 		std::max(action.velocity, -game.properties.unitMaxHorizontalSpeed);
 
-	const auto actionVelocityY = action.jump ? game.properties.unitJumpSpeed : -game.properties.unitFallSpeed;
+	double actionVelocityY;
+	if (jumpState.canJump && !jumpState.canCancel) //прыжок с батута
+	{
+		actionVelocityY = game.properties.jumpPadJumpSpeed;
+	}
+	else
+	{
+		actionVelocityY = action.jump ? game.properties.unitJumpSpeed : -game.properties.unitFallSpeed;
+	}
 
 	auto velocityX = actionVelocityX;
 	auto velocityY = 0;
+
+	if (jumpState.canJump && !jumpState.canCancel)
+	{
+		velocityY = game.properties.jumpPadJumpSpeed;
+	}
 	if (action.jump)
 	{
 		velocityY = game.properties.unitJumpSpeed;

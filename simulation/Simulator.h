@@ -21,7 +21,7 @@ public:
 	
 	//unit simulation	
 	static Vec2Double getUnitInTimePosition(
-		const Vec2Double& unitPosition, const Vec2Double& unitSize, const UnitAction& action, double time, const Game& game);
+		const Vec2Double& unitPosition, const Vec2Double& unitSize, const UnitAction& action, double time, JumpState& jumpState, const Game& game);
 	static void getPolygon(const Vec2Double& unitPos, const Vec2Double& newUnitPos, const Vec2Double& unitSize, Vec2Double polygon[6]);
 	static void getPolygon(const Vec2Double& bulletPos, const Vec2Double& newBulletPos, double halfBulletSize,
 		Vec2Double polygon[6]);
