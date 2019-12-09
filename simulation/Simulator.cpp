@@ -662,12 +662,8 @@ bool Simulator::isUnitOnLadder(const Vec2Double& unitPosition, const Vec2Double&
 
 	if (isUnitOnWall(unitPosition, unitSize, game)) return false;
 
-	const auto leftSideDownTile = game.level.tiles[size_t(unitPosition.x - unitSize.x / 2)][size_t(
-		unitPosition.y - TOLERANCE)];
-	const auto rightSideDownTile = game.level.tiles[size_t(unitPosition.x + unitSize.x / 2)][size_t(
-		unitPosition.y - TOLERANCE)];
-
-	return leftSideDownTile == LADDER || rightSideDownTile == LADDER;
+	const auto centerDownTile = game.level.tiles[size_t(unitPosition.x)][size_t(unitPosition.y - TOLERANCE)];
+	return centerDownTile == LADDER;
 	
 }
 
