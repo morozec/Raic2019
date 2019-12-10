@@ -121,7 +121,14 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			game.level.tiles[size_t(unit.position.x - 1)][size_t(unit.position.y)] == WALL;
 
 		action.jumpDown = !action.jump;
-		action.velocity = nearestWeapon->position.x > unit.position.x ? INT_MAX : -INT_MAX;
+		if (abs(nearestWeapon->position.x - unit.position.x) < TOLERANCE)
+		{
+			action.velocity = 0;
+		}
+		else
+		{
+			action.velocity = nearestWeapon->position.x > unit.position.x ? INT_MAX : -INT_MAX;
+		}
 		
 		action.shoot = false;
 		action.reload = false;
