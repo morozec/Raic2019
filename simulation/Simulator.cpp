@@ -621,7 +621,7 @@ Vec2Double Simulator::getUnitInTimePosition(
 				{
 					x = nextX;
 					y = startTickVelocityY > TOLERANCE ? nextY : trunc(nextY); //после падения встаем ровно на тайл
-					if (startTickVelocityY > TOLERANCE) jumpStopped = false;
+					if (startTickVelocityY > TOLERANCE) jumpStopped = true;
 					continue;
 				}
 				else
