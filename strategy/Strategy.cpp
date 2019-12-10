@@ -1145,4 +1145,14 @@ void Strategy::decreaseStopRunawayTick()
 	if (stop_runaway_tick_ >= 0) stop_runaway_tick_--;
 }
 
+size_t Strategy::getStartedJumpY() const
+{
+	return startedJumpY_;
+}
+
+void Strategy::setStartedJumpY(size_t newStartedJumpY)
+{
+	startedJumpY_ = newStartedJumpY;
+}
+
 

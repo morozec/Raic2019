@@ -4,6 +4,7 @@
 #include <map>
 #include <tuple>
 #include <sstream>
+#include <cmath>
 #include "common/Helper.h"
 #include "mathcalc/MathHelper.h"
 #include "debug/DebugHelper.h"
@@ -22,28 +23,106 @@ inline bool operator<(const Bullet& lhs, const Bullet& rhs)
 	return lhs.position.x < rhs.position.x;
 }
 
+void setJumpAndJumpDown(const Unit& unit, const Vec2Double& targetPosition, const Game& game,
+	bool considerYs,
+	UnitAction& action, Strategy& strategy)
+{
+	const auto isLeftWall = targetPosition.x < unit.position.x - 1 &&
+		game.level.tiles[size_t(unit.position.x - 1)][size_t(unit.position.y)] == WALL;
+	const auto isRightWall = targetPosition.x > unit.position.x + 1 &&
+		game.level.tiles[size_t(unit.position.x + 1)][size_t(unit.position.y)] == WALL;
+	const auto isSameColumnHigher = targetPosition.y > unit.position.y && targetPosition.x >= unit.position.x - 1 && targetPosition.x <= unit.position.x + 1;
+	const auto needJump = considerYs && targetPosition.y > unit.position.y || isLeftWall || isRightWall || isSameColumnHigher;
+
+	const auto bottomTile = game.level.tiles[size_t(unit.position.x)][size_t(unit.position.y - 1)];
+	if (strategy.getStartedJumpY() != 0 &&
+		bottomTile != EMPTY &&
+		size_t(unit.position.y) != strategy.getStartedJumpY())
+	{
+		action.jump = false;
+		action.jumpDown = false;
+		strategy.setStartedJumpY(0);
+	}
+	else if (needJump)
+	{
+		if (isLeftWall && unit.jumpState.canJump && unit.jumpState.canCancel)
+		{
+			auto wallHeight = 0;
+			while (game.level.tiles[size_t(unit.position.x - 1)][size_t(unit.position.y + wallHeight)] == WALL)
+			{
+				wallHeight++;
+			}
+			const auto maxJumpHeight = unit.jumpState.speed * unit.jumpState.maxTime;
+			if (maxJumpHeight < wallHeight)
+			{
+				strategy.setStartedJumpY(static_cast<int>(trunc(unit.position.y)));
+			}
+		}
+
+		else if (isRightWall && unit.jumpState.canJump && unit.jumpState.canCancel)
+		{
+			auto wallHeight = 0;
+			while (game.level.tiles[size_t(unit.position.x + 1)][size_t(unit.position.y + wallHeight)] == WALL)
+			{
+				wallHeight++;
+			}
+			const auto maxJumpHeight = unit.jumpState.speed * unit.jumpState.maxTime;
+			if (maxJumpHeight < wallHeight)
+			{
+				strategy.setStartedJumpY(size_t(unit.position.y));
+			}
+		}
+		else if (isSameColumnHigher)
+		{
+			const auto jumpHeight = targetPosition.y - unit.position.y;			
+			const auto maxJumpHeight = unit.jumpState.speed * unit.jumpState.maxTime;
+			if (maxJumpHeight < jumpHeight)
+			{
+				strategy.setStartedJumpY(size_t(unit.position.y));
+			}
+		}
+		
+		action.jump = true;
+		action.jumpDown = false;
+	}
+	else
+	{
+		action.jump = false;
+		action.jumpDown = considerYs && targetPosition.y < unit.position.y;
+	}	
+}
+
+void setGetWeaponAction(const Unit& unit, const Vec2Double& weaponPosition, const Game& game,
+	UnitAction& action, Strategy& strategy)
+{
+	setJumpAndJumpDown(unit, weaponPosition, game, true, action, strategy);
+	
+	if (abs(weaponPosition.x - unit.position.x) < TOLERANCE)
+		action.velocity = 0;
+	else
+		action.velocity = weaponPosition.x > unit.position.x ? INT_MAX : -INT_MAX;
+
+	action.shoot = false;
+	action.reload = false;
+	action.swapWeapon = false;
+	action.plantMine = false;
+}
 
 void setAttackEnemyAction(
-	const Unit& me, const Vec2Double& enemyPosition, bool needGo, const Game& game, UnitAction& action)
-{
-	double velocity = 0;
-	bool jump = false;
-	const bool jumpDown = false;
-
+	const Unit& unit, const Vec2Double& enemyPosition, bool needGo, const Game& game, 
+	UnitAction& action, Strategy& strategy)
+{	
 	if (needGo)
 	{
-		velocity = enemyPosition.x > me.position.x ? INT_MAX : -INT_MAX;
-		jump = enemyPosition.x > me.position.x &&
-			game.level.tiles[size_t(me.position.x + 1)][size_t(me.position.y)] == WALL ||
-			enemyPosition.x < me.position.x &&
-			game.level.tiles[size_t(me.position.x - 1)][size_t(me.position.y)] ==
-			WALL;
+		action.velocity = enemyPosition.x > unit.position.x ? INT_MAX : -INT_MAX;
+		setJumpAndJumpDown(unit, enemyPosition, game, false, action, strategy);		
 	}
-
-	action.velocity = velocity;
-	action.jump = jump;
-	action.jumpDown = jumpDown;
-	
+	else
+	{
+		action.velocity = 0;
+		action.jump = false;
+		action.jumpDown = false;
+	}
 }
 
 UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
@@ -90,18 +169,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			}
 		}
 	}
-	Vec2Double targetPos = unit.position;
-	if (unit.weapon == nullptr && nearestWeapon != nullptr)
-	{
-		targetPos = nearestWeapon->position;
-	}
-	else if (nearestEnemy != nullptr)
-	{
-		targetPos = nearestEnemy->position;
-	}
-
 	
-
 	UnitAction action;
 	action.aim = nearestEnemy != nullptr ?
 		Vec2Double(nearestEnemy->position.x - unit.position.x,
@@ -114,27 +182,9 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 	if (unit.weapon == nullptr)
 	{
-		action.jump = targetPos.y > unit.position.y ||
-			targetPos.x > unit.position.x &&
-			game.level.tiles[size_t(unit.position.x + 1)][size_t(unit.position.y)] == WALL ||
-			targetPos.x < unit.position.x &&
-			game.level.tiles[size_t(unit.position.x - 1)][size_t(unit.position.y)] == WALL;
-
-		action.jumpDown = !action.jump;
-		if (abs(nearestWeapon->position.x - unit.position.x) < TOLERANCE)
-		{
-			action.velocity = 0;
+		if (nearestWeapon != nullptr) {
+			setGetWeaponAction(unit, nearestWeapon->position, game, action, strategy_);
 		}
-		else
-		{
-			action.velocity = nearestWeapon->position.x > unit.position.x ? INT_MAX : -INT_MAX;
-		}
-		
-		action.shoot = false;
-		action.reload = false;
-		action.swapWeapon = false;
-		action.plantMine = false;
-
 		return action;
 	}
 
@@ -196,7 +246,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		return action;
 	}
 
-	setAttackEnemyAction(unit, nearestEnemy->position, needGo, game, action);
+	setAttackEnemyAction(unit, nearestEnemy->position, needGo, game, action, strategy_);
 
 	tuple<RunawayDirection, int, int, int> runawayAction;
 	auto isSafeMove = strategy_.isSafeMove(unit, action, enemyBulletsSimulation, game);

@@ -43,7 +43,13 @@ public:
 	void setRunaway(RunawayDirection runaway_direction, int sjt);
 	void decreaseStopRunawayTick();
 
+	size_t getStartedJumpY() const;
+	void setStartedJumpY(size_t newStartedJumpY);
+	
+
 private:
 	int stop_runaway_tick_ = -1;
 	RunawayDirection runaway_direction_ = GoNONE;
+
+	size_t startedJumpY_ = 0;
 };
