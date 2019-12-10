@@ -446,7 +446,7 @@ Vec2Double Simulator::getUnitInTimePosition(
 		}
 	}
 	
-	bool isJumpFinished = (isPadJump || isJump) && jumpState.maxTime < time;
+	bool isJumpFinished = (isPadJump || wasJump) && jumpState.maxTime < time;
 
 	if (canGoThroughTop && canGoThrough && !isJumpFinished && !canGoAction)
 	{
@@ -805,7 +805,7 @@ void Simulator::updateJumpState(JumpState& jumpState, double time,
 	bool isPadJump, bool wasJump, bool isJump, bool isFall,
 	const Game& game)
 {
-	if (isPadJump || isJump)//прыгаем
+	if (isPadJump || wasJump && isJump)//прыгаем
 	{
 		if (jumpState.maxTime > time) jumpState.maxTime -= time;//продолжаем прыжок
 		else //падаем
@@ -816,6 +816,14 @@ void Simulator::updateJumpState(JumpState& jumpState, double time,
 			jumpState.canCancel = false;
 		}
 		return;
+	}
+
+	if (!wasJump && isJump) //начинаем прыжок
+	{
+		jumpState.canJump = true;
+		jumpState.speed = game.properties.unitJumpSpeed;
+		jumpState.maxTime = game.properties.unitJumpTime - time;
+		jumpState.canCancel = true;
 	}
 
 	if (wasJump && !isJump) //прекратили прыжок
