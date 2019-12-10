@@ -128,9 +128,12 @@ std::map<Bullet, int> Strategy::getShootMeBullets(
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	std::map<Bullet, int> shootMeBullets;
 	std::map<int, Vec2Double> mePositions;
-	mePositions[0] = addTicks == 0 ? me.position : Simulator::getUnitInTimePosition(
-		me.position, me.size, unitAction, tickTime, game);
+	std::map<int, JumpState> meJumpStates;
+	auto jumpState = me.jumpState;
 	
+	mePositions[0] = addTicks == 0 ? me.position : Simulator::getUnitInTimePosition(
+		me.position, me.size, unitAction, tickTime, jumpState, game);
+	meJumpStates[0] = jumpState;
 
 	UnitAction action;
 	action.velocity = 0;
@@ -169,9 +172,12 @@ std::map<Bullet, int> Strategy::getShootMeBullets(
 				if (mePositions.count(tick) > 0) unitInTimePosition = mePositions[tick];//уже посчитали для другой пули
 				else
 				{
+					auto unitInTimeJumpState = meJumpStates.at(tick - 1);
 					unitInTimePosition =
-						Simulator::getUnitInTimePosition(mePositions.at(tick - 1), me.size, action, tickTime, game);
+						Simulator::getUnitInTimePosition(
+							mePositions.at(tick - 1), me.size, action, tickTime, unitInTimeJumpState, game);
 					mePositions[tick] = unitInTimePosition;
+					meJumpStates[tick] = unitInTimeJumpState;
 				}
 				const bool isShooting = bullet.playerId != me.playerId && isBulletMoveCrossUnitMove(
 					mePositions.at(tick - 1), unitInTimePosition, me.size,
@@ -186,8 +192,11 @@ std::map<Bullet, int> Strategy::getShootMeBullets(
 			{
 				
 				const auto thisTickBulletTime = bulletSimulation.targetCrossTime - (tick - 1) * tickTime;
+
+				auto unitInTimeJumpState = meJumpStates.at(tick - 1);
 				const auto unitInTimePosition =
-					Simulator::getUnitInTimePosition(mePositions.at(tick - 1), me.size, action, thisTickBulletTime, game);
+					Simulator::getUnitInTimePosition(
+						mePositions.at(tick - 1), me.size, action, thisTickBulletTime, unitInTimeJumpState, game);
 				auto isShooting = bullet.playerId != me.playerId && isBulletMoveCrossUnitMove(
 					mePositions.at(tick - 1), unitInTimePosition, me.size,
 					bulletPositions[tick - 1], bulletInTimePosition, bullet.size / 2.0);
@@ -255,10 +264,10 @@ bool Strategy::isBulletMoveCrossUnitMove(
 //TODO: учесть максимальное время прыжка
 std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 	const Vec2Double& unitPosition, const Vec2Double& unitSize, int unitPlayerId,
+	const JumpState& jumpState,
 	const std::map<Bullet, int>& shootingMeBullets,	
 	const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, int addTicks,
 	bool checkUp, bool checkDown, bool checkLeft, bool checkRight,
-	bool canJump,
 	const Game& game) const
 {
 	if (addTicks != 0 && addTicks != 1) throw std::runtime_error("addTicks is not 0 or 1");
@@ -346,6 +355,11 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 			auto goLeftUnitPosition = unitPosition;
 			auto goRightUnitPosition = unitPosition;
 
+			auto goUpJumpState = jumpState;
+			auto goDownJumpState = jumpState;
+			auto goLeftJumpState = jumpState;
+			auto goRightJumpState = jumpState;
+
 			std::map<Bullet, bool> gotUpBullets;
 			std::map<Bullet, bool> gotDownBullets;
 			std::map<Bullet, bool> gotLeftBullets;
@@ -368,16 +382,16 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 				auto thisTickRightDamage = 0;
 				
 				//jump
-				const auto thisTickCanJump = canJump && startGoTick == 0 ||
-					!Simulator::isUnitOnAir(jumpUnitPosition, unitSize, game) ||
-					startedJump;
-				
-				if (!thisTickCanJump)
-				{
-					action.jump = false;
-				}
-				else
-				{
+				//const auto thisTickCanJump = canJump && startGoTick == 0 ||
+				//	!Simulator::isUnitOnAir(jumpUnitPosition, unitSize, game) ||
+				//	startedJump; //TODO: учесть jumpState
+				//
+				//if (!thisTickCanJump)
+				//{
+				//	action.jump = false;
+				//}
+				//else
+				//{
 					if (tick > stopGoTick)
 					{
 						action.jump = false;
@@ -387,9 +401,10 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 						action.jump = true;
 						startedJump = true;
 					}
-				}
+				//}
+				auto thisTickGoUpJumpState = goUpJumpState;
 				const auto thisTickJumpUnitPosition = Simulator::getUnitInTimePosition(
-					jumpUnitPosition, unitSize, action, tickTime, game);
+					jumpUnitPosition, unitSize, action, tickTime, thisTickGoUpJumpState, game);
 				action.jump = false;				
 				
 				//fall
@@ -401,8 +416,10 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 				{
 					action.jumpDown = true;
 				}
+
+				auto thisTickGoDownJumpState = goDownJumpState;
 				const auto thisTickFallUnitPosition = Simulator::getUnitInTimePosition(
-					fallUnitPosition, unitSize, action, tickTime, game);
+					fallUnitPosition, unitSize, action, tickTime, thisTickGoDownJumpState, game);
 				action.jumpDown = false;
 
 				//left
@@ -414,8 +431,9 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 				{
 					action.velocity = -INT_MAX;
 				}
+				auto thisTickGoLeftJumpState = goLeftJumpState;
 				const auto thisTickGoLeftUnitPosition = Simulator::getUnitInTimePosition(
-					goLeftUnitPosition, unitSize, action, tickTime, game);
+					goLeftUnitPosition, unitSize, action, tickTime, thisTickGoLeftJumpState, game);
 				action.velocity = 0;
 
 				//right
@@ -427,8 +445,9 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 				{
 					action.velocity = INT_MAX;
 				}
+				auto thisTickGoRightJumpState = goRightJumpState;
 				const auto thisTickGoRightUnitPosition = Simulator::getUnitInTimePosition(
-					goRightUnitPosition, unitSize, action, tickTime, game);
+					goRightUnitPosition, unitSize, action, tickTime, thisTickGoRightJumpState, game);
 				action.velocity = 0;
 
 				if (tick <= startGoTick && 
@@ -478,12 +497,12 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 
 						//jump
 						if (canGoUp && !gotUpBullets[bullet]) {
-							if (!thisTickCanJump)
+							/*if (!thisTickCanJump)
 							{
 								action.jump = false;
 							}
 							else
-							{
+							{*/
 								if (tick > stopGoTick)
 								{
 									action.jump = false;
@@ -493,14 +512,16 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 									action.jump = true;
 									startedJump = true;
 								}
-							}
+							//}
 
+							auto newGoUpJumpState = goUpJumpState;
 							const auto newJumpUnitPosition = bulletExists ? thisTickJumpUnitPosition :
 								Simulator::getUnitInTimePosition(
 									jumpUnitPosition,
 									unitSize,
 									action,
 									notExistsUnitTime,
+									newGoUpJumpState,
 									game);
 
 							action.jump = false;
@@ -537,12 +558,15 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 							{
 								action.jumpDown = true;
 							}
+
+							auto newGoDownJumpState = goDownJumpState;
 							const auto newFallUnitPosition = bulletExists ? thisTickFallUnitPosition :
 								Simulator::getUnitInTimePosition(
 									fallUnitPosition,
 									unitSize,
 									action,
 									notExistsUnitTime,
+									newGoDownJumpState,
 									game);
 
 							action.jumpDown = false;
@@ -579,12 +603,15 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 							{
 								action.velocity = -INT_MAX;
 							}
+
+							auto newGoLeftJumpState = goLeftJumpState;
 							const auto newGoLeftUnitPosition = bulletExists ? thisTickGoLeftUnitPosition :
 								Simulator::getUnitInTimePosition(
 									goLeftUnitPosition,
 									unitSize,
 									action,
 									notExistsUnitTime,
+									newGoLeftJumpState,
 									game);
 
 							action.velocity = 0;
@@ -621,12 +648,15 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 							{
 								action.velocity = INT_MAX;
 							}
+
+							auto newGoRightJumpState = goRightJumpState;
 							const auto newGoRightUnitPosition = bulletExists ? thisTickGoRightUnitPosition :
 								Simulator::getUnitInTimePosition(
 									goRightUnitPosition,
 									unitSize,
 									action,
 									notExistsUnitTime,
+									newGoRightJumpState,
 									game);
 
 							action.velocity = 0;
@@ -672,7 +702,12 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 				fallUnitPosition = thisTickFallUnitPosition;
 				goLeftUnitPosition = thisTickGoLeftUnitPosition;
 				goRightUnitPosition = thisTickGoRightUnitPosition;
-				
+
+				goUpJumpState = thisTickGoUpJumpState;
+				goDownJumpState = thisTickGoDownJumpState;
+				goLeftJumpState = thisTickGoLeftJumpState;
+				goRightJumpState = thisTickGoRightJumpState;
+
 				upDamage += thisTickUpDamage;
 				downDamage += thisTickDownDamage;
 				leftDamage += thisTickLeftDamage;
@@ -1041,8 +1076,8 @@ bool Strategy::isSafeMove(
 		{
 			unitTime = bulletSimulation.targetCrossTime;
 		}
-
-		const auto unitInTimePosition = Simulator::getUnitInTimePosition(unit.position, unit.size, action, unitTime, game);			
+		auto jumpState = unit.jumpState;
+		const auto unitInTimePosition = Simulator::getUnitInTimePosition(unit.position, unit.size, action, unitTime, jumpState, game);			
 		
 		const auto cross = bullet.playerId != unit.playerId && isBulletMoveCrossUnitMove(
 			unit.position,
