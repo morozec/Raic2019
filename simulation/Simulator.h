@@ -36,7 +36,7 @@ public:
 
 private:
 	
-	static bool canGoThroughTile(const Tile& tile, bool jumpDown);
+	static bool canGoThroughTile(const Tile& tile);
 	static Vec2Double getBulletBorderCross(const Vec2Double& bulletPos, const Vec2Double& bulletVelocity, const Game& game);
 	static bool getBulletPointRectangleFirstCrossPoint(const Vec2Double& bulletPos, const Vec2Double& bulletVelocity,
 		double xLeft, double yDown, double xRight, double yUp,

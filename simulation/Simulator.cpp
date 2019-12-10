@@ -9,10 +9,9 @@
 #include <cmath>
 
 
-bool Simulator::canGoThroughTile(const Tile& tile, bool jumpDown)
+bool Simulator::canGoThroughTile(const Tile& tile)
 {
-	if (tile == WALL) return false;
-	return !jumpDown || jumpDown && (tile == LADDER || tile == PLATFORM || tile == EMPTY);
+	return tile != WALL;
 }
 
 Vec2Double Simulator::getBulletBorderCross(const Vec2Double& bulletPos, const Vec2Double& bulletVelocity, const Game& game)
@@ -405,10 +404,10 @@ Vec2Double Simulator::getUnitInTimePosition(
 	auto rightBottomTile = game.level.tiles[size_t(nextX + unitSize.x / 2)][size_t(nextY)];
 
 	auto canGoThrough = 
-		canGoThroughTile(leftTopTile, action.jumpDown) &&
-		canGoThroughTile(rightTopTile, action.jumpDown) &&
-		canGoThroughTile(leftBottomTile, action.jumpDown) && 
-		canGoThroughTile(rightBottomTile, action.jumpDown);
+		canGoThroughTile(leftTopTile) &&
+		canGoThroughTile(rightTopTile) &&
+		canGoThroughTile(leftBottomTile) && 
+		canGoThroughTile(rightBottomTile);
 
 	auto becameOnAir = !isOnAir && !isJump && isUnitOnAir({ nextX, nextY }, unitSize, game);
 
@@ -566,8 +565,8 @@ Vec2Double Simulator::getUnitInTimePosition(
 			rightBottomTile = game.level.tiles[size_t(nextX + unitSize.x / 2)][size_t(nextY)];
 
 			canGoThrough =
-				canGoThroughTile(leftBottomTile, action.jumpDown) && canGoThroughTile(leftTopTile, action.jumpDown) &&
-				canGoThroughTile(rightTopTile, action.jumpDown) && canGoThroughTile(rightBottomTile, action.jumpDown);
+				canGoThroughTile(leftBottomTile) && canGoThroughTile(leftTopTile) &&
+				canGoThroughTile(rightTopTile) && canGoThroughTile(rightBottomTile);
 
 			if (canGoThrough)
 			{
@@ -588,8 +587,8 @@ Vec2Double Simulator::getUnitInTimePosition(
 				rightBottomTile = game.level.tiles[size_t(nextX + unitSize.x / 2)][size_t(nextY)];
 
 				canGoThrough =
-					canGoThroughTile(leftBottomTile, action.jumpDown) && canGoThroughTile(leftTopTile, action.jumpDown) &&
-					canGoThroughTile(rightTopTile, action.jumpDown) && canGoThroughTile(rightBottomTile, action.jumpDown);
+					canGoThroughTile(leftBottomTile) && canGoThroughTile(leftTopTile) &&
+					canGoThroughTile(rightTopTile) && canGoThroughTile(rightBottomTile);
 
 				if (canGoThrough)
 				{
@@ -615,8 +614,8 @@ Vec2Double Simulator::getUnitInTimePosition(
 				rightBottomTile = game.level.tiles[size_t(nextX + unitSize.x / 2)][size_t(nextY)];
 
 				canGoThrough =
-					canGoThroughTile(leftBottomTile, action.jumpDown) && canGoThroughTile(leftTopTile, action.jumpDown) &&
-					canGoThroughTile(rightTopTile, action.jumpDown) && canGoThroughTile(rightBottomTile, action.jumpDown);
+					canGoThroughTile(leftBottomTile) && canGoThroughTile(leftTopTile) &&
+					canGoThroughTile(rightTopTile) && canGoThroughTile(rightBottomTile);
 
 				if (canGoThrough)
 				{
