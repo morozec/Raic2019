@@ -445,10 +445,15 @@ Vec2Double Simulator::getUnitInTimePosition(
 			canGoAction = true;
 		}
 	}
+
+	const auto isJumpPadCross = !isPadJump && (
+		isUnitOnJumpPad(unitPosition, unitSize, game) || isUnitOnJumpPad({ nextX, nextY }, unitSize, game));
 	
 	bool isJumpFinished = (isPadJump || wasJump) && jumpState.maxTime < time;
 
-	if (canGoThroughTop && canGoThrough && !isJumpFinished && !canGoAction)
+	
+
+	if (canGoThroughTop && canGoThrough && !isJumpPadCross && !isJumpFinished && !canGoAction)
 	{
 		x = nextX;
 		y = nextY;
@@ -643,6 +648,36 @@ Vec2Double Simulator::getUnitInTimePosition(
 			updateJumpState(jumpState, time, newUnitPosition, unitSize, isPadJump, wasJump, isJump, isFall, game);
 			return newUnitPosition;			
 		}
+	}
+
+	else if (isJumpPadCross)
+	{
+		int microTicksGone = 0;
+		for (int j = 0; j < microTicksCount; ++j)
+		{
+			nextX = x + velocityX * microTickTime;
+			nextY = y + velocityY * microTickTime;
+
+			if (!isUnitOnJumpPad({nextX, nextY}, unitSize, game))
+			{
+				x = nextX;
+				y = nextY;
+				microTicksGone++;				
+			}
+			else break;
+		}
+
+		velocityY = game.properties.jumpPadJumpSpeed;
+		const auto timeLeft = (microTicksCount - microTicksGone) * microTickTime;
+		x += velocityX * timeLeft;
+		y += velocityY * timeLeft;
+
+		const Vec2Double newUnitPosition = { x, y };
+		jumpState.canJump = true;
+		jumpState.speed = game.properties.jumpPadJumpSpeed;
+		jumpState.maxTime = game.properties.jumpPadJumpTime - timeLeft;
+		jumpState.canCancel = false;
+		return newUnitPosition;
 	}
 
 	else if (isJumpFinished)
@@ -896,6 +931,16 @@ bool Simulator::isUnitOnAir(const Vec2Double& unitPosition, const Vec2Double& un
 {
 	return !isUnitOnWall(unitPosition, unitSize, game) && !isUnitOnLadder(unitPosition, unitSize, game) && !isUnitOnPlatform(unitPosition, unitSize, game);
 }
+
+bool Simulator::isUnitOnJumpPad(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game)
+{
+	return
+		game.level.tiles[size_t(unitPosition.x - unitSize.x / 2)][size_t(unitPosition.y)] == JUMP_PAD ||
+		game.level.tiles[size_t(unitPosition.x - unitSize.x / 2)][size_t(unitPosition.y + unitSize.y)] == JUMP_PAD ||
+		game.level.tiles[size_t(unitPosition.x + unitSize.x / 2)][size_t(unitPosition.y + unitSize.y)] == JUMP_PAD ||
+		game.level.tiles[size_t(unitPosition.x + unitSize.x / 2)][size_t(unitPosition.y)] == JUMP_PAD;
+}
+
 
 bool Simulator::getBulletRectangleFirstCrossPoint(const Vec2Double& bulletPos, const Vec2Double& bulletVelocity, double halfBulletSize,
 	double xLeft, double yDown, double xRight, double yUp,
