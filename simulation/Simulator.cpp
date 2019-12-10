@@ -380,20 +380,6 @@ Vec2Double Simulator::getUnitInTimePosition(
 		std::min(action.velocity, game.properties.unitMaxHorizontalSpeed) :
 		std::max(action.velocity, -game.properties.unitMaxHorizontalSpeed);
 
-	double actionVelocityY;
-	if (isPadJump) //прыжок с батута
-	{
-		actionVelocityY = game.properties.jumpPadJumpSpeed;
-	}
-	else if (isJump)
-	{
-		actionVelocityY = game.properties.unitJumpSpeed;
-	}
-	else
-	{
-		actionVelocityY = -game.properties.unitFallSpeed;
-	}
-
 	auto velocityY = 0;
 
 	if (isPadJump)
@@ -404,8 +390,8 @@ Vec2Double Simulator::getUnitInTimePosition(
 	{
 		velocityY = game.properties.unitJumpSpeed;
 	}
-	else if (isFall ||
-		action.jumpDown && (isOnLadder || isOnPlatform))//TODO: возможно, также если прекращаем прыжок
+	else if (isFall || wasJump && !isJump ||
+		action.jumpDown && (isOnLadder || isOnPlatform))
 	{
 		velocityY = -game.properties.unitFallSpeed;
 	}
@@ -635,7 +621,7 @@ Vec2Double Simulator::getUnitInTimePosition(
 				if (canGoThrough)
 				{
 					x = nextX;
-					y = nextY;
+					y = startTickVelocityY > TOLERANCE ? nextY : trunc(nextY); //после падения встаем ровно на тайл
 					if (startTickVelocityY > TOLERANCE) jumpStopped = false;
 					continue;
 				}
