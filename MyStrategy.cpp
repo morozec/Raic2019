@@ -201,15 +201,11 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		const auto actionUnitPosition = Simulator::getUnitInTimePosition(
 			unit.position, unit.size, action, tickTime, jumpState, game);
 		const auto actionShootMeBullets = strategy_.getShootMeBullets(unit, enemyBulletsSimulation, 1, action, game);
-		//могу прыгнуть и прыгаю на этом тике или могу прыгнуть на следующем тике
-		const auto canJump = unit.jumpState.canJump && !Simulator::isUnitOnAir(unit.position, unit.size, game) && action.jump ||
-			!Simulator::isUnitOnAir(actionUnitPosition, unit.size, game);
 		
 		runawayAction = strategy_.getRunawayAction(
 			actionUnitPosition, unit.size, unit.playerId, jumpState,
 			actionShootMeBullets, enemyBulletsSimulation, 1,
 			true, true, true, true,
-			canJump,
 			game);	
 
 		const auto minDamage = std::get<3>(runawayAction);
@@ -252,13 +248,10 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	action.velocity = 0;
 
 	const auto shootMeBullets = strategy_.getShootMeBullets(unit, enemyBulletsSimulation, 0, action, game);
-	auto canJump = unit.jumpState.canJump ||
-		!Simulator::isUnitOnAir(unit.position, unit.size, game);
 	runawayAction = strategy_.getRunawayAction(
 		unit.position, unit.size, unit.playerId, unit.jumpState,
 		shootMeBullets, enemyBulletsSimulation, 0,
 		checkUp, checkDown, checkLeft, checkRight,
-		canJump,
 		game);
 	
 	

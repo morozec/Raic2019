@@ -43,4 +43,8 @@ private:
 
 	static inline void getPolygon(const Vec2Double rect[4], const Vec2Double newRect[4], Vec2Double polygon[6]);
 
+	static void updateJumpState(JumpState& jumpState, double time,
+		const Vec2Double& unitPosition, const Vec2Double& unitSize,
+		bool isPadJump, bool wasJump, bool isJump, bool isFall, const Game& game);
+
 };
