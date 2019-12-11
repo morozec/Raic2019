@@ -130,12 +130,8 @@ void setMoveToEnemyAction(
 void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, UnitAction& action)
 {
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
-
 	const auto movingTime = me.weapon->fireTimer != nullptr ? *(me.weapon->fireTimer) : 0;
-	//позиция, откуда произойдет выстрел
-	auto jumpState = me.jumpState;
-	const auto meShootingPosition = Simulator::getUnitInTimePosition(me.position, me.size, action, movingTime, jumpState, game);
-
+	
 	const auto isEnemyOnAir = Simulator::isUnitOnAir(enemy.position, enemy.size, game);
 	UnitAction enemyAction;
 	if (!enemy.jumpState.canJump && !enemy.jumpState.canCancel || //падает
@@ -153,9 +149,28 @@ void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, Unit
 		enemyAction.velocity = 0;
 	}
 	else throw runtime_error("unknown enemy position");
+	
+
+	const auto fullMovingTicks = static_cast<int>(movingTime / tickTime);
+	auto meShootingPosition = me.position;//позиция, откуда произойдет выстрел
+	auto meJumpState = me.jumpState;
+
+	auto enemyShootingPosition = enemy.position;
 	auto enemyJumpState = enemy.jumpState;
-	const auto enemyShootingPosition = Simulator::getUnitInTimePosition(
-		enemy.position, enemy.size, enemyAction, movingTime, enemyJumpState, game);
+	
+	for (int i = 0; i < fullMovingTicks; ++i)
+	{
+		meShootingPosition = Simulator::getUnitInTimePosition(
+			meShootingPosition, me.size, action, tickTime, meJumpState, game);
+		enemyShootingPosition = Simulator::getUnitInTimePosition(
+			enemyShootingPosition, enemy.size, enemyAction, tickTime, enemyJumpState, game);
+	}
+	const auto timeLeft = movingTime - fullMovingTicks / game.properties.ticksPerSecond;
+	meShootingPosition = Simulator::getUnitInTimePosition(
+		meShootingPosition, me.size, action, timeLeft, meJumpState, game);
+	enemyShootingPosition = Simulator::getUnitInTimePosition(
+		enemyShootingPosition, enemy.size, enemyAction, timeLeft, enemyJumpState, game);
+
 
 	/*if (me.weapon->fireTimer != nullptr && *(me.weapon->fireTimer) > tickTime)
 	{

@@ -359,6 +359,9 @@ Vec2Double Simulator::getUnitInTimePosition(
 	JumpState& jumpState,
 	const Game& game)
 {
+	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
+	if (time > tickTime + TOLERANCE) throw std::runtime_error("impossible to simulate unit for more then 1 tick");
+	
 	if (!action.jump && !action.jumpDown && abs(action.velocity) < TOLERANCE &&
 		!isUnitOnAir(unitPosition, unitSize, game))
 		return unitPosition;
@@ -452,7 +455,7 @@ Vec2Double Simulator::getUnitInTimePosition(
 	//симул€ци€ по микротикам
 
 	bool jumpStopped = false;
-	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
+	
 	const auto microTickTime = tickTime / game.properties.updatesPerTick;
 	const auto microTicksCount = static_cast<int>(round(time / microTickTime));
 
