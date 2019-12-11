@@ -93,7 +93,7 @@ void setJumpAndJumpDown(const Unit& unit, const Vec2Double& targetPosition, cons
 	}	
 }
 
-void setGetWeaponAction(const Unit& unit, const Vec2Double& weaponPosition, const Game& game,
+void setMoveToWeaponAction(const Unit& unit, const Vec2Double& weaponPosition, const Game& game,
 	UnitAction& action, Strategy& strategy)
 {
 	setJumpAndJumpDown(unit, weaponPosition, game, true, action, strategy);
@@ -109,7 +109,7 @@ void setGetWeaponAction(const Unit& unit, const Vec2Double& weaponPosition, cons
 	action.plantMine = false;
 }
 
-void setAttackEnemyAction(
+void setMoveToEnemyAction(
 	const Unit& unit, const Vec2Double& enemyPosition, bool needGo, const Game& game, 
 	UnitAction& action, Strategy& strategy)
 {	
@@ -124,6 +124,12 @@ void setAttackEnemyAction(
 		action.jump = false;
 		action.jumpDown = false;
 	}
+}
+
+void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, UnitAction& action)
+{
+	action.aim = enemy.position - me.position;
+	action.shoot = Strategy::getShootEnemyProbability(me, enemy, game, me.weapon->spread) >= SHOOTING_PROBABILITY;
 }
 
 UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
@@ -172,37 +178,36 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	
 	UnitAction action;
-	action.aim = nearestEnemy != nullptr ?
-		Vec2Double(nearestEnemy->position.x - unit.position.x,
-			nearestEnemy->position.y - unit.position.y) :
-		Vec2Double(0, 0);
-	
+	action.aim = Vec2Double(0, 0);	
 	action.reload = false;
 	action.swapWeapon = false;
 	action.plantMine = false;
+	action.shoot = false;
 
 	if (unit.weapon == nullptr)
 	{
 		if (nearestWeapon != nullptr) {
-			setGetWeaponAction(unit, nearestWeapon->position, game, action, strategy_);
+			setMoveToWeaponAction(unit, nearestWeapon->position, game, action, strategy_);
 		}
 		return action;
 	}
 
 	if (nearestEnemy == nullptr) return action;
 
+	setShootingAction(unit, *nearestEnemy, game, action);
+
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	auto needGo = false;
-	auto needShoot = false;
+	//auto needShoot = false;
 
 	if (nearestEnemy != nullptr)
 	{		
-		needGo = strategy_.getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->params.minSpread) <
+		needGo = Strategy::getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->params.minSpread) <
 			WALKING_PROBABILITY;
-		needShoot = strategy_.getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->spread, &debug) >=
-			SHOOTING_PROBABILITY;		
+		/*needShoot = strategy_.getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->spread, &debug) >=
+			SHOOTING_PROBABILITY;	*/	
 	}
-	action.shoot = needShoot;
+	//action.shoot = needShoot;
 
 	const auto enemyBulletsSimulation = strategy_.getEnemyBulletsSimulation(game, unit.playerId);	
 
@@ -247,7 +252,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		return action;
 	}
 
-	setAttackEnemyAction(unit, nearestEnemy->position, needGo, game, action, strategy_);
+	setMoveToEnemyAction(unit, nearestEnemy->position, needGo, game, action, strategy_);
 
 	tuple<RunawayDirection, int, int, int> runawayAction;
 	auto isSafeMove = strategy_.isSafeMove(unit, action, enemyBulletsSimulation, game);

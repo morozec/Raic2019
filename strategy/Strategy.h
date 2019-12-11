@@ -4,7 +4,6 @@
 #include "../model/Bullet.hpp"
 #include "../model/Game.hpp"
 #include "RunawayDirection.h"
-#include "../Debug.hpp"
 #include "../model/UnitAction.hpp"
 #include "../simulation/BulletSimulation.h"
 
@@ -12,8 +11,7 @@
 class Strategy
 {
 public:
-	double getShootEnemyProbability(const Unit& me, const Unit& enemy, const Game& game, double spread,
-		Debug* debug = nullptr) const;
+	static double getShootEnemyProbability(const Unit& me, const Unit& enemy, const Game& game, double spread);
 
 	static std::map<Bullet, BulletSimulation> getEnemyBulletsSimulation(const Game& game, int mePlayerId);
 	std::map<Bullet, int>  getShootMeBullets(

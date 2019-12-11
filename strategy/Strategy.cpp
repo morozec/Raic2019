@@ -17,8 +17,7 @@ inline bool operator<(const Bullet& lhs, const Bullet& rhs)
 	return lhs.position.x < rhs.position.x;
 }
 
-double Strategy::getShootEnemyProbability(const Unit& me, const Unit& enemy, const Game& game, double spread,
-	Debug* debug) const
+double Strategy::getShootEnemyProbability(const Unit& me, const Unit& enemy, const Game& game, double spread)
 {
 	if (me.weapon == nullptr) return 0;
 	if (me.weapon->lastAngle == nullptr) return 1;
