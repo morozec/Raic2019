@@ -180,7 +180,7 @@ std::map<Bullet, int> Strategy::getShootMeBullets(
 			else
 			{
 				
-				const auto thisTickBulletTime = bulletSimulation.targetCrossTime - (tick - 1) * tickTime;
+				const auto thisTickBulletTime = bulletSimulation.targetCrossTime - (tick + addTicks - 1) * tickTime;
 
 				auto unitInTimeJumpState = meJumpStates.at(tick - 1);
 				const auto unitInTimePosition =
