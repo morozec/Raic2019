@@ -975,7 +975,8 @@ bool Simulator::isUnitOnPlatform(const Vec2Double& unitPosition, const Vec2Doubl
 	const auto rightSideDownTile = game.level.tiles[size_t(unitPosition.x + unitSize.x / 2)][size_t(
 		unitPosition.y - TOLERANCE)];
 
-	return leftSideDownTile == PLATFORM || rightSideDownTile == PLATFORM;
+	return (leftSideDownTile == PLATFORM || rightSideDownTile == PLATFORM) && 
+		size_t(unitPosition.y - TOLERANCE) != size_t(unitPosition.y + TOLERANCE);
 }
 
 bool Simulator::isUnitOnAir(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game)
