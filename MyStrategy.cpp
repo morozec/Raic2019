@@ -9,6 +9,7 @@
 #include "mathcalc/MathHelper.h"
 #include "debug/DebugHelper.h"
 #include "simulation/Simulator.h"
+#include <iostream>
 
 using namespace std;
 
@@ -356,7 +357,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		}
 	}	
 	
-
+	cout << game.currentTick << ": " << action.jump << " " << action.jumpDown << " " << action.velocity << "\n";
 	return action;
 }
 
