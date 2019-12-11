@@ -123,20 +123,21 @@ bool Simulator::getBulletPointRectangleFirstCrossPoint(const Vec2Double& bulletP
 
 
 bool Simulator::getBulletInTimePosition(
-	const Bullet& bullet, double time, const BulletSimulation& bulletSimulation, const Game& game,
+	const Vec2Double& bulletPosition, const Vec2Double& bulletVelocity, double time, double targetCrossTime, const Game& game,
 	Vec2Double& position)
 {
-	if (time > bulletSimulation.targetCrossTime) {
+	if (time > targetCrossTime) {
 		position = Vec2Double(
-			bullet.position.x + bullet.velocity.x * bulletSimulation.targetCrossTime,
-			bullet.position.y + bullet.velocity.y * bulletSimulation.targetCrossTime);
+			bulletPosition.x + bulletVelocity.x * targetCrossTime,
+			bulletPosition.y + bulletVelocity.y * targetCrossTime);
 		return false;
 	}
-	position = Vec2Double(bullet.position.x + bullet.velocity.x * time, bullet.position.y + bullet.velocity.y * time);
+	position = bulletPosition + bulletVelocity * time;
 	return true;
 }
 
-BulletSimulation Simulator::getBulletSimulation(const Vec2Double& bulletPosition, const Vec2Double& bulletVelocity, double halfBulletSize, const Game& game)
+BulletSimulation Simulator::getBulletSimulation(
+	const Vec2Double& bulletPosition, const Vec2Double& bulletVelocity, double halfBulletSize, const Game& game)
 {
 	const auto bulletLD0 = Vec2Double(bulletPosition.x - halfBulletSize, bulletPosition.y - halfBulletSize);
 	const auto bulletLU0 = Vec2Double(bulletPosition.x - halfBulletSize, bulletPosition.y + halfBulletSize);
@@ -347,9 +348,9 @@ BulletSimulation Simulator::getBulletSimulation(const Vec2Double& bulletPosition
 
 	const auto shootWallTime = MathHelper::getVectorLength(bulletWallCrossCorner, wallCrossPoint) /
 		MathHelper::getVectorLength(bulletVelocity);
-	const auto shootWallTick = static_cast<int>(ceil(shootWallTime * game.properties.ticksPerSecond));	
-	
-	return { wallCrossPoint, bulletWallCrossCorner, shootWallTime };
+
+	BulletSimulation simulation = { wallCrossPoint, bulletWallCrossCorner, shootWallTime };	
+	return simulation;
 }
 
 
@@ -1058,4 +1059,21 @@ bool Simulator::getBulletRectangleFirstCrossPoint(const Vec2Double& bulletPos, c
 	return hasCross;
 }
 
+std::map<int, Vec2Double> Simulator::getBulletPositions(
+	const Vec2Double& bulletPosition, const Vec2Double& bulletVelocity, double targetCrossTime, const Game& game)
+{
+	const auto shootWallTick = static_cast<int>(ceil(targetCrossTime * game.properties.ticksPerSecond));
+	std::map<int, Vec2Double> bulletPositions;
+	bulletPositions[0] = bulletPosition;
 
+	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
+	for (int i = 1; i <= shootWallTick; ++i)
+	{
+		Vec2Double position;
+		const auto exists = Simulator::getBulletInTimePosition(
+			bulletPosition, bulletVelocity, tickTime * i, targetCrossTime, game, position);
+		bulletPositions[exists ? i : -1] = position;
+	}
+
+	return bulletPositions;
+}

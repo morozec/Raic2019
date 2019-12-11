@@ -10,6 +10,7 @@
 #include "debug/DebugHelper.h"
 #include "simulation/Simulator.h"
 #include <iostream>
+#include <algorithm>
 
 using namespace std;
 
@@ -128,8 +129,126 @@ void setMoveToEnemyAction(
 
 void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, UnitAction& action)
 {
-	action.aim = enemy.position - me.position;
-	action.shoot = Strategy::getShootEnemyProbability(me, enemy, game, me.weapon->spread) >= SHOOTING_PROBABILITY;
+	const auto tickTime = 1.0 / game.properties.ticksPerSecond;	
+
+	if (me.weapon->fireTimer != nullptr && *(me.weapon->fireTimer) > tickTime)
+	{
+		action.aim = enemy.position - me.position;
+		action.shoot = false;		
+		return;
+	}
+
+	const auto movingTime = me.weapon->fireTimer != nullptr ? *(me.weapon->fireTimer) : 0;
+	const auto shootingTime = tickTime - movingTime;
+	
+	//позиция, откуда произойдет выстрел
+	auto jumpState = me.jumpState;
+	const auto shootingPosition = Simulator::getUnitInTimePosition(me.position, me.size, action, movingTime, jumpState, game);
+
+	Vec2Double targetPosition;
+	if (!Simulator::isUnitOnAir(enemy.position, enemy.size, game))
+	{
+		targetPosition = enemy.position;
+	}
+	else
+	{
+		if (!enemy.jumpState.canJump && !enemy.jumpState.canCancel)//падает
+		{
+			auto isShoot = false;
+			UnitAction enemyAction;
+			enemyAction.jump = false;
+			enemyAction.jumpDown = false;
+			enemyAction.velocity = 0;
+
+			auto enemyJumpState = enemy.jumpState;
+			
+			const auto bulletPos0 = Vec2Double(shootingPosition.x, shootingPosition.y + me.size.y / 2);
+			const auto enemyPos0 = Simulator::getUnitInTimePosition(enemy.position, enemy.size, enemyAction, movingTime, enemyJumpState, game);
+			const auto enemyPos1 = Simulator::getUnitInTimePosition(enemyPos0, enemy.size, enemyAction, shootingTime, enemyJumpState, game);
+						
+			const auto maxBulletVelocity = me.weapon->params.bullet.speed;
+			const auto halfBulletSize = me.weapon->params.bullet.size / 2;
+
+			int fallingTicks = 0;
+			map<int, Vec2Double> enemyPositions;
+			enemyPositions[0] = enemyPos1;
+			
+			while (!enemyJumpState.canJump) // здесь нельзя проверять !onAir из-за прыжков на батуте
+			{
+				const auto nextPos = Simulator::getUnitInTimePosition(
+					enemyPositions[fallingTicks], enemy.size, enemyAction, tickTime, enemyJumpState, game);
+				enemyPositions[++fallingTicks] = nextPos;
+			}
+
+			for (int i = 0; i <= fallingTicks; ++i)
+			{
+				const auto targetEnemyPos = enemyPositions[i];
+				const auto shootingVector = targetEnemyPos - bulletPos0;
+
+				Vec2Double bulletVelocity;
+				if (abs(shootingVector.x) > TOLERANCE) {
+					const auto angle = atan2(shootingVector.y, shootingVector.x);
+					bulletVelocity = { maxBulletVelocity * cos(angle), maxBulletVelocity*sin(angle) };
+				}
+				else
+				{
+					bulletVelocity = { 0, shootingVector.y > 0 ? maxBulletVelocity : -maxBulletVelocity };
+				}
+
+				//проверяем пересечение на тике 0-1
+				const auto bulletPos1 = bulletPos0 + bulletVelocity * shootingTime;
+				isShoot = Strategy::isBulletMoveCrossUnitMove(
+					enemyPos0, enemyPos1, enemy.size, bulletPos0, bulletPos1, halfBulletSize);
+
+				if (isShoot)
+				{
+					targetPosition = targetEnemyPos;
+					break;
+				}
+
+				const auto bulletSimulation = Simulator::getBulletSimulation(bulletPos1, bulletVelocity, halfBulletSize, game);
+				const auto bulletPositions = Simulator::getBulletPositions(
+					bulletPos1, bulletVelocity, bulletSimulation.targetCrossTime, game);				
+				
+				const auto shootWallTick = static_cast<int>(ceil(bulletSimulation.targetCrossTime * game.properties.ticksPerSecond));
+
+				//TODO: проверить пересчение со стеной до пересечения с врагом
+
+				for (int j = 0; j < std::min(fallingTicks, shootWallTick); ++j)
+				{
+					const auto bp0 = bulletPositions.at(j);
+					const auto bp1 = bulletPositions.at(j < shootWallTick - 1 ? j + 1 : -1);
+
+					const auto ep0 = enemyPositions[j];
+					const auto ep1 = enemyPositions[j + 1];
+					
+					isShoot = Strategy::isBulletMoveCrossUnitMove(
+						ep0, ep1, enemy.size, bp0, bp1, halfBulletSize);
+					if (isShoot) break;
+				}
+
+				if (isShoot)
+				{
+					targetPosition = targetEnemyPos;
+					break;
+				}
+			}
+
+			if (!isShoot) targetPosition = enemy.position;
+		}
+		else //прыгает
+		{
+			//TODO: разделить обычный прыжок и с батута
+			targetPosition = enemy.position;
+		}
+	}
+
+	//TODO: ракетницей стрелять под ноги врагу
+	//TODO: не стрелять ракетницей с риском задеть себя
+	
+	action.aim = targetPosition - shootingPosition;
+	action.shoot = true;
+	//action.shoot = Strategy::getShootEnemyProbability(me, enemy, game, me.weapon->spread) >= SHOOTING_PROBABILITY;
 }
 
 UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
@@ -193,9 +312,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 
 	if (nearestEnemy == nullptr) return action;
-
-	setShootingAction(unit, *nearestEnemy, game, action);
-
+	
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	auto needGo = false;
 	//auto needShoot = false;
@@ -249,6 +366,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			throw runtime_error("unknown runawayDirection");
 		}
 		strategy_.decreaseStopRunawayTick();
+
+		setShootingAction(unit, *nearestEnemy, game, action);
 		return action;
 	}
 
@@ -280,7 +399,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 				to_string(std::get<1>(runawayAction) + 1) + " " +
 				to_string(std::get<2>(runawayAction) + 1) + " " +
 				to_string(std::get<3>(runawayAction)) + "\n"));
-			
+
+			setShootingAction(unit, *nearestEnemy, game, action);
 			return action;
 			//
 			//isSafeMove = true;
@@ -363,6 +483,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}	
 	
 	cout << game.currentTick << ": " << action.jump << " " << action.jumpDown << " " << action.velocity << "\n";
+
+	setShootingAction(unit, *nearestEnemy, game, action);
 	return action;
 }
 

@@ -100,18 +100,7 @@ std::map<Bullet, BulletSimulation> Strategy::getEnemyBulletsSimulation(const Gam
 			}
 		}
 		
-		const auto shootWallTick = static_cast<int>(ceil(simulation.targetCrossTime * game.properties.ticksPerSecond));
-		std::map<int, Vec2Double> bulletPositions;
-		bulletPositions[0] = bullet.position;
-
-		for (int i = 1; i <= shootWallTick; ++i)
-		{
-			Vec2Double position;
-			const auto exists = Simulator::getBulletInTimePosition(bullet, tickTime * i, simulation, game, position);
-			bulletPositions[exists ? i : -1] = position;
-		}
-		
-		simulation.bulletPositions = bulletPositions;
+		simulation.bulletPositions = Simulator::getBulletPositions(bullet.position, bullet.velocity, simulation.targetCrossTime, game);
 		simulations[bullet] = simulation;
 	}
 	return simulations;
@@ -160,7 +149,8 @@ std::map<Bullet, int> Strategy::getShootMeBullets(
 		{
 			Vec2Double bulletInTimePosition;
 			const bool exists = Simulator::getBulletInTimePosition(
-				bullet, (tick+addTicks)* tickTime, bulletSimulation, game, bulletInTimePosition);
+				bullet.position, bullet.velocity, (tick+addTicks)* tickTime, 
+				bulletSimulation.targetCrossTime, game, bulletInTimePosition);
 						
 
 			if (exists)
@@ -1078,7 +1068,7 @@ bool Strategy::isSafeMove(
 		
 		Vec2Double bulletInTimePosition;
 		const auto exists = Simulator::getBulletInTimePosition(
-			bullet, tickTime, bulletSimulation, game, bulletInTimePosition);
+			bullet.position, bullet.velocity, tickTime, bulletSimulation.targetCrossTime, game, bulletInTimePosition);
 		if (!exists)
 		{
 			unitTime = bulletSimulation.targetCrossTime;

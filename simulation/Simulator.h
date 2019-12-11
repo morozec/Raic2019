@@ -13,11 +13,13 @@ public:
 
 	//bullet simulation
 	static bool getBulletInTimePosition(
-		const Bullet& bullet, double time, const BulletSimulation& bulletSimulation, const Game& game, Vec2Double& position);
+		const Vec2Double& bulletPosition, const Vec2Double& bulletVelocity, double time, double targetCrossTime, const Game& game, Vec2Double& position);
 	static BulletSimulation getBulletSimulation(const Vec2Double& bulletPosition, const Vec2Double& bulletVelocity, double halfBulletSize, const Game& game);	
 	static bool getBulletRectangleFirstCrossPoint(const Vec2Double& bulletPos, const Vec2Double& bulletVelocity, double halfBulletSize,
 		double xLeft, double yDown, double xRight, double yUp,
 		Vec2Double& crossPoint, Vec2Double& bulletCorner);
+	static std::map<int, Vec2Double> getBulletPositions(
+		const Vec2Double& bulletPosition, const Vec2Double& bulletVelocity, double targetCrossTime, const Game& game);
 	
 	//unit simulation	
 	static Vec2Double getUnitInTimePosition(
