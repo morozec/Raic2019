@@ -278,9 +278,11 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 	}
 
 	int minShootMeDamage = 0;
+	int maxFirstShootMeTick = INT_MAX;
 	for (const auto& item: shootingMeBullets)
 	{
 		minShootMeDamage += item.first.damage;
+		if (item.second < maxFirstShootMeTick) maxFirstShootMeTick = item.second;
 	}
 
 	auto bestRunAwayDirection = NoWAY;
@@ -339,16 +341,23 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 		{			
 			auto canGoUp = checkUp;
 			auto upDamage = 0;
-			bool startedJump = false;
+			int upFirstMeTick = INT_MAX;
+			int upShootMeCount = 0;
 			
 			auto canGoLeft = checkLeft;
 			auto leftDamage = 0;
+			int leftFirstMeTick = INT_MAX;
+			int leftShootMeCount = 0;
 			
 			auto canGoRight = checkRight;
 			auto rightDamage = 0;
-			
+			int rightFirstMeTick = INT_MAX;
+			int rightShootMeCount = 0;
+						
 			auto canGoDown = checkDown;
 			auto downDamage = 0;
+			int downFirstMeTick = INT_MAX;
+			int downShootMeCount = 0;
 
 			auto jumpUnitPosition = unitPosition;
 			auto fallUnitPosition = unitPosition;
@@ -399,7 +408,6 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 					else if (tick > startGoTick)
 					{
 						action.jump = true;
-						startedJump = true;
 					}
 				//}
 				auto thisTickGoUpJumpState = goUpJumpState;
@@ -510,7 +518,6 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 								else if (tick > startGoTick)
 								{
 									action.jump = true;
-									startedJump = true;
 								}
 							//}
 
@@ -532,19 +539,12 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 								unitSize,
 								prevTickBulletPosition,
 								thisTickBulletPosition,
-								halfBulletSize))
+								halfBulletSize) ||
+								!bulletExists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newJumpUnitPosition, unitSize))
 							{
-								//canGoUp = false;
 								thisTickUpDamage += bullet.damage;
 								gotUpBullets[bullet] = true;
-							}
-							else if (!bulletExists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newJumpUnitPosition, unitSize))
-							{
-								//пуля ударится о стену. надо проверить взрыв
-								//canGoUp = false;
-								thisTickUpDamage += bullet.damage;
-								gotUpBullets[bullet] = true;
-							}
+							}							
 						}
 
 
@@ -577,16 +577,9 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 								unitSize,
 								prevTickBulletPosition,
 								thisTickBulletPosition,
-								halfBulletSize))
+								halfBulletSize) ||
+								!bulletExists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newFallUnitPosition, unitSize))
 							{
-								//canGoDown = false;
-								thisTickDownDamage += bullet.damage;
-								gotDownBullets[bullet] = true;
-							}
-							else if (!bulletExists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newFallUnitPosition, unitSize))
-							{
-								//пуля ударится о стену. надо проверить взрыв
-								//canGoDown = false;
 								thisTickDownDamage += bullet.damage;
 								gotDownBullets[bullet] = true;
 							}
@@ -622,16 +615,9 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 								unitSize,
 								prevTickBulletPosition,
 								thisTickBulletPosition,
-								halfBulletSize))
+								halfBulletSize) ||
+								!bulletExists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newGoLeftUnitPosition, unitSize))
 							{
-								//canGoLeft = false;
-								thisTickLeftDamage += bullet.damage;
-								gotLeftBullets[bullet] = true;
-							}
-							else if (!bulletExists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newGoLeftUnitPosition, unitSize))
-							{
-								//пуля ударится о стену. надо проверить взрыв
-								//canGoLeft = false;
 								thisTickLeftDamage += bullet.damage;
 								gotLeftBullets[bullet] = true;
 							}
@@ -667,16 +653,9 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 								unitSize,
 								prevTickBulletPosition,
 								thisTickBulletPosition,
-								halfBulletSize))
+								halfBulletSize) ||
+								!bulletExists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newGoRightUnitPosition, unitSize))
 							{
-								//canGoRight = false;
-								thisTickRightDamage += bullet.damage;
-								gotRightBullets[bullet] = true;
-							}
-							else if (!bulletExists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newGoRightUnitPosition, unitSize))
-							{
-								//пуля ударится о стену. надо проверить взрыв
-								//canGoRight = false;
 								thisTickRightDamage += bullet.damage;
 								gotRightBullets[bullet] = true;
 							}
@@ -709,9 +688,30 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 				goRightJumpState = thisTickGoRightJumpState;
 
 				upDamage += thisTickUpDamage;
+				if (thisTickUpDamage > 0) {
+					upShootMeCount++;
+					if (tick < upFirstMeTick) upFirstMeTick = tick;
+				}
+					
+				
 				downDamage += thisTickDownDamage;
+				if (thisTickDownDamage > 0) {
+					downShootMeCount++;
+					if (tick < downFirstMeTick) downFirstMeTick = tick;
+				}
+				
 				leftDamage += thisTickLeftDamage;
+				if (thisTickLeftDamage > 0) {
+					leftShootMeCount++;
+					if (tick < leftFirstMeTick) leftFirstMeTick = tick;
+				}
+				
 				rightDamage += thisTickRightDamage;
+				if (thisTickRightDamage > 0)
+				{
+					rightShootMeCount++;
+					if (tick < rightFirstMeTick) rightFirstMeTick = tick;
+				} 
 
 				if ((!canGoUp || upDamage >= minShootMeDamage) &&
 					(!canGoDown || downDamage >= minShootMeDamage) &&
@@ -729,33 +729,41 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 			if (canGoRight && rightDamage == 0)
 				return std::make_tuple(GoRIGHT, startGoTick, stopGoTick, 0);
 
-			if (canGoUp && upDamage < minShootMeDamage)
+			if (canGoUp && (upDamage < minShootMeDamage || 
+				upDamage == minShootMeDamage && upFirstMeTick > maxFirstShootMeTick && upShootMeCount >= 2))
 			{
 				minShootMeDamage = upDamage;
 				bestRunAwayDirection = GoUP;
 				bestStartGoTick = startGoTick;
 				bestStopGoTick = stopGoTick;
+				maxFirstShootMeTick = upFirstMeTick;
 			}
-			if (canGoDown && downDamage < minShootMeDamage)
+			if (canGoDown && (downDamage < minShootMeDamage || 
+				downDamage == minShootMeDamage && downFirstMeTick > maxFirstShootMeTick && downShootMeCount >= 2))
 			{
 				minShootMeDamage = downDamage;
 				bestRunAwayDirection = GoDOWN;
 				bestStartGoTick = startGoTick;
 				bestStopGoTick = stopGoTick;
+				maxFirstShootMeTick = downFirstMeTick;
 			}
-			if (canGoLeft && leftDamage < minShootMeDamage)
+			if (canGoLeft && (leftDamage < minShootMeDamage || 
+				leftDamage == minShootMeDamage && leftFirstMeTick > maxFirstShootMeTick && leftShootMeCount >= 2))
 			{
 				minShootMeDamage = leftDamage;
 				bestRunAwayDirection = GoLEFT;
 				bestStartGoTick = startGoTick;
 				bestStopGoTick = stopGoTick;
+				maxFirstShootMeTick = leftFirstMeTick;
 			}
-			if (canGoRight && rightDamage < minShootMeDamage)
+			if (canGoRight && (rightDamage < minShootMeDamage || 
+				rightDamage == minShootMeDamage && rightFirstMeTick > maxFirstShootMeTick && rightShootMeCount >= 2))
 			{
 				minShootMeDamage = rightDamage;
 				bestRunAwayDirection = GoRIGHT;
 				bestStartGoTick = startGoTick;
 				bestStopGoTick = stopGoTick;
+				maxFirstShootMeTick = rightFirstMeTick;
 			}
 
 						
