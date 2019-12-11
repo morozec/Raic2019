@@ -129,42 +129,61 @@ void setMoveToEnemyAction(
 
 void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, UnitAction& action)
 {
-	const auto tickTime = 1.0 / game.properties.ticksPerSecond;	
-
-	if (me.weapon->fireTimer != nullptr && *(me.weapon->fireTimer) > tickTime)
-	{
-		action.aim = enemy.position - me.position;
-		action.shoot = false;		
-		return;
-	}
+	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 
 	const auto movingTime = me.weapon->fireTimer != nullptr ? *(me.weapon->fireTimer) : 0;
-	const auto shootingTime = tickTime - movingTime;
-	
 	//позиция, откуда произойдет выстрел
 	auto jumpState = me.jumpState;
-	const auto shootingPosition = Simulator::getUnitInTimePosition(me.position, me.size, action, movingTime, jumpState, game);
+	const auto meShootingPosition = Simulator::getUnitInTimePosition(me.position, me.size, action, movingTime, jumpState, game);
+
+	const auto isEnemyOnAir = Simulator::isUnitOnAir(enemy.position, enemy.size, game);
+	UnitAction enemyAction;
+	if (!enemy.jumpState.canJump && !enemy.jumpState.canCancel || //падает
+		enemy.jumpState.canJump && !enemy.jumpState.canCancel || //прыгает на батуте
+		!isEnemyOnAir) // стоит на земле 
+	{
+		enemyAction.jump = false;
+		enemyAction.jumpDown = false;
+		enemyAction.velocity = 0;
+	}
+	else if (enemy.jumpState.canJump && enemy.jumpState.canCancel && isEnemyOnAir) //прыгает
+	{
+		enemyAction.jump = true;
+		enemyAction.jumpDown = false;
+		enemyAction.velocity = 0;
+	}
+	else throw runtime_error("unknown enemy position");
+	auto enemyJumpState = enemy.jumpState;
+	const auto enemyShootingPosition = Simulator::getUnitInTimePosition(
+		enemy.position, enemy.size, enemyAction, movingTime, enemyJumpState, game);
+
+	/*if (me.weapon->fireTimer != nullptr && *(me.weapon->fireTimer) > tickTime)
+	{
+		action.aim = enemyShootingPosition - meShootingPosition;
+		action.shoot = false;		
+		return;
+	}*/
+
+
+	const auto shootingTick = static_cast<int>(ceil(movingTime / tickTime));
+	const auto thisTickShootingTime = shootingTick / game.properties.ticksPerSecond - movingTime;
 
 	Vec2Double targetPosition;
 	if (!Simulator::isUnitOnAir(enemy.position, enemy.size, game))
 	{
 		targetPosition = enemy.position;
+		action.shoot = false;
 	}
 	else
 	{
-		if (!enemy.jumpState.canJump && !enemy.jumpState.canCancel)//падает
+		if (!enemyJumpState.canJump && !enemyJumpState.canCancel || //падает
+			enemyJumpState.canJump && !enemyJumpState.canCancel)   //прыгает на батуте
 		{
-			auto isShoot = false;
-			UnitAction enemyAction;
-			enemyAction.jump = false;
-			enemyAction.jumpDown = false;
-			enemyAction.velocity = 0;
-
-			auto enemyJumpState = enemy.jumpState;
+			auto isShoot = false;	
 			
-			const auto bulletPos0 = Vec2Double(shootingPosition.x, shootingPosition.y + me.size.y / 2);
-			const auto enemyPos0 = Simulator::getUnitInTimePosition(enemy.position, enemy.size, enemyAction, movingTime, enemyJumpState, game);
-			const auto enemyPos1 = Simulator::getUnitInTimePosition(enemyPos0, enemy.size, enemyAction, shootingTime, enemyJumpState, game);
+			const auto bulletPos0 = Vec2Double(meShootingPosition.x, meShootingPosition.y + me.size.y / 2);
+			const auto enemyPos0 = enemyShootingPosition;
+			const auto enemyPos1 = Simulator::getUnitInTimePosition(enemyPos0, enemy.size, enemyAction, thisTickShootingTime, enemyJumpState, game);
 						
 			const auto maxBulletVelocity = me.weapon->params.bullet.speed;
 			const auto halfBulletSize = me.weapon->params.bullet.size / 2;
@@ -196,7 +215,7 @@ void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, Unit
 				}
 
 				//проверяем пересечение на тике 0-1
-				const auto bulletPos1 = bulletPos0 + bulletVelocity * shootingTime;
+				const auto bulletPos1 = bulletPos0 + bulletVelocity * thisTickShootingTime;
 				isShoot = Strategy::isBulletMoveCrossUnitMove(
 					enemyPos0, enemyPos1, enemy.size, bulletPos0, bulletPos1, halfBulletSize);
 
@@ -234,20 +253,29 @@ void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, Unit
 				}
 			}
 
-			if (!isShoot) targetPosition = enemy.position;
+			if (isShoot)
+			{
+				action.shoot = true;
+			}
+			else
+			{				
+				targetPosition = enemy.position;
+				action.shoot = false;
+			}
 		}
 		else //прыгает
 		{
 			//TODO: разделить обычный прыжок и с батута
 			targetPosition = enemy.position;
+			action.shoot = false;
 		}
 	}
 
 	//TODO: ракетницей стрелять под ноги врагу
 	//TODO: не стрелять ракетницей с риском задеть себя
 	
-	action.aim = targetPosition - shootingPosition;
-	action.shoot = true;
+	action.aim = targetPosition - meShootingPosition;
+	//action.shoot = true;
 	//action.shoot = Strategy::getShootEnemyProbability(me, enemy, game, me.weapon->spread) >= SHOOTING_PROBABILITY;
 }
 
