@@ -388,7 +388,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 	if (nearestEnemy != nullptr)
 	{		
-		needGo = Strategy::getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->params.minSpread) <
+		needGo = game.currentTick >= 100 ? false : Strategy::getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->params.minSpread) <
 			WALKING_PROBABILITY;
 		/*needShoot = strategy_.getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->spread, &debug) >=
 			SHOOTING_PROBABILITY;	*/	
