@@ -17,6 +17,11 @@ public:
 		const Vec2Double& enemyPosition, const Vec2Double& enemySize,
 		const Weapon& weapon, double spread, double shootingAngle,
 		const Game& game);
+	static double getShootEnemyProbability(
+		const Vec2Double& startBulletPosition, double shootingAngle, double spread, const BulletParams& bulletParams, double thisTickShootingTime,
+		const Vec2Double& startEnemyPosition, const std::map<int, Vec2Double>& enemyPositions, const Vec2Double& enemySize,
+		const Game& game
+	);
 
 	static std::map<Bullet, BulletSimulation> getEnemyBulletsSimulation(const Game& game, int mePlayerId);
 	std::map<Bullet, int>  getShootMeBullets(

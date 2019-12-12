@@ -199,13 +199,9 @@ void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, Unit
 		if (!enemyJumpState.canJump && !enemyJumpState.canCancel || //падает
 			enemyJumpState.canJump && !enemyJumpState.canCancel)   //прыгает на батуте
 		{
-			const auto bulletPos0 = Vec2Double(meShootingPosition.x, meShootingPosition.y + me.size.y / 2);
-			const auto enemyPos0 = enemyShootingPosition;
-			const auto enemyPos1 = Simulator::getUnitInTimePosition(enemyPos0, enemy.size, enemyAction, thisTickShootingTime, enemyJumpState, game);
-						
-			const auto maxBulletVelocity = me.weapon->params.bullet.speed;
-			const auto halfBulletSize = me.weapon->params.bullet.size / 2;
-
+			const auto startBulletPosition = Vec2Double(meShootingPosition.x, meShootingPosition.y + me.size.y / 2);
+			const auto enemyPos1 = Simulator::getUnitInTimePosition(enemyShootingPosition, enemy.size, enemyAction, thisTickShootingTime, enemyJumpState, game);
+		
 			int fallingTicks = 0;
 			map<int, Vec2Double> enemyPositions;
 			enemyPositions[0] = enemyPos1;
@@ -234,8 +230,6 @@ void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, Unit
 			for (int i = 0; i <= fallingTicks; ++i)
 			{
 				const auto shootingVector = enemyPositions[i] - meShootingPosition;
-
-				Vec2Double bulletVelocity;
 				double shootingAngle;
 				if (abs(shootingVector.x) > TOLERANCE) {
 					shootingAngle = atan2(shootingVector.y, shootingVector.x);					
@@ -243,20 +237,7 @@ void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, Unit
 				else
 				{
 					shootingAngle = shootingVector.y > 0 ? M_PI : -M_PI;
-				}
-
-				bulletVelocity = { maxBulletVelocity * cos(shootingAngle), maxBulletVelocity*sin(shootingAngle) };
-
-				//проверяем пересечение на тике 0-1
-				const auto bulletPos1 = bulletPos0 + bulletVelocity * thisTickShootingTime;
-
-				if (Strategy::isBulletMoveCrossUnitMove(
-					enemyPos0, enemyPos1, enemy.size, bulletPos0, bulletPos1, halfBulletSize))
-				{
-					maxShootingProbability = 1;
-					mspTarget = &enemyPositions[i];
-					break;
-				}
+				}							
 
 				double spread;
 				if (me.weapon->lastAngle == nullptr)
@@ -271,7 +252,15 @@ void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, Unit
 				}
 
 				const auto probability = Strategy::getShootEnemyProbability(
-					meShootingPosition, me.size, enemyShootingPosition, enemy.size, *me.weapon, spread, shootingAngle, game);
+					startBulletPosition,
+					shootingAngle,
+					spread,
+					me.weapon->params.bullet,
+					thisTickShootingTime,
+					enemyShootingPosition,
+					enemyPositions,
+					enemy.size,
+					game);
 				if (probability > maxShootingProbability)
 				{
 					maxShootingProbability = probability;

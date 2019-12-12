@@ -70,6 +70,56 @@ double Strategy::getShootEnemyProbability(
 	return shootingCount * 1.0 / (2 * ANGLE_SPLIT_COUNT + 1.0);
 }
 
+double Strategy::getShootEnemyProbability(
+	const Vec2Double& startBulletPosition, double shootingAngle, double spread, const BulletParams& bulletParams, double thisTickShootingTime, 
+	const Vec2Double& startEnemyPosition, const std::map<int, Vec2Double>& enemyPositions, const Vec2Double& enemySize,
+	const Game& game)
+{
+	const auto deltaAngle = spread / ANGLE_SPLIT_COUNT;
+	const auto halfBulletSize = bulletParams.size / 2;
+
+	auto shootingCount = 0;
+	
+	for (auto i = -ANGLE_SPLIT_COUNT; i <= ANGLE_SPLIT_COUNT; ++i)
+	{
+		const auto angle = shootingAngle + deltaAngle * i;
+		auto bulletVelocity = Vec2Double(bulletParams.speed * cos(angle), bulletParams.speed * sin(angle));
+
+		const auto bulletPos1 = startBulletPosition + bulletVelocity * thisTickShootingTime;
+
+		const auto bulletSimulation = Simulator::getBulletSimulation(bulletPos1, bulletVelocity, halfBulletSize, game);
+		const auto bulletPositions = Simulator::getBulletPositions(
+			bulletPos1, bulletVelocity, bulletSimulation.targetCrossTime, game);
+
+		//проверяем пересечение на тике 0-1
+		if (isBulletMoveCrossUnitMove(
+			startEnemyPosition, enemyPositions.at(0), enemySize, startBulletPosition, bulletPos1, halfBulletSize))
+		{
+			shootingCount++;
+			break;
+		}
+
+		const auto shootWallTick = static_cast<size_t>(ceil(bulletSimulation.targetCrossTime * game.properties.ticksPerSecond));
+
+		for (size_t j = 0; j < std::min(enemyPositions.size() - 1, shootWallTick); ++j)
+		{
+			const auto bp0 = bulletPositions.at(j);
+			const auto bp1 = bulletPositions.at(j < shootWallTick - 1 ? j + 1 : -1);
+
+			const auto ep0 = enemyPositions.at(j);
+			const auto ep1 = enemyPositions.at(j + 1);
+
+			if(isBulletMoveCrossUnitMove(
+				ep0, ep1, enemySize, bp0, bp1, halfBulletSize))
+			{
+				shootingCount++;
+				break;
+			}
+		}
+	}
+	return shootingCount * 1.0 / (2 * ANGLE_SPLIT_COUNT + 1.0);
+}
+
 std::map<Bullet, BulletSimulation> Strategy::getEnemyBulletsSimulation(const Game& game, int mePlayerId)
 {
 	std::map<Bullet, BulletSimulation> simulations;
