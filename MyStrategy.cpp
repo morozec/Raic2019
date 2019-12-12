@@ -206,6 +206,8 @@ void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, Unit
 			map<int, Vec2Double> enemyPositions;
 			enemyPositions[0] = enemyPos1;
 
+			
+
 			bool isFallingWhileJumpPadJumping = false;
 			bool isJumpPadJumpingWhileFalling = false;
 			while (true) // здесь нельзя проверять !onAir из-за прыжков на батуте
@@ -223,22 +225,33 @@ void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, Unit
 				if (isFalling && enemyJumpState.canJump && !enemyJumpState.canCancel)
 					isJumpPadJumpingWhileFalling = true;//перешли из падения в прыжок на батуте
 			}
-
-			auto maxShootingProbability = 0.0;
-			const Vec2Double* mspTarget = nullptr;
-
-			for (int i = 0; i <= fallingTicks; ++i)
+			
+			double minAngle = INT_MAX;
+			double maxAngle = -INT_MAX;
+			for (const auto& ep: enemyPositions)
 			{
-				const auto shootingVector = enemyPositions[i] - meShootingPosition;
+				const auto shootingVector = ep.second - meShootingPosition;
 				double shootingAngle;
 				if (abs(shootingVector.x) > TOLERANCE) {
-					shootingAngle = atan2(shootingVector.y, shootingVector.x);					
+					shootingAngle = atan2(shootingVector.y, shootingVector.x);
 				}
 				else
 				{
 					shootingAngle = shootingVector.y > 0 ? M_PI : -M_PI;
-				}							
+				}
+				if (shootingAngle < minAngle) minAngle = shootingAngle;
+				if (shootingAngle > maxAngle) maxAngle = shootingAngle;
+			}
 
+			const int directionsCount = 10;
+			const double deltaAngle = (maxAngle - minAngle) / directionsCount;
+
+			auto maxShootingProbability = 0.0;
+			const Vec2Double* mspTarget = nullptr;
+
+			for (int i = 0; i < directionsCount; ++i)
+			{								
+				const auto shootingAngle = minAngle + i * deltaAngle;
 				double spread;
 				if (me.weapon->lastAngle == nullptr)
 				{
@@ -293,7 +306,7 @@ void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, Unit
 				//}
 			}
 
-			if (maxShootingProbability > SHOOTING_PROBABILITY)
+			if (maxShootingProbability > 0.85)
 			{
 				targetPosition = *mspTarget;
 				action.shoot = true;
