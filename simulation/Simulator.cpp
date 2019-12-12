@@ -437,9 +437,54 @@ Vec2Double Simulator::getUnitInTimePosition(
 		}
 	}*/
 
-	const auto isJumpPadCross = !isPadJump && (
-		isUnitOnJumpPad(unitPosition, unitSize, game) || isUnitOnJumpPad({ nextX, nextY }, unitSize, game));
-	
+	const auto squaresLD = MathHelper::getLineSquares(
+		{ unitPosition.x - unitSize.x / 2, unitPosition.y }, { nextX - unitSize.x / 2, nextY }, 1);
+	const auto squaresLU = MathHelper::getLineSquares(
+		{ unitPosition.x - unitSize.x / 2, unitPosition.y + unitSize.y }, { nextX - unitSize.x / 2, nextY + unitSize.y }, 1);
+	const auto squaresRU = MathHelper::getLineSquares(
+		{ unitPosition.x + unitSize.x / 2, unitPosition.y + unitSize.y }, { nextX + unitSize.x / 2, nextY + unitSize.y }, 1);
+	const auto squaresRD = MathHelper::getLineSquares(
+		{ unitPosition.x + unitSize.x / 2, unitPosition.y }, { nextX + unitSize.x / 2, nextY }, 1);
+
+	auto isJumpPadCross = false;
+	for (const auto& s :squaresLD)
+	{
+		if (game.level.tiles[s.first][s.second] == JUMP_PAD) {
+			isJumpPadCross = true;
+			break;
+		}
+	}
+	if (!isJumpPadCross)
+	{
+		for (const auto& s : squaresLU)
+		{
+			if (game.level.tiles[s.first][s.second] == JUMP_PAD) {
+				isJumpPadCross = true;
+				break;
+			}
+		}
+	}
+	if (!isJumpPadCross)
+	{
+		for (const auto& s : squaresRU)
+		{
+			if (game.level.tiles[s.first][s.second] == JUMP_PAD) {
+				isJumpPadCross = true;
+				break;
+			}
+		}
+	}
+
+	if (!isJumpPadCross)
+	{
+		for (const auto& s : squaresRD)
+		{
+			if (game.level.tiles[s.first][s.second] == JUMP_PAD) {
+				isJumpPadCross = true;
+				break;
+			}
+		}
+	}
 	bool isJumpFinished = (isPadJump || wasJump) && jumpState.maxTime < time;		
 
 	if (canGoThrough && !isJumpPadCross && !becameOnAir && !isJumpFinished)
