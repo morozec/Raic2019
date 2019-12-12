@@ -155,7 +155,7 @@ void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, Unit
 	auto meShootingPosition = me.position;//позиция, откуда произойдет выстрел
 	auto meJumpState = me.jumpState;
 
-	auto enemyShootingPosition = enemy.position;
+	auto enemyShootingPosition = enemy.position;//позиция, где будет враг в момент моего выстрела
 	auto enemyJumpState = enemy.jumpState;
 	
 	for (int i = 0; i < fullMovingTicks; ++i)
@@ -191,6 +191,9 @@ void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, Unit
 	}
 	else
 	{
+		const auto isFalling = !enemyJumpState.canJump && !enemyJumpState.canCancel;
+		const auto isJumpPadJumping = enemyJumpState.canJump && !enemyJumpState.canCancel;
+		
 		if (!enemyJumpState.canJump && !enemyJumpState.canCancel || //падает
 			enemyJumpState.canJump && !enemyJumpState.canCancel)   //прыгает на батуте
 		{
@@ -206,18 +209,29 @@ void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, Unit
 			int fallingTicks = 0;
 			map<int, Vec2Double> enemyPositions;
 			enemyPositions[0] = enemyPos1;
-			
-			while (!enemyJumpState.canJump) // здесь нельзя проверять !onAir из-за прыжков на батуте
+
+			bool isFallingWhileJumpPadJumping = false;
+			bool isJumpPadJumpingWhileFalling = false;
+			while (true) // здесь нельзя проверять !onAir из-за прыжков на батуте
 			{
 				const auto nextPos = Simulator::getUnitInTimePosition(
 					enemyPositions[fallingTicks], enemy.size, enemyAction, tickTime, enemyJumpState, game);
 				enemyPositions[++fallingTicks] = nextPos;
+
+				if (!Simulator::isUnitOnAir(nextPos, enemy.size, game)) break; // оказался на земле
+				if (isFallingWhileJumpPadJumping && enemyJumpState.canJump && !enemyJumpState.canCancel) break;//новый цикл прыжка на батуте
+				if (isJumpPadJumpingWhileFalling && !enemyJumpState.canJump && !enemyJumpState.canCancel) break;//новый цикл падения при прыжке на батуте
+
+				if (isJumpPadJumping && !enemyJumpState.canJump && !enemyJumpState.canCancel) 
+					isFallingWhileJumpPadJumping = true;//перешли из прыжка на батуте в падение
+				if (isFalling && enemyJumpState.canJump && !enemyJumpState.canCancel)
+					isJumpPadJumpingWhileFalling = true;//перешли из падения в прыжок на батуте
 			}
 
 			for (int i = 0; i <= fallingTicks; ++i)
 			{
 				const auto targetEnemyPos = enemyPositions[i];
-				const auto shootingVector = targetEnemyPos - bulletPos0;
+				const auto shootingVector = targetEnemyPos - meShootingPosition;
 
 				Vec2Double bulletVelocity;
 				if (abs(shootingVector.x) > TOLERANCE) {
@@ -274,14 +288,14 @@ void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, Unit
 			}
 			else
 			{				
-				targetPosition = enemy.position;
+				targetPosition = enemyShootingPosition;
 				action.shoot = false;
 			}
 		}
 		else //прыгает
 		{
 			//TODO: разделить обычный прыжок и с батута
-			targetPosition = enemy.position;
+			targetPosition = enemyShootingPosition;
 			action.shoot = false;
 		}
 	}
