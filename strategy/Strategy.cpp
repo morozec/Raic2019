@@ -21,44 +21,48 @@ double Strategy::getShootEnemyProbability(const Unit& me, const Unit& enemy, con
 {
 	if (me.weapon == nullptr) return 0;
 	if (me.weapon->lastAngle == nullptr) return 1;
+	return getShootEnemyProbability(
+		me.position, me.size, enemy.position, enemy.size, *me.weapon, spread, *(me.weapon->lastAngle), game);
+}
 
-	const auto bulletCenterPos = Vec2Double(me.position.x, me.position.y + me.size.y / 2);
+double Strategy::getShootEnemyProbability(
+	const Vec2Double& mePosition, const Vec2Double& meSize,
+	const Vec2Double& enemyPosition, const Vec2Double& enemySize,
+	const Weapon& weapon, double spread, double shootingAngle,
+	const Game& game)
+{
+
+	const auto bulletCenterPos = Vec2Double(mePosition.x, mePosition.y + meSize.y / 2);
 	const auto deltaAngle = spread / ANGLE_SPLIT_COUNT;
 
-	const auto xLeft = enemy.position.x - enemy.size.x / 2;
-	const auto xRight = enemy.position.x + enemy.size.x / 2;
-	const auto yDown = enemy.position.y;
-	const auto yUp = enemy.position.y + enemy.size.y;
+	const auto xLeft = enemyPosition.x - enemySize.x / 2;
+	const auto xRight = enemyPosition.x + enemySize.x / 2;
+	const auto yDown = enemyPosition.y;
+	const auto yUp = enemyPosition.y + enemySize.y;
 
 	auto shootingCount = 0;
 
-	const auto bulletVelocityLength = (*me.weapon).params.bullet.speed;
-	const auto halfBulletSize = me.weapon->params.bullet.size / 2;
+	const auto bulletVelocityLength = weapon.params.bullet.speed;
+	const auto halfBulletSize = weapon.params.bullet.size / 2;
 
 	for (auto i = -ANGLE_SPLIT_COUNT; i <= ANGLE_SPLIT_COUNT; ++i)
-	{		
-		const auto angle = *me.weapon->lastAngle + deltaAngle * i;	
+	{
+		const auto angle = shootingAngle + deltaAngle * i;
 		auto bulletVelocity = Vec2Double(bulletVelocityLength * cos(angle), bulletVelocityLength * sin(angle));
 
 		Vec2Double shootingCrossPoint;
 		Vec2Double bulletCornerPoint;
 		const auto isShooting = Simulator::getBulletRectangleFirstCrossPoint(bulletCenterPos, bulletVelocity, halfBulletSize,
-			xLeft, yDown, xRight, yUp, shootingCrossPoint, bulletCornerPoint);		
+			xLeft, yDown, xRight, yUp, shootingCrossPoint, bulletCornerPoint);
 
 		if (isShooting)
 		{
-			const auto bulletSimulation = Simulator::getBulletSimulation(bulletCenterPos, bulletVelocity, halfBulletSize, game);							
+			const auto bulletSimulation = Simulator::getBulletSimulation(bulletCenterPos, bulletVelocity, halfBulletSize, game);
 
 			if (MathHelper::getVectorLength2(bulletCornerPoint, shootingCrossPoint) <
 				MathHelper::getVectorLength2(bulletSimulation.bulletCrossCorner, bulletSimulation.targetCrossPoint))
 			{
-				shootingCount++;
-				/*if (debug != nullptr) {
-					(*debug).draw(CustomData::Line(
-						vec2DoubleToVec2Float(bulletCenterPos),
-						vec2DoubleToVec2Float(cp),
-						0.1, ColorFloat(100, 100, 100, 0.5)));
-				}*/
+				shootingCount++;				
 			}
 		}
 	}

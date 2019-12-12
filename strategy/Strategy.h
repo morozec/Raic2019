@@ -12,6 +12,11 @@ class Strategy
 {
 public:
 	static double getShootEnemyProbability(const Unit& me, const Unit& enemy, const Game& game, double spread);
+	static double getShootEnemyProbability(
+		const Vec2Double& mePosition, const Vec2Double& meSize,
+		const Vec2Double& enemyPosition, const Vec2Double& enemySize,
+		const Weapon& weapon, double spread, double shootingAngle,
+		const Game& game);
 
 	static std::map<Bullet, BulletSimulation> getEnemyBulletsSimulation(const Game& game, int mePlayerId);
 	std::map<Bullet, int>  getShootMeBullets(
