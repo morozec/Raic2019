@@ -18,8 +18,10 @@ public:
 		const Weapon& weapon, double spread, double shootingAngle,
 		const Game& game);
 	static double getShootEnemyProbability(
-		const Vec2Double& startBulletPosition, double shootingAngle, double spread, const BulletParams& bulletParams, double thisTickShootingTime,
-		const Vec2Double& startEnemyPosition, const std::map<int, Vec2Double>& enemyPositions, const Vec2Double& enemySize,
+		const Vec2Double& meShootingPosition, const Vec2Double& meSize, double shootingAngle, double spread, const BulletParams& bulletParams, double thisTickShootingTime,
+		const Vec2Double& startEnemyPosition, std::map<int, Vec2Double>& enemyPositions, const Vec2Double& enemySize,
+		const UnitAction& enemyAction, JumpState& enemyJumpState,
+		int addShootingSimulations,
 		const Game& game
 	);
 

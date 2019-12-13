@@ -71,13 +71,17 @@ double Strategy::getShootEnemyProbability(
 }
 
 double Strategy::getShootEnemyProbability(
-	const Vec2Double& startBulletPosition, double shootingAngle, double spread, const BulletParams& bulletParams, double thisTickShootingTime, 
-	const Vec2Double& startEnemyPosition, const std::map<int, Vec2Double>& enemyPositions, const Vec2Double& enemySize,
+	const Vec2Double& meShootingPosition, const Vec2Double& meSize, double shootingAngle, double spread, const BulletParams& bulletParams, double thisTickShootingTime, 
+	const Vec2Double& startEnemyPosition, 
+	std::map<int, Vec2Double>& enemyPositions, const Vec2Double& enemySize, const UnitAction& enemyAction, JumpState& enemyJumpState,
+	int addShootingSimulations,
 	const Game& game)
 {
+	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	const auto deltaAngle = spread / ANGLE_SPLIT_COUNT;
 	const auto halfBulletSize = bulletParams.size / 2;
-
+	const auto startBulletPosition = Vec2Double(meShootingPosition.x, meShootingPosition.y + meSize.y / 2);
+	
 	auto shootingCount = 0;
 	
 	for (auto i = -ANGLE_SPLIT_COUNT; i <= ANGLE_SPLIT_COUNT; ++i)
@@ -92,7 +96,8 @@ double Strategy::getShootEnemyProbability(
 			bulletPos1, bulletVelocity, bulletSimulation.targetCrossTime, game);
 
 		//проверяем пересечение на тике 0-1
-		if (isBulletMoveCrossUnitMove(
+		if (addShootingSimulations == 0 &&
+			isBulletMoveCrossUnitMove(
 			startEnemyPosition, enemyPositions.at(0), enemySize, startBulletPosition, bulletPos1, halfBulletSize))
 		{
 			shootingCount++;
@@ -101,13 +106,15 @@ double Strategy::getShootEnemyProbability(
 
 		const auto shootWallTick = static_cast<size_t>(ceil(bulletSimulation.targetCrossTime * game.properties.ticksPerSecond));
 
-		for (size_t j = 0; j < std::min(enemyPositions.size() - 1, shootWallTick); ++j)
+		for (size_t j = 0; j < shootWallTick; ++j)
 		{
-			const auto bp0 = bulletPositions.at(j);
-			const auto bp1 = bulletPositions.at(j < shootWallTick - 1 ? j + 1 : -1);
+			const auto& bp0 = bulletPositions.at(j);
+			const auto& bp1 = bulletPositions.at(j < shootWallTick - 1 ? j + 1 : -1);
 
-			const auto ep0 = enemyPositions.at(j);
-			const auto ep1 = enemyPositions.at(j + 1);
+			const auto& ep0 = enemyPositions.at(j + addShootingSimulations);
+			if (enemyPositions.count(j + 1 + addShootingSimulations) == 0)
+				enemyPositions[j + 1 + addShootingSimulations] = Simulator::getUnitInTimePosition(ep0, enemySize, enemyAction, tickTime, enemyJumpState, game);
+			const auto& ep1 = enemyPositions.at(j + 1 + addShootingSimulations);
 
 			if(isBulletMoveCrossUnitMove(
 				ep0, ep1, enemySize, bp0, bp1, halfBulletSize))
