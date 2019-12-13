@@ -220,9 +220,7 @@ void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, Unit
 	double okShootingAngle = 0;
 	int addShootingSimulations = 0;
 	
-	const int MAX_ADD_SHOOTING_SIMULATIONS = 100;
-	const double OK_SHOOTING_PROBABILITY = 0.85;
-
+	
 	while (addShootingSimulations < MAX_ADD_SHOOTING_SIMULATIONS && maxShootingProbability < OK_SHOOTING_PROBABILITY)
 	{
 		double minAngle = INT_MAX;
@@ -242,7 +240,7 @@ void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, Unit
 			if (shootingAngle > maxAngle) maxAngle = shootingAngle;
 		}
 
-		const int directionsCount = min(1, static_cast<int>((maxAngle - minAngle) / M_PI * 20));
+		const int directionsCount = max(1, static_cast<int>((maxAngle - minAngle) / M_PI * 20));
 		const double deltaAngle = (maxAngle - minAngle) / directionsCount;
 
 		for (int i = 0; i < directionsCount; ++i)
@@ -378,7 +376,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 	if (nearestEnemy != nullptr)
 	{		
-		needGo = game.currentTick >= 100 ? false : Strategy::getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->params.minSpread) <
+		needGo = game.currentTick >= 97 ? false : Strategy::getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->params.minSpread) <
 			WALKING_PROBABILITY;
 		/*needShoot = strategy_.getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->spread, &debug) >=
 			SHOOTING_PROBABILITY;	*/	
