@@ -247,7 +247,7 @@ void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, Unit
 			const double deltaAngle = (maxAngle - minAngle) / directionsCount;
 
 			auto maxShootingProbability = 0.0;
-			const Vec2Double* mspTarget = nullptr;
+			double okShootingAngle = 0;
 
 			for (int i = 0; i < directionsCount; ++i)
 			{								
@@ -277,38 +277,13 @@ void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, Unit
 				if (probability > maxShootingProbability)
 				{
 					maxShootingProbability = probability;
-					mspTarget = &enemyPositions[i];
-				}
-
-				//const auto bulletSimulation = Simulator::getBulletSimulation(bulletPos1, bulletVelocity, halfBulletSize, game);
-				//const auto bulletPositions = Simulator::getBulletPositions(
-				//	bulletPos1, bulletVelocity, bulletSimulation.targetCrossTime, game);				
-				//
-				//const auto shootWallTick = static_cast<int>(ceil(bulletSimulation.targetCrossTime * game.properties.ticksPerSecond));
-
-				//for (int j = 0; j < std::min(fallingTicks, shootWallTick); ++j)
-				//{
-				//	const auto bp0 = bulletPositions.at(j);
-				//	const auto bp1 = bulletPositions.at(j < shootWallTick - 1 ? j + 1 : -1);
-
-				//	const auto ep0 = enemyPositions[j];
-				//	const auto ep1 = enemyPositions[j + 1];
-				//	
-				//	isShoot = Strategy::isBulletMoveCrossUnitMove(
-				//		ep0, ep1, enemy.size, bp0, bp1, halfBulletSize);
-				//	if (isShoot) break;
-				//}
-
-				//if (isShoot)
-				//{
-				//	targetPosition = targetEnemyPos;
-				//	break;
-				//}
+					okShootingAngle = shootingAngle;
+				}			
 			}
 
 			if (maxShootingProbability > 0.85)
 			{
-				targetPosition = *mspTarget;
+				targetPosition = meShootingPosition + Vec2Double(cos(okShootingAngle), sin(okShootingAngle));
 				action.shoot = true;
 			}
 			else
