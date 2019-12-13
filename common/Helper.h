@@ -10,9 +10,8 @@ constexpr auto ANGLE_SPLIT_COUNT = 10;
 constexpr auto SHOOTING_PROBABILITY = 0.33;
 constexpr auto WALKING_PROBABILITY = 0.5;
 
-const int MAX_ADD_SHOOTING_SIMULATIONS = 50;
 const double OK_SHOOTING_PROBABILITY = 0.85;
-
+const int MAX_SIMULATIONS = 100;
 
 Vec2Float vec2DoubleToVec2Float(const Vec2Double& vec2Double);
 //inline bool operator<(const Bullet& lhs, const Bullet& rhs);

@@ -6,6 +6,5 @@ enum RunawayDirection
 	GoUP,
 	GoLEFT,
 	GoRIGHT,
-	GoDOWN,
-	NoWAY
+	GoDOWN
 };

@@ -26,62 +26,98 @@ inline bool operator<(const Bullet& lhs, const Bullet& rhs)
 	return lhs.position.x < rhs.position.x;
 }
 
-void setJumpAndJumpDown(const Unit& unit, const Vec2Double& targetPosition, const Game& game,
-	bool considerYs,
-	UnitAction& action, Strategy& strategy)
+vector<Vec2Double> getActionPositions(const Unit& unit, const UnitAction& action, int startTick, int stopTick, const Game& game)
 {
-	const auto isLeftWall = targetPosition.x < unit.position.x - 1 &&
-		game.level.tiles[size_t(unit.position.x - 1)][size_t(unit.position.y)] == WALL;
-	const auto isRightWall = targetPosition.x > unit.position.x + 1 &&
-		game.level.tiles[size_t(unit.position.x + 1)][size_t(unit.position.y)] == WALL;
-	const auto isSameColumnHigher = targetPosition.y > unit.position.y && targetPosition.x >= unit.position.x - 1 && targetPosition.x <= unit.position.x + 1;
-	const auto needJump = considerYs && targetPosition.y > unit.position.y || isLeftWall || isRightWall || isSameColumnHigher;
+	if (startTick < 0 || stopTick < 0) throw runtime_error("getActionPositions tick is negative");
+	
+	const auto tickTime = 1 / game.properties.ticksPerSecond;
+	vector<Vec2Double> positions;
 
-	const auto bottomTile = game.level.tiles[size_t(unit.position.x)][size_t(unit.position.y - 1)];
-	if (strategy.getStartedJumpY() != 0 &&
+	positions.emplace_back(unit.position);
+	auto jumpState = unit.jumpState;
+
+	UnitAction waitAction;
+	waitAction.jump = false;
+	waitAction.jumpDown = false;
+	waitAction.velocity = 0;
+	for (int i = 0; i < startTick; ++i)
+	{
+		const auto nextPos = Simulator::getUnitInTimePosition(
+			positions.back(), unit.size, waitAction, tickTime, jumpState, game);
+		positions.emplace_back(nextPos);
+	}
+
+	for (int i = 0; i < stopTick - startTick; ++i)
+	{
+		const auto nextPos = Simulator::getUnitInTimePosition(
+			positions.back(), unit.size, action, tickTime, jumpState, game);
+		positions.emplace_back(nextPos);
+	}
+	
+	return positions;
+}
+
+
+void setJumpAndJumpDown(const Vec2Double& unitPosition, const JumpState& unitJumpState, 
+	const Vec2Double& targetPosition, const Game& game,
+	bool considerYs,
+	UnitAction& action, size_t& startedJumpY)
+{
+
+	//TODO: выставить startedJumpY в стратегии
+	const auto isLeftWall = targetPosition.x < unitPosition.x - 1 &&
+		game.level.tiles[size_t(unitPosition.x - 1)][size_t(unitPosition.y)] == WALL;
+	const auto isRightWall = targetPosition.x > unitPosition.x + 1 &&
+		game.level.tiles[size_t(unitPosition.x + 1)][size_t(unitPosition.y)] == WALL;
+	const auto isSameColumnHigher = 
+		targetPosition.y > unitPosition.y && targetPosition.x >= unitPosition.x - 1 && targetPosition.x <= unitPosition.x + 1;
+	const auto needJump = considerYs && targetPosition.y > unitPosition.y || isLeftWall || isRightWall || isSameColumnHigher;
+
+	const auto bottomTile = game.level.tiles[size_t(unitPosition.x)][size_t(unitPosition.y - 1)];
+	if (startedJumpY != 0 &&
 		bottomTile != EMPTY &&
-		size_t(unit.position.y) != strategy.getStartedJumpY())
+		size_t(unitPosition.y) != startedJumpY)
 	{
 		action.jump = false;
 		action.jumpDown = false;
-		strategy.setStartedJumpY(0);
+		startedJumpY = 0;
 	}
 	else if (needJump)
 	{
-		if (isLeftWall && unit.jumpState.canJump && unit.jumpState.canCancel)
+		if (isLeftWall && unitJumpState.canJump && unitJumpState.canCancel)
 		{
 			auto wallHeight = 0;
-			while (game.level.tiles[size_t(unit.position.x - 1)][size_t(unit.position.y + wallHeight)] == WALL)
+			while (game.level.tiles[size_t(unitPosition.x - 1)][size_t(unitPosition.y + wallHeight)] == WALL)
 			{
 				wallHeight++;
 			}
-			const auto maxJumpHeight = unit.jumpState.speed * unit.jumpState.maxTime;
+			const auto maxJumpHeight = unitJumpState.speed * unitJumpState.maxTime;
 			if (maxJumpHeight < wallHeight)
 			{
-				strategy.setStartedJumpY(static_cast<int>(trunc(unit.position.y)));
+				startedJumpY = size_t(unitPosition.y);
 			}
 		}
 
-		else if (isRightWall && unit.jumpState.canJump && unit.jumpState.canCancel)
+		else if (isRightWall && unitJumpState.canJump && unitJumpState.canCancel)
 		{
 			auto wallHeight = 0;
-			while (game.level.tiles[size_t(unit.position.x + 1)][size_t(unit.position.y + wallHeight)] == WALL)
+			while (game.level.tiles[size_t(unitPosition.x + 1)][size_t(unitPosition.y + wallHeight)] == WALL)
 			{
 				wallHeight++;
 			}
-			const auto maxJumpHeight = unit.jumpState.speed * unit.jumpState.maxTime;
+			const auto maxJumpHeight = unitJumpState.speed * unitJumpState.maxTime;
 			if (maxJumpHeight < wallHeight)
 			{
-				strategy.setStartedJumpY(size_t(unit.position.y));
+				startedJumpY = size_t(unitPosition.y);
 			}
 		}
 		else if (isSameColumnHigher)
 		{
-			const auto jumpHeight = targetPosition.y - unit.position.y;			
-			const auto maxJumpHeight = unit.jumpState.speed * unit.jumpState.maxTime;
+			const auto jumpHeight = targetPosition.y - unitPosition.y;			
+			const auto maxJumpHeight = unitJumpState.speed * unitJumpState.maxTime;
 			if (maxJumpHeight < jumpHeight)
 			{
-				strategy.setStartedJumpY(size_t(unit.position.y));
+				startedJumpY = size_t(unitPosition.y);
 			}
 		}
 		
@@ -91,14 +127,17 @@ void setJumpAndJumpDown(const Unit& unit, const Vec2Double& targetPosition, cons
 	else
 	{
 		action.jump = false;
-		action.jumpDown = considerYs && targetPosition.y < unit.position.y;
+		action.jumpDown = considerYs && targetPosition.y < unitPosition.y;
 	}	
 }
 
 void setMoveToWeaponAction(const Unit& unit, const Vec2Double& weaponPosition, const Game& game,
 	UnitAction& action, Strategy& strategy)
 {
-	setJumpAndJumpDown(unit, weaponPosition, game, true, action, strategy);
+	auto startedJumpY = strategy.getStartedJumpY();
+	setJumpAndJumpDown(
+		unit.position, unit.jumpState, weaponPosition, game, true, action, startedJumpY);
+	strategy.setStartedJumpY(startedJumpY);
 	
 	if (abs(weaponPosition.x - unit.position.x) < TOLERANCE)
 		action.velocity = 0;
@@ -111,123 +150,185 @@ void setMoveToWeaponAction(const Unit& unit, const Vec2Double& weaponPosition, c
 	action.plantMine = false;
 }
 
-void setMoveToEnemyAction(
-	const Unit& unit, const Vec2Double& enemyPosition, bool needGo, const Game& game, 
-	UnitAction& action, Strategy& strategy)
-{	
-	if (needGo)
+//void setMoveToEnemyAction(
+//	const Unit& unit, const Vec2Double& enemyPosition, bool needGo, const Game& game, 
+//	UnitAction& action, Strategy& strategy)
+//{	
+//	if (needGo)
+//	{
+//		action.velocity = enemyPosition.x > unit.position.x ? INT_MAX : -INT_MAX;
+//		setJumpAndJumpDown(unit, enemyPosition, game, false, action, strategy);		
+//	}
+//	else
+//	{
+//		action.velocity = 0;
+//		action.jump = false;
+//		action.jumpDown = false;
+//	}
+//}
+
+vector<Vec2Double> getSimplePositions(
+	const Vec2Double& unitPosition, const Vec2Double& unitSize, JumpState& unitJumpState, const Game& game)
+{
+	const auto tickTime = 1 / game.properties.ticksPerSecond;
+	
+	vector<Vec2Double> positions;
+	positions.emplace_back(unitPosition);
+
+	const auto isOnAir = Simulator::isUnitOnAir(unitPosition, unitSize, game);
+	const auto isFalling = !unitJumpState.canJump && !unitJumpState.canCancel;
+	const auto isJumping = isOnAir && unitJumpState.canJump && unitJumpState.canCancel;
+	const auto isJumpPadJumping = unitJumpState.canJump && !unitJumpState.canCancel;
+	
+	UnitAction action;
+	if (isFalling || //падает
+		isJumpPadJumping || //прыгает на батуте
+		!isOnAir) // стоит на земле 
 	{
-		action.velocity = enemyPosition.x > unit.position.x ? INT_MAX : -INT_MAX;
-		setJumpAndJumpDown(unit, enemyPosition, game, false, action, strategy);		
-	}
-	else
-	{
-		action.velocity = 0;
 		action.jump = false;
 		action.jumpDown = false;
+		action.velocity = 0;
 	}
-}
-
-void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, UnitAction& action)
-{
-	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
-	const auto movingTime = me.weapon->fireTimer != nullptr ? *(me.weapon->fireTimer) : 0;
-	
-	const auto isEnemyOnAir = Simulator::isUnitOnAir(enemy.position, enemy.size, game);
-	UnitAction enemyAction;
-	if (!enemy.jumpState.canJump && !enemy.jumpState.canCancel || //падает
-		enemy.jumpState.canJump && !enemy.jumpState.canCancel || //прыгает на батуте
-		!isEnemyOnAir) // стоит на земле 
+	else if (isJumping) //прыгает
 	{
-		enemyAction.jump = false;
-		enemyAction.jumpDown = false;
-		enemyAction.velocity = 0;
-	}
-	else if (enemy.jumpState.canJump && enemy.jumpState.canCancel && isEnemyOnAir) //прыгает
-	{
-		enemyAction.jump = true;
-		enemyAction.jumpDown = false;
-		enemyAction.velocity = 0;
+		action.jump = true;
+		action.jumpDown = false;
+		action.velocity = 0;
 	}
 	else throw runtime_error("unknown enemy position");
-	
 
-	const auto fullMovingTicks = static_cast<int>(movingTime / tickTime);
-	auto meShootingPosition = me.position;//позиция, откуда произойдет выстрел
-	auto meJumpState = me.jumpState;
-
-	auto enemyShootingPosition = enemy.position;//позиция, где будет враг в момент моего выстрела
-	auto enemyJumpState = enemy.jumpState;
-	
-	for (int i = 0; i < fullMovingTicks; ++i)
-	{
-		meShootingPosition = Simulator::getUnitInTimePosition(
-			meShootingPosition, me.size, action, tickTime, meJumpState, game);
-		enemyShootingPosition = Simulator::getUnitInTimePosition(
-			enemyShootingPosition, enemy.size, enemyAction, tickTime, enemyJumpState, game);
-	}
-	const auto timeLeft = movingTime - fullMovingTicks / game.properties.ticksPerSecond;
-	meShootingPosition = Simulator::getUnitInTimePosition(
-		meShootingPosition, me.size, action, timeLeft, meJumpState, game);
-	enemyShootingPosition = Simulator::getUnitInTimePosition(
-		enemyShootingPosition, enemy.size, enemyAction, timeLeft, enemyJumpState, game);
-
-
-	/*if (me.weapon->fireTimer != nullptr && *(me.weapon->fireTimer) > tickTime)
-	{
-		action.aim = enemyShootingPosition - meShootingPosition;
-		action.shoot = false;		
-		return;
-	}*/
-	
-
-
-	const auto shootingTick = static_cast<int>(ceil(movingTime / tickTime));
-	const auto thisTickShootingTime = shootingTick / game.properties.ticksPerSecond - movingTime;
-
-	const auto canSimulateMore = abs(action.velocity) > TOLERANCE || Simulator::isUnitOnAir(meShootingPosition, me.size, game);
-		
-	
-	const auto isFalling = !enemyJumpState.canJump && !enemyJumpState.canCancel;  //падает
-	const auto isJumping = enemyJumpState.canJump && enemyJumpState.canCancel;  //прыгает
-	const auto isJumpPadJumping = enemyJumpState.canJump && !enemyJumpState.canCancel;  //прыгает на батуте
-			
-	const auto enemyPos1 = Simulator::getUnitInTimePosition(enemyShootingPosition, enemy.size, enemyAction, thisTickShootingTime, enemyJumpState, game);
-
-	int fallingTicks = 0;
-	map<int, Vec2Double> enemyPositions;
-	enemyPositions[0] = enemyPos1;			
+	auto jumpState = unitJumpState;
 
 	bool isFallingWhileJumpPadJumping = false;
 	bool isJumpPadJumpingWhileFalling = false;
-	while (Simulator::isUnitOnAir(enemyPositions[fallingTicks], enemy.size, game))
+	while (Simulator::isUnitOnAir(positions.back(), unitSize, game))
 	{
 		const auto nextPos = Simulator::getUnitInTimePosition(
-			enemyPositions[fallingTicks], enemy.size, enemyAction, tickTime, enemyJumpState, game);
-		enemyPositions[++fallingTicks] = nextPos;
+			positions.back(), unitSize, action, tickTime, jumpState, game);
+		if (positions.size() == 1) unitJumpState = jumpState;//обновляем jumpState после тика 1 TODO
+		
+		positions.emplace_back(nextPos);
 
-		if (isFallingWhileJumpPadJumping && enemyJumpState.canJump && !enemyJumpState.canCancel) break;//новый цикл прыжка на батуте
-		if (isJumpPadJumpingWhileFalling && !enemyJumpState.canJump && !enemyJumpState.canCancel) break;//новый цикл падения при прыжке на батуте
+		if (isFallingWhileJumpPadJumping && jumpState.canJump && !jumpState.canCancel) break;//новый цикл прыжка на батуте
+		if (isJumpPadJumpingWhileFalling && !jumpState.canJump && !jumpState.canCancel) break;//новый цикл падения при прыжке на батуте
 
-		if (isJumpPadJumping && !enemyJumpState.canJump && !enemyJumpState.canCancel) 
+		if (isJumpPadJumping && !jumpState.canJump && !jumpState.canCancel)
 			isFallingWhileJumpPadJumping = true;//перешли из прыжка на батуте в падение
-		if (isFalling && enemyJumpState.canJump && !enemyJumpState.canCancel)
+		if (isFalling && jumpState.canJump && !jumpState.canCancel)
 			isJumpPadJumpingWhileFalling = true;//перешли из падения в прыжок на батуте
 	}
 
+	return positions;
+}
 
+vector<vector<Vec2Double>> getSimplePositionsSimulations(const Unit& enemy, const Game& game)
+{
+	vector<vector<Vec2Double>> enemyPositions;
+
+	auto lastEnemyPosition = enemy.position;
+	auto lastEnemyJumpState = enemy.jumpState;
+	auto curEnemyPositions = getSimplePositions(lastEnemyPosition, enemy.size, lastEnemyJumpState, game);
+	enemyPositions.emplace_back(curEnemyPositions);
+
+	int counter = 0;
+	while (counter < MAX_SIMULATIONS)
+	{
+		lastEnemyPosition = curEnemyPositions.size() == 1 ? curEnemyPositions[0] : curEnemyPositions[1];
+		curEnemyPositions = getSimplePositions(lastEnemyPosition, enemy.size, lastEnemyJumpState, game);
+		enemyPositions.emplace_back(curEnemyPositions);
+
+		counter++;
+	}
+
+	return enemyPositions;
+}
+
+
+bool areAllPositionsShooting(const Vec2Double& mePosition, const vector<Vec2Double>& enemyPositions)
+{
+	//TODO
+	return true;
+}
+
+
+void getAttackingData(
+	const Unit& me,	
+	vector<Vec2Double>& mePositions, 
+	vector<JumpState>& meJumpStates, 
+	vector<UnitAction>& meActions, 
+	const vector<vector<Vec2Double>>& enemyPositions,
+	size_t startJumpY,
+	const Game& game)
+{
+	const auto tickTime = 1 / game.properties.ticksPerSecond;
+	
+	auto lastMePosition = me.position;
+	auto lastMeJumpState = me.jumpState;
+	auto lastStartJumpY = startJumpY;
+	mePositions.emplace_back(lastMePosition);	
+	meJumpStates.emplace_back(lastMeJumpState);	
+
+	int counter = 0;
+	while (counter < MAX_SIMULATIONS)
+	{
+		const auto curEnemyPositions = enemyPositions[counter];
+		if (areAllPositionsShooting(lastMePosition, curEnemyPositions)) return;
+		
+		UnitAction action;
+		action.velocity = curEnemyPositions[0].x > lastMePosition.x ? INT_MAX : -INT_MAX;
+		setJumpAndJumpDown(
+			lastMePosition, lastMeJumpState, curEnemyPositions[0], game, false, action, lastStartJumpY);
+				
+		lastMePosition = Simulator::getUnitInTimePosition(lastMePosition, me.size, action, tickTime, lastMeJumpState, game);
+		meActions.emplace_back(action);
+		mePositions.emplace_back(lastMePosition);		
+		meJumpStates.emplace_back(lastMeJumpState);
+		
+		counter++;
+	}
+}
+
+
+void setShootingAction(
+	const Unit& me, const vector<Vec2Double>& mePositions, 
+	const Vec2Double& enemySize, const vector<vector<Vec2Double>>& enemyPositions,
+	const Game& game, UnitAction& action)
+{
+	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
+	auto movingTime = me.weapon->fireTimer != nullptr ? *(me.weapon->fireTimer) : 0;
+	if (abs(movingTime) < TOLERANCE) movingTime = 0;
+	
+
+	const auto canShootingTick = static_cast<size_t>(ceil(movingTime / tickTime));
+
+	//const auto canSimulateMore = abs(action.velocity) > TOLERANCE || Simulator::isUnitOnAir(meShootingPosition, me.size, game);
+		
+	
 	auto maxShootingProbability = 0.0;
 	double okShootingAngle = 0;
 	int addShootingSimulations = 0;
-	
-	
-	while (addShootingSimulations < MAX_ADD_SHOOTING_SIMULATIONS && maxShootingProbability < OK_SHOOTING_PROBABILITY)
+		
+	while (canShootingTick + addShootingSimulations < MAX_SIMULATIONS)
 	{
+		const auto shootingTick = canShootingTick + addShootingSimulations;
+		Vec2Double meShootingPosition;//позиция, откуда произойдет выстрел
+		if (shootingTick >= mePositions.size())
+		{
+			if (addShootingSimulations > 0) break;//стоим на месте. нет смысла симулировать дальше
+			meShootingPosition = mePositions.back();
+		}
+		else
+		{
+			meShootingPosition = mePositions[shootingTick];
+		}
+		
+		auto enemyShootingPositions = //позиции врага, начиная с тика выстрела
+			enemyPositions[shootingTick];
 		double minAngle = INT_MAX;
 		double maxAngle = -INT_MAX;
-		for (const auto& ep : enemyPositions)
+		for (const auto& ep : enemyShootingPositions)
 		{
-			const auto shootingVector = ep.second - meShootingPosition;
+			const auto shootingVector = ep - meShootingPosition;
 			double shootingAngle;
 			if (abs(shootingVector.x) > TOLERANCE) {
 				shootingAngle = atan2(shootingVector.y, shootingVector.x);
@@ -255,7 +356,9 @@ void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, Unit
 			{
 				spread = me.weapon->spread + abs(*(me.weapon->lastAngle) - shootingAngle);
 				spread = min(spread, me.weapon->params.maxSpread);
-				spread = max(me.weapon->params.minSpread, spread - me.weapon->params.aimSpeed*(movingTime + tickTime * addShootingSimulations));
+				spread = max(
+					me.weapon->params.minSpread, 
+					spread - me.weapon->params.aimSpeed*(shootingTick / game.properties.ticksPerSecond));
 			}
 
 			const auto probability = Strategy::getShootEnemyProbability(
@@ -264,13 +367,8 @@ void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, Unit
 				shootingAngle,
 				spread,
 				me.weapon->params.bullet,
-				thisTickShootingTime,
-				enemyShootingPosition,
-				enemyPositions,
-				enemy.size,
-				enemyAction,
-				enemyJumpState,
-				addShootingSimulations,
+				enemyShootingPositions,
+				enemySize,
 				game);
 			if (probability > maxShootingProbability)
 			{
@@ -279,33 +377,23 @@ void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, Unit
 			}
 		}
 
-		if (maxShootingProbability > OK_SHOOTING_PROBABILITY) break;
-		if (!canSimulateMore) break;
-
-		meShootingPosition = Simulator::getUnitInTimePosition(
-			meShootingPosition, me.size, action, tickTime, meJumpState, game);
+		if (maxShootingProbability >= OK_SHOOTING_PROBABILITY) break;
 		addShootingSimulations++;
 	}					
 
-	Vec2Double targetPosition;
 	if (maxShootingProbability >= OK_SHOOTING_PROBABILITY)
 	{
-		targetPosition = meShootingPosition + Vec2Double(cos(okShootingAngle), sin(okShootingAngle));				
-		action.shoot = abs(movingTime) <TOLERANCE && addShootingSimulations == 0;
+		action.shoot = canShootingTick == 0 && addShootingSimulations == 0;
+		action.aim = Vec2Double(cos(okShootingAngle), sin(okShootingAngle));
 	}
 	else
 	{				
-		targetPosition = enemyShootingPosition;
 		action.shoot = false;
-	}		
-		
+		action.aim = enemyPositions[canShootingTick][0] - mePositions[canShootingTick];
+	}				
 
 	//TODO: ракетницей стрелять под ноги врагу
-	//TODO: не стрелять ракетницей с риском задеть себя
-	
-	action.aim = targetPosition - meShootingPosition;
-	//action.shoot = true;
-	//action.shoot = Strategy::getShootEnemyProbability(me, enemy, game, me.weapon->spread) >= SHOOTING_PROBABILITY;
+	//TODO: не стрелять ракетницей с риском задеть себя	
 }
 
 UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
@@ -370,29 +458,31 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 	if (nearestEnemy == nullptr) return action;
 	
-	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
+	/*const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	auto needGo = false;
-	//auto needShoot = false;
+	auto needShoot = false;
 
 	if (nearestEnemy != nullptr)
 	{		
 		needGo = game.currentTick >= 97 ? false : Strategy::getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->params.minSpread) <
 			WALKING_PROBABILITY;
-		/*needShoot = strategy_.getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->spread, &debug) >=
-			SHOOTING_PROBABILITY;	*/	
+		needShoot = strategy_.getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->spread, &debug) >=
+			SHOOTING_PROBABILITY;		
 	}
-	//action.shoot = needShoot;
+	action.shoot = needShoot;*/
 
-	const auto enemyBulletsSimulation = strategy_.getEnemyBulletsSimulation(game, unit.playerId);	
+	const auto enemyBulletsSimulation = strategy_.getEnemyBulletsSimulation(game, unit.playerId);
+	const auto enemyPositions = getSimplePositionsSimulations(*nearestEnemy, game);
 
 	drawBullets(debug, game, enemyBulletsSimulation, unit.playerId);
 	drawShootingSector(debug, unit, game);
+	const auto curStopRunawayTick = strategy_.getStopRunawayTick();
 	
-	if (strategy_.getStopRunawayTick() == 0)
+	if (curStopRunawayTick == 0)
 	{
 		strategy_.setRunaway(GoNONE, -1);
 	}
-	else if (strategy_.getStopRunawayTick() > 0)
+	else if (curStopRunawayTick > 0)
 	{
 		const auto runawayDirection = strategy_.getRunawayDirection();
 		if (runawayDirection == GoUP)
@@ -422,27 +512,39 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		{
 			throw runtime_error("unknown runawayDirection");
 		}
-		strategy_.decreaseStopRunawayTick();
 
-		setShootingAction(unit, *nearestEnemy, game, action);
+		const auto mePositions = getActionPositions(unit, action, 0, curStopRunawayTick, game);
+		setShootingAction(unit, mePositions, nearestEnemy->size, enemyPositions, game, action);
+
+		strategy_.decreaseStopRunawayTick();
 		return action;
 	}
 
-	setMoveToEnemyAction(unit, nearestEnemy->position, needGo, game, action, strategy_);
+	//setMoveToEnemyAction(unit, nearestEnemy->position, needGo, game, action, strategy_);
+	vector<Vec2Double> meAttackingPositions;
+	vector<JumpState> meAttackingJumpStates;
+	vector<UnitAction> meAttackingActions;	
+	getAttackingData(
+		unit, 
+		meAttackingPositions, meAttackingJumpStates, meAttackingActions,
+		enemyPositions, strategy_.getStartedJumpY(), game);
 
 	tuple<RunawayDirection, int, int, int> runawayAction;
-	auto isSafeMove = strategy_.isSafeMove(unit, action, enemyBulletsSimulation, game);
-	
+	auto isSafeMove = strategy_.isSafeMove(unit, action, enemyBulletsSimulation, game);	
 
 	if (isSafeMove)
 	{
 		auto jumpState = unit.jumpState;
-		const auto actionUnitPosition = Simulator::getUnitInTimePosition(
-			unit.position, unit.size, action, tickTime, jumpState, game);
-		const auto actionShootMeBullets = strategy_.getShootMeBullets(unit, enemyBulletsSimulation, 1, action, game);
+
+		const auto meAttackPosition = meAttackingPositions.size() == 1 ? meAttackingPositions[0] : meAttackingPositions[1];
+		const auto meAttackingJumpState = meAttackingJumpStates.size() == 1 ? meAttackingJumpStates[0] : meAttackingJumpStates[1];
+		const auto actionShootMeBullets = strategy_.getShootMeBullets(
+			meAttackPosition, unit.size, meAttackingJumpState,
+			unit.playerId,
+			enemyBulletsSimulation, 1, game);
 		
 		runawayAction = strategy_.getRunawayAction(
-			actionUnitPosition, unit.size, unit.playerId, jumpState,
+			meAttackPosition, unit.size, unit.playerId, jumpState,
 			actionShootMeBullets, enemyBulletsSimulation, 1,
 			true, true, true, true,
 			game);	
@@ -457,16 +559,9 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 				to_string(std::get<2>(runawayAction) + 1) + " " +
 				to_string(std::get<3>(runawayAction)) + "\n"));
 
-			setShootingAction(unit, *nearestEnemy, game, action);
-			return action;
-			//
-			//isSafeMove = true;
-			//if (runawayDirection != GoNONE)//увеличиваем время на 1, т.к. расчет runawayAction был на тик вперед
-			//{
-			//	std::get<1>(runawayAction) += 1;
-			//	std::get<2>(runawayAction) += 1;
-			//}
-			
+			//TODO: продлить meAttackingPositions
+			setShootingAction(unit, meAttackingPositions, nearestEnemy->size, enemyPositions, game, action);
+			return action;			
 		}				
 	}
 
@@ -487,7 +582,9 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	action.jumpDown = false;
 	action.velocity = 0;
 
-	const auto shootMeBullets = strategy_.getShootMeBullets(unit, enemyBulletsSimulation, 0, action, game);
+	const auto shootMeBullets = strategy_.getShootMeBullets(
+		unit.position, unit.size, unit.jumpState, unit.playerId,
+		enemyBulletsSimulation, 0, game);
 	runawayAction = strategy_.getRunawayAction(
 		unit.position, unit.size, unit.playerId, unit.jumpState,
 		shootMeBullets, enemyBulletsSimulation, 0,
@@ -505,43 +602,52 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	const auto startRunawayTick = std::get<1>(runawayAction);
 	const auto stopRunawayTick = std::get<2>(runawayAction);
 
+
+	UnitAction runawayUnitAction;
+	if (runawayDirection == GoUP)
+	{
+		runawayUnitAction.jump = true;
+		runawayUnitAction.jumpDown = false;
+		runawayUnitAction.velocity = 0;
+	}
+	else if (runawayDirection == GoDOWN)
+	{
+		runawayUnitAction.jump = false;
+		runawayUnitAction.jumpDown = true;
+		runawayUnitAction.velocity = 0;
+	}
+	else if (runawayDirection == GoLEFT)
+	{
+		runawayUnitAction.jump = false;
+		runawayUnitAction.jumpDown = false;
+		runawayUnitAction.velocity = -INT_MAX;
+	}
+	else if (runawayDirection == GoRIGHT)
+	{
+		runawayUnitAction.jump = false;
+		runawayUnitAction.jumpDown = false;
+		runawayUnitAction.velocity = INT_MAX;
+	}
+	else
+	{
+		throw runtime_error("unknown runawayDirection 2");
+	}
+	
 	if (startRunawayTick == 0)
 	{		
 		strategy_.setRunaway(runawayDirection, stopRunawayTick - 1);
-
-		if (runawayDirection == GoUP)
-		{
-			action.jump = true;
-			action.jumpDown = false;
-			action.velocity = 0;
-		}
-		else if (runawayDirection == GoDOWN)
-		{
-			action.jump = false;
-			action.jumpDown = true;
-			action.velocity = 0;
-		}
-		else if (runawayDirection == GoLEFT)
-		{
-			action.jump = false;
-			action.jumpDown = false;
-			action.velocity = -INT_MAX;
-		}
-		else if (runawayDirection == GoRIGHT)
-		{
-			action.jump = false;
-			action.jumpDown = false;
-			action.velocity = INT_MAX;
-		}		
-		else 
-		{
-			throw runtime_error("unknown runawayDirection 2");
-		}
+		action.jump = runawayUnitAction.jump;
+		action.jumpDown = runawayUnitAction.jumpDown;
+		action.velocity = runawayUnitAction.velocity;
 	}	
 	
 	cout << game.currentTick << ": " << action.jump << " " << action.jumpDown << " " << action.velocity << "\n";
 
-	setShootingAction(unit, *nearestEnemy, game, action);
+	const auto mePositions = runawayDirection == GoNONE ?
+		vector<Vec2Double>{unit.position} :
+		getActionPositions(unit, runawayUnitAction, startRunawayTick, stopRunawayTick, game);
+	
+	setShootingAction(unit, mePositions, nearestEnemy->size, enemyPositions, game, action);
 	return action;
 }
 

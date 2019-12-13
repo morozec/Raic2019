@@ -18,17 +18,17 @@ public:
 		const Weapon& weapon, double spread, double shootingAngle,
 		const Game& game);
 	static double getShootEnemyProbability(
-		const Vec2Double& meShootingPosition, const Vec2Double& meSize, double shootingAngle, double spread, const BulletParams& bulletParams, double thisTickShootingTime,
-		const Vec2Double& startEnemyPosition, std::map<int, Vec2Double>& enemyPositions, const Vec2Double& enemySize,
-		const UnitAction& enemyAction, JumpState& enemyJumpState,
-		int addShootingSimulations,
+		const Vec2Double& meShootingPosition, const Vec2Double& meSize,
+		double shootingAngle, double spread,
+		const BulletParams& bulletParams,
+		std::vector<Vec2Double>& enemyPositions, const Vec2Double& enemySize,
 		const Game& game
 	);
 
 	static std::map<Bullet, BulletSimulation> getEnemyBulletsSimulation(const Game& game, int mePlayerId);
 	std::map<Bullet, int>  getShootMeBullets(
-		const Unit& me, 
-		const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, int addTicks, const UnitAction& unitAction,
+		const Vec2Double& mePosition, const Vec2Double& meSize, const JumpState& meJumpState, int mePlayerId,
+		const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, int addTicks,
 		const Game& game) const;
 	
 	static bool isBulletMoveCrossUnitMove(

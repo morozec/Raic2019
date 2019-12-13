@@ -71,10 +71,10 @@ double Strategy::getShootEnemyProbability(
 }
 
 double Strategy::getShootEnemyProbability(
-	const Vec2Double& meShootingPosition, const Vec2Double& meSize, double shootingAngle, double spread, const BulletParams& bulletParams, double thisTickShootingTime, 
-	const Vec2Double& startEnemyPosition, 
-	std::map<int, Vec2Double>& enemyPositions, const Vec2Double& enemySize, const UnitAction& enemyAction, JumpState& enemyJumpState,
-	int addShootingSimulations,
+	const Vec2Double& meShootingPosition, const Vec2Double& meSize, 
+	double shootingAngle, double spread, 
+	const BulletParams& bulletParams,
+	std::vector<Vec2Double>& enemyPositions, const Vec2Double& enemySize, 
 	const Game& game)
 {
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
@@ -89,21 +89,11 @@ double Strategy::getShootEnemyProbability(
 		const auto angle = shootingAngle + deltaAngle * i;
 		auto bulletVelocity = Vec2Double(bulletParams.speed * cos(angle), bulletParams.speed * sin(angle));
 
-		const auto bulletPos1 = startBulletPosition + bulletVelocity * thisTickShootingTime;
-
-		const auto bulletSimulation = Simulator::getBulletSimulation(bulletPos1, bulletVelocity, halfBulletSize, game);
+		const auto bulletSimulation = Simulator::getBulletSimulation(
+			startBulletPosition, bulletVelocity, halfBulletSize, game);
 		const auto bulletPositions = Simulator::getBulletPositions(
-			bulletPos1, bulletVelocity, bulletSimulation.targetCrossTime, game);
-
-		//проверяем пересечение на тике 0-1
-		if (addShootingSimulations == 0 &&
-			isBulletMoveCrossUnitMove(
-			startEnemyPosition, enemyPositions.at(0), enemySize, startBulletPosition, bulletPos1, halfBulletSize))
-		{
-			shootingCount++;
-			break;
-		}
-
+			startBulletPosition, bulletVelocity, bulletSimulation.targetCrossTime, game);
+		
 		const auto shootWallTick = static_cast<size_t>(ceil(bulletSimulation.targetCrossTime * game.properties.ticksPerSecond));
 
 		for (size_t j = 0; j < shootWallTick; ++j)
@@ -111,11 +101,16 @@ double Strategy::getShootEnemyProbability(
 			const auto& bp0 = bulletPositions.at(j);
 			const auto& bp1 = bulletPositions.at(j < shootWallTick - 1 ? j + 1 : -1);
 
-			const auto& ep0 = enemyPositions.at(j + addShootingSimulations);
-			if (enemyPositions.count(j + 1 + addShootingSimulations) == 0)
-				enemyPositions[j + 1 + addShootingSimulations] = Simulator::getUnitInTimePosition(ep0, enemySize, enemyAction, tickTime, enemyJumpState, game);
-			const auto& ep1 = enemyPositions.at(j + 1 + addShootingSimulations);
+			const auto& ep0 = j < enemyPositions.size() ? enemyPositions[j] : enemyPositions.back();
+			auto& ep1 = j + 1 < enemyPositions.size() ? enemyPositions[j + 1] : enemyPositions.back();
 
+			if (j == shootWallTick - 1) // тик удара о стену
+			{
+				const auto thisTickTime = bulletSimulation.targetCrossTime - j / game.properties.ticksPerSecond;
+				const auto thisTickPart = thisTickTime / tickTime;
+				ep1 = ep0 + (ep1 - ep0) * thisTickPart;
+			}
+			
 			if(isBulletMoveCrossUnitMove(
 				ep0, ep1, enemySize, bp0, bp1, halfBulletSize))
 			{
@@ -124,7 +119,7 @@ double Strategy::getShootEnemyProbability(
 			}
 		}
 	}
-	return shootingCount * 1.0 / (2 * ANGLE_SPLIT_COUNT + 1.0);
+	return shootingCount * 1.0 / (ANGLE_SPLIT_COUNT * 2 + 1);
 }
 
 std::map<Bullet, BulletSimulation> Strategy::getEnemyBulletsSimulation(const Game& game, int mePlayerId)
@@ -168,8 +163,8 @@ std::map<Bullet, BulletSimulation> Strategy::getEnemyBulletsSimulation(const Gam
 }
 
 std::map<Bullet, int> Strategy::getShootMeBullets(
-	const Unit& me,
-	const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, int addTicks, const UnitAction& unitAction,
+	const Vec2Double& mePosition, const Vec2Double& meSize, const JumpState& meJumpState, int mePlayerId,
+	const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, int addTicks,
 	const Game& game) const
 {
 	if (addTicks != 0 && addTicks != 1) throw std::runtime_error("addTicks is not 0 or 1");
@@ -178,11 +173,9 @@ std::map<Bullet, int> Strategy::getShootMeBullets(
 	std::map<Bullet, int> shootMeBullets;
 	std::map<int, Vec2Double> mePositions;
 	std::map<int, JumpState> meJumpStates;
-	auto jumpState = me.jumpState;
 	
-	mePositions[0] = addTicks == 0 ? me.position : Simulator::getUnitInTimePosition(
-		me.position, me.size, unitAction, tickTime, jumpState, game);
-	meJumpStates[0] = jumpState;
+	mePositions[0] = mePosition;
+	meJumpStates[0] = meJumpState;
 
 	UnitAction action;
 	action.velocity = 0;
@@ -225,12 +218,12 @@ std::map<Bullet, int> Strategy::getShootMeBullets(
 					auto unitInTimeJumpState = meJumpStates.at(tick - 1);
 					unitInTimePosition =
 						Simulator::getUnitInTimePosition(
-							mePositions.at(tick - 1), me.size, action, tickTime, unitInTimeJumpState, game);
+							mePositions.at(tick - 1), meSize, action, tickTime, unitInTimeJumpState, game);
 					mePositions[tick] = unitInTimePosition;
 					meJumpStates[tick] = unitInTimeJumpState;
 				}
-				const bool isShooting = bullet.playerId != me.playerId && isBulletMoveCrossUnitMove(
-					mePositions.at(tick - 1), unitInTimePosition, me.size,
+				const bool isShooting = bullet.playerId != mePlayerId && isBulletMoveCrossUnitMove(
+					mePositions.at(tick - 1), unitInTimePosition, meSize,
 					bulletPositions[tick - 1], bulletInTimePosition, bullet.size / 2.0);
 				if (isShooting)
 				{
@@ -246,16 +239,16 @@ std::map<Bullet, int> Strategy::getShootMeBullets(
 				auto unitInTimeJumpState = meJumpStates.at(tick - 1);
 				const auto unitInTimePosition =
 					Simulator::getUnitInTimePosition(
-						mePositions.at(tick - 1), me.size, action, thisTickBulletTime, unitInTimeJumpState, game);
-				auto isShooting = bullet.playerId != me.playerId && isBulletMoveCrossUnitMove(
-					mePositions.at(tick - 1), unitInTimePosition, me.size,
+						mePositions.at(tick - 1), meSize, action, thisTickBulletTime, unitInTimeJumpState, game);
+				auto isShooting = bullet.playerId != mePlayerId && isBulletMoveCrossUnitMove(
+					mePositions.at(tick - 1), unitInTimePosition, meSize,
 					bulletPositions[tick - 1], bulletInTimePosition, bullet.size / 2.0);
 				if (!isShooting)
 				{
 					const auto bulletCrossWallCenter = Vec2Double(
 						bullet.position.x + bullet.velocity.x * bulletSimulation.targetCrossTime,
 						bullet.position.y + bullet.velocity.y * bulletSimulation.targetCrossTime);
-					if (isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, unitInTimePosition, me.size))
+					if (isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, unitInTimePosition, meSize))
 					{
 						isShooting = true;
 					}
@@ -335,7 +328,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 		if (item.second < maxFirstShootMeTick) maxFirstShootMeTick = item.second;
 	}
 
-	auto bestRunAwayDirection = NoWAY;
+	auto bestRunAwayDirection = GoNONE;
 	auto bestStartGoTick = -1;
 	auto bestStopGoTick = -1;
 	
