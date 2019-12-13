@@ -186,137 +186,121 @@ void setShootingAction(const Unit& me, const Unit& enemy, const Game& game, Unit
 	const auto thisTickShootingTime = shootingTick / game.properties.ticksPerSecond - movingTime;
 
 	const auto canSimulateMore = abs(action.velocity) > TOLERANCE || Simulator::isUnitOnAir(meShootingPosition, me.size, game);
-
-	Vec2Double targetPosition;
-	if (!Simulator::isUnitOnAir(enemy.position, enemy.size, game))
-	{
-		targetPosition = enemy.position;
-		action.shoot = false;
-	}
-	else
-	{
-		const auto isFalling = !enemyJumpState.canJump && !enemyJumpState.canCancel;
-		const auto isJumpPadJumping = enemyJumpState.canJump && !enemyJumpState.canCancel;
 		
-		if (!enemyJumpState.canJump && !enemyJumpState.canCancel || //падает
-			enemyJumpState.canJump && !enemyJumpState.canCancel)   //прыгает на батуте
-		{			
-			const auto enemyPos1 = Simulator::getUnitInTimePosition(enemyShootingPosition, enemy.size, enemyAction, thisTickShootingTime, enemyJumpState, game);
-		
-			int fallingTicks = 0;
-			map<int, Vec2Double> enemyPositions;
-			enemyPositions[0] = enemyPos1;			
-
-			bool isFallingWhileJumpPadJumping = false;
-			bool isJumpPadJumpingWhileFalling = false;
-			while (true) // здесь нельзя проверять !onAir из-за прыжков на батуте
-			{
-				const auto nextPos = Simulator::getUnitInTimePosition(
-					enemyPositions[fallingTicks], enemy.size, enemyAction, tickTime, enemyJumpState, game);
-				enemyPositions[++fallingTicks] = nextPos;
-
-				if (!Simulator::isUnitOnAir(nextPos, enemy.size, game)) break; // оказался на земле
-				if (isFallingWhileJumpPadJumping && enemyJumpState.canJump && !enemyJumpState.canCancel) break;//новый цикл прыжка на батуте
-				if (isJumpPadJumpingWhileFalling && !enemyJumpState.canJump && !enemyJumpState.canCancel) break;//новый цикл падения при прыжке на батуте
-
-				if (isJumpPadJumping && !enemyJumpState.canJump && !enemyJumpState.canCancel) 
-					isFallingWhileJumpPadJumping = true;//перешли из прыжка на батуте в падение
-				if (isFalling && enemyJumpState.canJump && !enemyJumpState.canCancel)
-					isJumpPadJumpingWhileFalling = true;//перешли из падения в прыжок на батуте
-			}
-
-
-			auto maxShootingProbability = 0.0;
-			double okShootingAngle = 0;
-			int addShootingSimulations = 0;
+	
+	const auto isFalling = !enemyJumpState.canJump && !enemyJumpState.canCancel;  //падает
+	const auto isJumping = enemyJumpState.canJump && enemyJumpState.canCancel;  //прыгает
+	const auto isJumpPadJumping = enemyJumpState.canJump && !enemyJumpState.canCancel;  //прыгает на батуте
 			
-			const int MAX_ADD_SHOOTING_SIMULATIONS = 100;
-			const double OK_SHOOTING_PROBABILITY = 0.85;
+	const auto enemyPos1 = Simulator::getUnitInTimePosition(enemyShootingPosition, enemy.size, enemyAction, thisTickShootingTime, enemyJumpState, game);
 
-			while (addShootingSimulations < MAX_ADD_SHOOTING_SIMULATIONS && maxShootingProbability < OK_SHOOTING_PROBABILITY)
-			{
-				double minAngle = INT_MAX;
-				double maxAngle = -INT_MAX;
-				for (const auto& ep : enemyPositions)
-				{
-					const auto shootingVector = ep.second - meShootingPosition;
-					double shootingAngle;
-					if (abs(shootingVector.x) > TOLERANCE) {
-						shootingAngle = atan2(shootingVector.y, shootingVector.x);
-					}
-					else
-					{
-						shootingAngle = shootingVector.y > 0 ? M_PI : -M_PI;
-					}
-					if (shootingAngle < minAngle) minAngle = shootingAngle;
-					if (shootingAngle > maxAngle) maxAngle = shootingAngle;
-				}
+	int fallingTicks = 0;
+	map<int, Vec2Double> enemyPositions;
+	enemyPositions[0] = enemyPos1;			
 
-				const int directionsCount = 10;
-				const double deltaAngle = (maxAngle - minAngle) / directionsCount;
+	bool isFallingWhileJumpPadJumping = false;
+	bool isJumpPadJumpingWhileFalling = false;
+	while (Simulator::isUnitOnAir(enemyPositions[fallingTicks], enemy.size, game))
+	{
+		const auto nextPos = Simulator::getUnitInTimePosition(
+			enemyPositions[fallingTicks], enemy.size, enemyAction, tickTime, enemyJumpState, game);
+		enemyPositions[++fallingTicks] = nextPos;
 
-				for (int i = 0; i < directionsCount; ++i)
-				{
-					const auto shootingAngle = minAngle + i * deltaAngle;
-					double spread;
-					if (me.weapon->lastAngle == nullptr)
-					{
-						spread = me.weapon->spread;
-					}
-					else
-					{
-						spread = me.weapon->spread + abs(*(me.weapon->lastAngle) - shootingAngle);
-						spread = min(spread, me.weapon->params.maxSpread);
-						spread = max(me.weapon->params.minSpread, spread - me.weapon->params.aimSpeed*(movingTime + tickTime * addShootingSimulations));
-					}
+		if (isFallingWhileJumpPadJumping && enemyJumpState.canJump && !enemyJumpState.canCancel) break;//новый цикл прыжка на батуте
+		if (isJumpPadJumpingWhileFalling && !enemyJumpState.canJump && !enemyJumpState.canCancel) break;//новый цикл падения при прыжке на батуте
 
-					const auto probability = Strategy::getShootEnemyProbability(
-						meShootingPosition,
-						me.size,
-						shootingAngle,
-						spread,
-						me.weapon->params.bullet,
-						thisTickShootingTime,
-						enemyShootingPosition,
-						enemyPositions,
-						enemy.size,
-						enemyAction,
-						enemyJumpState,
-						addShootingSimulations,
-						game);
-					if (probability > maxShootingProbability)
-					{
-						maxShootingProbability = probability;
-						okShootingAngle = shootingAngle;
-					}
-				}
+		if (isJumpPadJumping && !enemyJumpState.canJump && !enemyJumpState.canCancel) 
+			isFallingWhileJumpPadJumping = true;//перешли из прыжка на батуте в падение
+		if (isFalling && enemyJumpState.canJump && !enemyJumpState.canCancel)
+			isJumpPadJumpingWhileFalling = true;//перешли из падения в прыжок на батуте
+	}
 
-				if (maxShootingProbability > OK_SHOOTING_PROBABILITY) break;
-				if (!canSimulateMore) break;
 
-				meShootingPosition = Simulator::getUnitInTimePosition(
-					meShootingPosition, me.size, action, tickTime, meJumpState, game);
-				addShootingSimulations++;
-			}					
+	auto maxShootingProbability = 0.0;
+	double okShootingAngle = 0;
+	int addShootingSimulations = 0;
+	
+	const int MAX_ADD_SHOOTING_SIMULATIONS = 100;
+	const double OK_SHOOTING_PROBABILITY = 0.85;
 
-			if (maxShootingProbability >= OK_SHOOTING_PROBABILITY)
-			{
-				targetPosition = meShootingPosition + Vec2Double(cos(okShootingAngle), sin(okShootingAngle));				
-				action.shoot = addShootingSimulations == 0;
+	while (addShootingSimulations < MAX_ADD_SHOOTING_SIMULATIONS && maxShootingProbability < OK_SHOOTING_PROBABILITY)
+	{
+		double minAngle = INT_MAX;
+		double maxAngle = -INT_MAX;
+		for (const auto& ep : enemyPositions)
+		{
+			const auto shootingVector = ep.second - meShootingPosition;
+			double shootingAngle;
+			if (abs(shootingVector.x) > TOLERANCE) {
+				shootingAngle = atan2(shootingVector.y, shootingVector.x);
 			}
 			else
-			{				
-				targetPosition = enemyShootingPosition;
-				action.shoot = false;
+			{
+				shootingAngle = shootingVector.y > 0 ? M_PI : -M_PI;
+			}
+			if (shootingAngle < minAngle) minAngle = shootingAngle;
+			if (shootingAngle > maxAngle) maxAngle = shootingAngle;
+		}
+
+		const int directionsCount = min(1, static_cast<int>((maxAngle - minAngle) / M_PI * 20));
+		const double deltaAngle = (maxAngle - minAngle) / directionsCount;
+
+		for (int i = 0; i < directionsCount; ++i)
+		{
+			const auto shootingAngle = minAngle + i * deltaAngle;
+			double spread;
+			if (me.weapon->lastAngle == nullptr)
+			{
+				spread = me.weapon->spread;
+			}
+			else
+			{
+				spread = me.weapon->spread + abs(*(me.weapon->lastAngle) - shootingAngle);
+				spread = min(spread, me.weapon->params.maxSpread);
+				spread = max(me.weapon->params.minSpread, spread - me.weapon->params.aimSpeed*(movingTime + tickTime * addShootingSimulations));
+			}
+
+			const auto probability = Strategy::getShootEnemyProbability(
+				meShootingPosition,
+				me.size,
+				shootingAngle,
+				spread,
+				me.weapon->params.bullet,
+				thisTickShootingTime,
+				enemyShootingPosition,
+				enemyPositions,
+				enemy.size,
+				enemyAction,
+				enemyJumpState,
+				addShootingSimulations,
+				game);
+			if (probability > maxShootingProbability)
+			{
+				maxShootingProbability = probability;
+				okShootingAngle = shootingAngle;
 			}
 		}
-		else //прыгает
-		{
-			//TODO: разделить обычный прыжок и с батута
-			targetPosition = enemyShootingPosition;
-			action.shoot = false;
-		}
+
+		if (maxShootingProbability > OK_SHOOTING_PROBABILITY) break;
+		if (!canSimulateMore) break;
+
+		meShootingPosition = Simulator::getUnitInTimePosition(
+			meShootingPosition, me.size, action, tickTime, meJumpState, game);
+		addShootingSimulations++;
+	}					
+
+	Vec2Double targetPosition;
+	if (maxShootingProbability >= OK_SHOOTING_PROBABILITY)
+	{
+		targetPosition = meShootingPosition + Vec2Double(cos(okShootingAngle), sin(okShootingAngle));				
+		action.shoot = abs(movingTime) <TOLERANCE && addShootingSimulations == 0;
 	}
+	else
+	{				
+		targetPosition = enemyShootingPosition;
+		action.shoot = false;
+	}		
+		
 
 	//TODO: ракетницей стрелять под ноги врагу
 	//TODO: не стрелять ракетницей с риском задеть себя
