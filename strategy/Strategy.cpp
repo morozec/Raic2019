@@ -271,35 +271,65 @@ std::map<Bullet, int> Strategy::getShootMeBullets(
 bool Strategy::isBulletMoveCrossUnitMove(
 	const Vec2Double& unitPos, const Vec2Double& newUnitPos, const Vec2Double& unitSize,
 	const Vec2Double& bulletPos, const Vec2Double& newBulletPos, double halfBulletSize)
-{
-	Vec2Double unitPolygon[6];
-	Simulator::getPolygon(unitPos, newUnitPos, unitSize, unitPolygon);
-
+{	
 	Vec2Double bulletPolygon[6];
 	Simulator::getPolygon(bulletPos, newBulletPos, halfBulletSize, bulletPolygon);
-
-	Segment unitSegments[6];
-	for (int i = 0; i < 6; ++i)
-	{
-		const int endIndex = i < 5 ? i + 1 : 0;
-		unitSegments[i] = Segment(unitPolygon[i], unitPolygon[endIndex]);
-	}
 
 	Segment bulletSegments[6];
 	for (int i = 0; i < 6; ++i)
 	{
 		const int endIndex = i < 5 ? i + 1 : 0;
 		bulletSegments[i] = Segment(bulletPolygon[i], bulletPolygon[endIndex]);
-	}	
-
-	for (const auto& us : unitSegments)
-	{
-		for (const auto& bs : bulletSegments)
-		{
-			const auto cross = MathHelper::areSegmentsCross(us, bs);
-			if (cross) return true;
-		}
 	}
+
+	const auto isStaticUnit = abs(unitPos.x - newUnitPos.x) < TOLERANCE && abs(unitPos.y - newUnitPos.y) < TOLERANCE;	
+
+	if (isStaticUnit)
+	{
+		Segment unitSegments[4];
+		unitSegments[0] = Segment(
+			{ unitPos.x - unitSize.x / 2, unitPos.y }, 
+			{ unitPos.x - unitSize.x / 2,unitPos.y + unitSize.y });
+		unitSegments[1] = Segment(
+			{ unitPos.x - unitSize.x / 2, unitPos.y + unitSize.y },
+			{ unitPos.x + unitSize.x / 2,unitPos.y + unitSize.y });
+		unitSegments[2] = Segment(
+			{ unitPos.x + unitSize.x / 2, unitPos.y + unitSize.y },
+			{ unitPos.x + unitSize.x / 2,unitPos.y });
+		unitSegments[3] = Segment(
+			{ unitPos.x + unitSize.x / 2, unitPos.y },
+			{ unitPos.x - unitSize.x / 2,unitPos.y });
+		
+		for (const auto& us : unitSegments)
+		{
+			for (const auto& bs : bulletSegments)
+			{
+				const auto cross = MathHelper::areSegmentsCross(us, bs);
+				if (cross) return true;
+			}
+		}
+	}else
+	{
+		Vec2Double unitPolygon[6];
+		Simulator::getPolygon(unitPos, newUnitPos, unitSize, unitPolygon);
+
+		Segment unitSegments[6];
+		for (int i = 0; i < 6; ++i)
+		{
+			const int endIndex = i < 5 ? i + 1 : 0;
+			unitSegments[i] = Segment(unitPolygon[i], unitPolygon[endIndex]);
+		}
+
+		for (const auto& us : unitSegments)
+		{
+			for (const auto& bs : bulletSegments)
+			{
+				const auto cross = MathHelper::areSegmentsCross(us, bs);
+				if (cross) return true;
+			}
+		}
+	}	
+	
 	return false;
 }
 
