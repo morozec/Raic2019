@@ -221,7 +221,7 @@ vector<Vec2Double> getSimplePositions(
 	}
 	else if (isJumping) //ןנûדאוע
 	{
-		action.jump = true;
+		action.jump = false;
 		action.jumpDown = false;
 		action.velocity = 0;
 	}
