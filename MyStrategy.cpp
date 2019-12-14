@@ -37,7 +37,7 @@ void prolongatePositions(vector<Vec2Double>& positions, const Vec2Double& unitSi
 	bool isFallingWhileJumpPadJumping = false;
 	bool isJumpPadJumpingWhileFalling = false;
 	
-	while (Simulator::isUnitOnAir(lastPosition, unitSize, game))
+	while (positions.size() < MAX_SIMULATIONS && Simulator::isUnitOnAir(lastPosition, unitSize, game))
 	{
 		lastPosition = Simulator::getUnitInTimePosition(lastPosition, unitSize, action, tickTime, jumpState, game);
 		positions.push_back(lastPosition);
@@ -259,7 +259,7 @@ vector<vector<Vec2Double>> getSimplePositionsSimulations(const Unit& enemy, cons
 	auto curEnemyPositions = getSimplePositions(lastEnemyPosition, enemy.size, lastEnemyJumpState, game);
 	enemyPositions.emplace_back(curEnemyPositions);
 
-	int counter = 0;
+	int counter = 1;
 	while (counter < MAX_SIMULATIONS)
 	{
 		lastEnemyPosition = curEnemyPositions.size() == 1 ? curEnemyPositions[0] : curEnemyPositions[1];
@@ -293,7 +293,6 @@ double getSimpleProbability(
 void getAttackingData(
 	const Unit& me,	
 	vector<Vec2Double>& mePositions,
-	vector<double>& simpleProbabilities,
 	vector<JumpState>& meJumpStates,	
 	const Vec2Double& enemySize,
 	const vector<vector<Vec2Double>>& enemyPositions,
@@ -309,16 +308,15 @@ void getAttackingData(
 	mePositions.emplace_back(lastMePosition);	
 	meJumpStates.emplace_back(lastMeJumpState);	
 
-	int counter = 0;
+	int counter = 1;
 	while (counter < MAX_SIMULATIONS)
 	{
 		const auto curEnemyPositions = enemyPositions[counter];
 		const auto sp = getSimpleProbability(lastMePosition, me.size,
 			curEnemyPositions, enemySize, game);
-		simpleProbabilities.emplace_back(sp);
 		if (abs(sp - 1) < TOLERANCE)
 		{
-			if (counter == 0)
+			if (counter == 1)
 			{
 				meAction.jump = false;
 				meAction.jumpDown = false;
@@ -332,7 +330,7 @@ void getAttackingData(
 		setJumpAndJumpDown(
 			lastMePosition, lastMeJumpState, curEnemyPositions[0], game, false, action, lastStartJumpY);
 
-		if (counter == 0) {
+		if (counter == 1) {
 			startJumpY = lastStartJumpY;
 			meAction = action;
 		}
@@ -605,13 +603,12 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 	//setMoveToEnemyAction(unit, nearestEnemy->position, needGo, game, action, strategy_);
 	vector<Vec2Double> meAttackingPositions;
-	vector<double> meAttackingSimpleProbabilities;
 	vector<JumpState> meAttackingJumpStates;
 	UnitAction meAttackingAction;
 	auto startJumpY = strategy_.getStartedJumpY();
 	getAttackingData(
 		unit, 
-		meAttackingPositions, meAttackingSimpleProbabilities, meAttackingJumpStates,
+		meAttackingPositions, meAttackingJumpStates,
 		nearestEnemy->size, enemyPositions, meAttackingAction, startJumpY, game);
 
 	tuple<RunawayDirection, int, int, int> runawayAction;
@@ -697,20 +694,20 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 				{
 					runawayMeAttackingPositions.emplace_back(nextPos);
 				}
-				meAttackingPositions = runawayMeAttackingPositions;
-
-				meAttackingSimpleProbabilities.clear();
-				for (size_t i = 0; i < meAttackingPositions.size(); ++i)
-				{
-					const auto& mePosition = meAttackingPositions[i];
-					const auto& curEnemyPositions = enemyPositions[i];
-					const auto sp = getSimpleProbability(mePosition, unit.size, curEnemyPositions, nearestEnemy->size, game);
-					meAttackingSimpleProbabilities.emplace_back(sp);
-				}
+				meAttackingPositions = runawayMeAttackingPositions;				
 			}
 			
 			prolongatePositions(meAttackingPositions, unit.size, lastMeAttackingJumpState, game);
-			setShootingAction(unit, meAttackingPositions, meAttackingSimpleProbabilities, nearestEnemy->size, enemyPositions, game, action);
+
+			for (size_t i = 0; i < meAttackingPositions.size(); ++i)
+			{
+				const auto& mePosition = meAttackingPositions[i];
+				const auto& curEnemyPositions = enemyPositions[i];
+				const auto sp = getSimpleProbability(mePosition, unit.size, curEnemyPositions, nearestEnemy->size, game);
+				meSimpleProbabilities.emplace_back(sp);
+			}
+			
+			setShootingAction(unit, meAttackingPositions, meSimpleProbabilities, nearestEnemy->size, enemyPositions, game, action);
 			strategy_.setStartedJumpY(startJumpY);
 			return action;			
 		}				
