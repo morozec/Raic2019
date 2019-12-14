@@ -100,7 +100,8 @@ void setJumpAndJumpDown(const Vec2Double& unitPosition, const JumpState& unitJum
 		game.level.tiles[size_t(unitPosition.x + 1)][size_t(unitPosition.y)] == WALL;
 	const auto isSameColumnHigher = 
 		targetPosition.y > unitPosition.y && targetPosition.x >= unitPosition.x - 1 && targetPosition.x <= unitPosition.x + 1;
-	const auto needJump = considerYs && targetPosition.y > unitPosition.y || isLeftWall || isRightWall || isSameColumnHigher;
+	const auto needJump = considerYs && targetPosition.y > unitPosition.y || isLeftWall || isRightWall || 
+		considerYs && isSameColumnHigher;
 
 	const auto bottomTile = game.level.tiles[size_t(unitPosition.x)][size_t(unitPosition.y - 1)];
 	if (startedJumpY != 0 &&
