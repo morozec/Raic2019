@@ -58,14 +58,14 @@ inline bool operator<(const Bullet& lhs, const Bullet& rhs)
 }
 
 vector<Vec2Double> getActionPositions(
-	const Unit& unit, const UnitAction& action, int startTick, int stopTick, JumpState& jumpState, const Game& game)
+	const Vec2Double& unitPosition, const Vec2Double& unitSize, const UnitAction& action, int startTick, int stopTick, JumpState& jumpState, const Game& game)
 {
 	if (startTick < 0 || stopTick < 0) throw runtime_error("getActionPositions tick is negative");
 	
 	const auto tickTime = 1 / game.properties.ticksPerSecond;
 	vector<Vec2Double> positions;
 
-	positions.emplace_back(unit.position);
+	positions.emplace_back(unitPosition);
 
 	UnitAction waitAction;
 	waitAction.jump = false;
@@ -74,14 +74,14 @@ vector<Vec2Double> getActionPositions(
 	for (int i = 0; i < startTick; ++i)
 	{
 		const auto nextPos = Simulator::getUnitInTimePosition(
-			positions.back(), unit.size, waitAction, tickTime, jumpState, game);
+			positions.back(), unitSize, waitAction, tickTime, jumpState, game);
 		positions.emplace_back(nextPos);
 	}
 
 	for (int i = 0; i < stopTick - startTick; ++i)
 	{
 		const auto nextPos = Simulator::getUnitInTimePosition(
-			positions.back(), unit.size, action, tickTime, jumpState, game);
+			positions.back(), unitSize, action, tickTime, jumpState, game);
 		positions.emplace_back(nextPos);
 	}
 	
@@ -570,7 +570,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			throw runtime_error("unknown runawayDirection");
 		}
 		auto jumpState = unit.jumpState;
-		auto mePositions = getActionPositions(unit, action, 0, curStopRunawayTick, jumpState, game);
+		auto mePositions = getActionPositions(unit.position, unit.size, action, 0, curStopRunawayTick, jumpState, game);
 		prolongatePositions(mePositions, unit.size, jumpState, game);
 		setShootingAction(unit, mePositions, nearestEnemy->size, enemyPositions, game, action);
 
@@ -595,33 +595,86 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	{
 		auto jumpState = unit.jumpState;
 
-		const auto meAttackPosition = meAttackingPositions.size() == 1 ? meAttackingPositions[0] : meAttackingPositions[1];
-		const auto meAttackingJumpState = meAttackingJumpStates.size() == 1 ? meAttackingJumpStates[0] : meAttackingJumpStates[1];
-		const auto actionShootMeBullets = strategy_.getShootMeBullets(
-			meAttackPosition, unit.size, meAttackingJumpState,
+		const auto nextTickMeAttackPosition = meAttackingPositions.size() == 1 ? meAttackingPositions[0] : meAttackingPositions[1];
+		const auto nextTickMeAttackingJumpState = 
+			meAttackingJumpStates.size() == 1 ? meAttackingJumpStates[0] : meAttackingJumpStates[1];
+		const auto nextTickShootMeBullets = strategy_.getShootMeBullets(
+			nextTickMeAttackPosition, unit.size, nextTickMeAttackingJumpState,
 			unit.playerId,
 			enemyBulletsSimulation, 1, game);
 		
 		runawayAction = strategy_.getRunawayAction(
-			meAttackPosition, unit.size, unit.playerId, jumpState,
-			actionShootMeBullets, enemyBulletsSimulation, 1,
+			nextTickMeAttackPosition, unit.size, unit.playerId, jumpState,
+			nextTickShootMeBullets, enemyBulletsSimulation, 1,
 			true, true, true, true,
-			game);	
-
+			game);
+		const auto runawayDirection = std::get<0>(runawayAction);
+		const auto runawayStartTick = std::get<1>(runawayAction);
+		const auto runawayStopTick = std::get<2>(runawayAction);
 		const auto minDamage = std::get<3>(runawayAction);
 		
 		if (minDamage == 0)
 		{
 			debug.draw(CustomData::Log(
-				to_string(std::get<0>(runawayAction)) + " " +
-				to_string(std::get<1>(runawayAction) + 1) + " " +
-				to_string(std::get<2>(runawayAction) + 1) + " " +
-				to_string(std::get<3>(runawayAction)) + "\n"));
+				to_string(runawayDirection) + " " +
+				to_string(runawayStartTick + 1) + " " +
+				to_string(runawayStopTick + 1) + " " +
+				to_string(minDamage) + "\n"));
 
 			action.jump = meAttackingAction.jump;
 			action.jumpDown = meAttackingAction.jumpDown;
 			action.velocity = meAttackingAction.velocity;
-			prolongatePositions(meAttackingPositions, unit.size, meAttackingJumpStates.back(), game);
+
+			auto lastMeAttackingJumpState = meAttackingJumpStates.back();
+
+			if (runawayDirection != GoNONE)//потом придется убегать убегать
+			{
+				vector<Vec2Double> runawayMeAttackingPositions;
+				runawayMeAttackingPositions.emplace_back(meAttackingPositions[0]);
+
+				UnitAction runawayAttackAction;
+				if (runawayDirection == GoUP)
+				{
+					runawayAttackAction.jump = true;
+					runawayAttackAction.jumpDown = false;
+					runawayAttackAction.velocity = 0;
+				}
+				else if (runawayDirection == GoDOWN)
+				{
+					runawayAttackAction.jump = false;
+					runawayAttackAction.jumpDown = true;
+					runawayAttackAction.velocity = 0;
+				}
+				else if (runawayDirection == GoLEFT)
+				{
+					runawayAttackAction.jump = false;
+					runawayAttackAction.jumpDown = false;
+					runawayAttackAction.velocity = -INT_MAX;
+				}
+				else if (runawayDirection == GoRIGHT)
+				{
+					runawayAttackAction.jump = false;
+					runawayAttackAction.jumpDown = false;
+					runawayAttackAction.velocity = INT_MAX;
+				}
+				else
+				{
+					throw runtime_error("unknown runawayDirection 2");
+				}
+
+				lastMeAttackingJumpState = nextTickMeAttackingJumpState;
+				auto nextPositions = getActionPositions(
+					nextTickMeAttackPosition, unit.size, runawayAttackAction, 
+					runawayStartTick, runawayStopTick, lastMeAttackingJumpState, 
+					game);
+				for (const auto& nextPos : nextPositions)
+				{
+					runawayMeAttackingPositions.emplace_back(nextPos);
+				}
+				meAttackingPositions = runawayMeAttackingPositions;
+			}
+			
+			prolongatePositions(meAttackingPositions, unit.size, lastMeAttackingJumpState, game);
 			setShootingAction(unit, meAttackingPositions, nearestEnemy->size, enemyPositions, game, action);
 			strategy_.setStartedJumpY(startJumpY);
 			return action;			
@@ -709,7 +762,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	JumpState jumpState = unit.jumpState;
 	auto mePositions = runawayDirection == GoNONE ?
 		vector<Vec2Double>{ unit.position } :
-		getActionPositions(unit, runawayUnitAction, startRunawayTick, stopRunawayTick, jumpState, game);
+		getActionPositions(unit.position, unit.size, runawayUnitAction, startRunawayTick, stopRunawayTick, jumpState, game);
 	
 	prolongatePositions(mePositions, unit.size, jumpState, game);
 	
