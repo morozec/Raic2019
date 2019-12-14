@@ -436,10 +436,14 @@ void setShootingAction(
 		addShootingSimulations++;
 	}					
 
-	if (maxShootingProbability >= OK_SHOOTING_PROBABILITY 
-		|| mePositions.size() == 1 && maxShootingProbability > TOLERANCE) // дальше я уже не пойду
+	if (maxShootingProbability >= OK_SHOOTING_PROBABILITY) 
 	{
 		action.shoot = canShootingTick == 0 && addShootingSimulations == 0;
+		action.aim = Vec2Double(cos(okShootingAngle), sin(okShootingAngle));
+	}
+	else if (mePositions.size() == 1 && maxShootingProbability > TOLERANCE)// дальше я уже не пойду
+	{
+		action.shoot = canShootingTick == 0;
 		action.aim = Vec2Double(cos(okShootingAngle), sin(okShootingAngle));
 	}
 	else
