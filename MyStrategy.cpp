@@ -589,7 +589,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		nearestEnemy->size, enemyPositions, meAttackingAction, startJumpY, game);
 
 	tuple<RunawayDirection, int, int, int> runawayAction;
-	auto isSafeMove = strategy_.isSafeMove(unit, action, enemyBulletsSimulation, game);	
+	auto isSafeMove = strategy_.isSafeMove(unit, meAttackingAction, enemyBulletsSimulation, game);
 
 	if (isSafeMove)
 	{
