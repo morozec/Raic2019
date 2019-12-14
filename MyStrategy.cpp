@@ -444,7 +444,9 @@ void setShootingAction(
 	else
 	{				
 		action.shoot = false;
-		action.aim = enemyPositions[canShootingTick][0] - mePositions[canShootingTick];
+		const auto enemyPos = enemyPositions[canShootingTick][0];
+		const auto mePos = mePositions.size() < canShootingTick ? mePositions[canShootingTick] : mePositions.back();
+		action.aim = enemyPos - mePos;
 	}				
 
 	//TODO: ракетницей стрелять под ноги врагу
