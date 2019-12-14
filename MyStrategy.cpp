@@ -21,12 +21,44 @@ MyStrategy::MyStrategy()
 }
 
 
+void prolongatePositions(vector<Vec2Double>& positions, const Vec2Double& unitSize, JumpState& jumpState, const Game& game)
+{
+	const auto tickTime = 1 / game.properties.ticksPerSecond;
+	auto lastPosition = positions.back();
+
+	const auto isFalling = !jumpState.canJump && !jumpState.canCancel;
+	const auto isJumpPadJumping = jumpState.canJump && !jumpState.canCancel;
+	
+	UnitAction action;
+	action.jump = false;
+	action.jumpDown = false;
+	action.velocity = 0;
+
+	bool isFallingWhileJumpPadJumping = false;
+	bool isJumpPadJumpingWhileFalling = false;
+	
+	while (!Simulator::isUnitOnAir(lastPosition, unitSize, game))
+	{
+		lastPosition = Simulator::getUnitInTimePosition(lastPosition, unitSize, action, tickTime, jumpState, game);
+		positions.push_back(lastPosition);
+
+		if (isFallingWhileJumpPadJumping && jumpState.canJump && !jumpState.canCancel) break;//новый цикл прыжка на батуте
+		if (isJumpPadJumpingWhileFalling && !jumpState.canJump && !jumpState.canCancel) break;//новый цикл падения при прыжке на батуте
+
+		if (isJumpPadJumping && !jumpState.canJump && !jumpState.canCancel)
+			isFallingWhileJumpPadJumping = true;//перешли из прыжка на батуте в падение
+		if (isFalling && jumpState.canJump && !jumpState.canCancel)
+			isJumpPadJumpingWhileFalling = true;//перешли из падения в прыжок на батуте
+	}	
+}
+
 inline bool operator<(const Bullet& lhs, const Bullet& rhs)
 {
 	return lhs.position.x < rhs.position.x;
 }
 
-vector<Vec2Double> getActionPositions(const Unit& unit, const UnitAction& action, int startTick, int stopTick, const Game& game)
+vector<Vec2Double> getActionPositions(
+	const Unit& unit, const UnitAction& action, int startTick, int stopTick, JumpState& jumpState, const Game& game)
 {
 	if (startTick < 0 || stopTick < 0) throw runtime_error("getActionPositions tick is negative");
 	
@@ -34,7 +66,6 @@ vector<Vec2Double> getActionPositions(const Unit& unit, const UnitAction& action
 	vector<Vec2Double> positions;
 
 	positions.emplace_back(unit.position);
-	auto jumpState = unit.jumpState;
 
 	UnitAction waitAction;
 	waitAction.jump = false;
@@ -511,8 +542,9 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		{
 			throw runtime_error("unknown runawayDirection");
 		}
-
-		const auto mePositions = getActionPositions(unit, action, 0, curStopRunawayTick, game);
+		auto jumpState = unit.jumpState;
+		auto mePositions = getActionPositions(unit, action, 0, curStopRunawayTick, jumpState, game);
+		prolongatePositions(mePositions, unit.size, jumpState, game);
 		setShootingAction(unit, mePositions, nearestEnemy->size, enemyPositions, game, action);
 
 		strategy_.decreaseStopRunawayTick();
@@ -558,8 +590,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 				to_string(std::get<1>(runawayAction) + 1) + " " +
 				to_string(std::get<2>(runawayAction) + 1) + " " +
 				to_string(std::get<3>(runawayAction)) + "\n"));
-
-			//TODO: продлить meAttackingPositions
+						
+			prolongatePositions(meAttackingPositions, unit.size, meAttackingJumpStates.back(), game);
 			setShootingAction(unit, meAttackingPositions, nearestEnemy->size, enemyPositions, game, action);
 			strategy_.setStartedJumpY(startJumpY);
 			return action;			
@@ -644,9 +676,12 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	
 	cout << game.currentTick << ": " << action.jump << " " << action.jumpDown << " " << action.velocity << "\n";
 
-	const auto mePositions = runawayDirection == GoNONE ?
-		vector<Vec2Double>{unit.position} :
-		getActionPositions(unit, runawayUnitAction, startRunawayTick, stopRunawayTick, game);
+	JumpState jumpState = unit.jumpState;
+	auto mePositions = runawayDirection == GoNONE ?
+		vector<Vec2Double>{ unit.position } :
+		getActionPositions(unit, runawayUnitAction, startRunawayTick, stopRunawayTick, jumpState, game);
+	
+	prolongatePositions(mePositions, unit.size, jumpState, game);
 	
 	setShootingAction(unit, mePositions, nearestEnemy->size, enemyPositions, game, action);
 	return action;
