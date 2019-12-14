@@ -633,10 +633,10 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	bool checkLeft = true;
 	bool checkRight = true;
 
-	if (action.jump) checkUp = false;
-	else if (action.jumpDown) checkDown = false;
-	else if (action.velocity < -TOLERANCE) checkLeft = false;
-	else if (action.velocity > TOLERANCE) checkRight = false;
+	if (meAttackingAction.jump) checkUp = false;
+	else if (meAttackingAction.jumpDown) checkDown = false;
+	else if (meAttackingAction.velocity < -TOLERANCE) checkLeft = false;
+	else if (meAttackingAction.velocity > TOLERANCE) checkRight = false;
 
 	// выжидаем тик начала движения, не делая ничего
 	action.jump = false;
@@ -702,7 +702,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		action.velocity = runawayUnitAction.velocity;
 	}	
 	
-	cout << game.currentTick << ": " << action.jump << " " << action.jumpDown << " " << action.velocity << "\n";
+	//cout << game.currentTick << ": " << action.jump << " " << action.jumpDown << " " << action.velocity << "\n";
 
 	JumpState jumpState = unit.jumpState;
 	auto mePositions = runawayDirection == GoNONE ?
