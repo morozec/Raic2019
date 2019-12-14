@@ -292,10 +292,10 @@ bool areAllPositionsShooting(
 void getAttackingData(
 	const Unit& me,	
 	vector<Vec2Double>& mePositions, 
-	vector<JumpState>& meJumpStates, 
-	vector<UnitAction>& meActions,
+	vector<JumpState>& meJumpStates,	
 	const Vec2Double& enemySize,
 	const vector<vector<Vec2Double>>& enemyPositions,
+	UnitAction& meAction,
 	size_t& startJumpY,
 	const Game& game)
 {
@@ -314,16 +314,28 @@ void getAttackingData(
 		if (areAllPositionsShooting(
 			lastMePosition, me.size,
 			curEnemyPositions, enemySize,
-			game)) return;
+			game)) 
+		{
+			if (counter == 0)
+			{
+				meAction.jump = false;
+				meAction.jumpDown = false;
+				meAction.velocity = 0;
+			}
+			return;
+		}
 		
 		UnitAction action;
 		action.velocity = curEnemyPositions[0].x > lastMePosition.x ? INT_MAX : -INT_MAX;
 		setJumpAndJumpDown(
 			lastMePosition, lastMeJumpState, curEnemyPositions[0], game, false, action, lastStartJumpY);
-		if (counter == 0) startJumpY = lastStartJumpY;
-				
-		lastMePosition = Simulator::getUnitInTimePosition(lastMePosition, me.size, action, tickTime, lastMeJumpState, game);
-		meActions.emplace_back(action);
+
+		if (counter == 0) {
+			startJumpY = lastStartJumpY;
+			meAction = action;
+		}
+		
+		lastMePosition = Simulator::getUnitInTimePosition(lastMePosition, me.size, action, tickTime, lastMeJumpState, game);	
 		mePositions.emplace_back(lastMePosition);		
 		meJumpStates.emplace_back(lastMeJumpState);
 		
@@ -567,12 +579,12 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	//setMoveToEnemyAction(unit, nearestEnemy->position, needGo, game, action, strategy_);
 	vector<Vec2Double> meAttackingPositions;
 	vector<JumpState> meAttackingJumpStates;
-	vector<UnitAction> meAttackingActions;
+	UnitAction meAttackingAction;
 	auto startJumpY = strategy_.getStartedJumpY();
 	getAttackingData(
 		unit, 
-		meAttackingPositions, meAttackingJumpStates, meAttackingActions,
-		nearestEnemy->size, enemyPositions, startJumpY, game);
+		meAttackingPositions, meAttackingJumpStates,
+		nearestEnemy->size, enemyPositions, meAttackingAction, startJumpY, game);
 
 	tuple<RunawayDirection, int, int, int> runawayAction;
 	auto isSafeMove = strategy_.isSafeMove(unit, action, enemyBulletsSimulation, game);	
@@ -603,7 +615,10 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 				to_string(std::get<1>(runawayAction) + 1) + " " +
 				to_string(std::get<2>(runawayAction) + 1) + " " +
 				to_string(std::get<3>(runawayAction)) + "\n"));
-						
+
+			action.jump = meAttackingAction.jump;
+			action.jumpDown = meAttackingAction.jumpDown;
+			action.velocity = meAttackingAction.velocity;
 			prolongatePositions(meAttackingPositions, unit.size, meAttackingJumpStates.back(), game);
 			setShootingAction(unit, meAttackingPositions, nearestEnemy->size, enemyPositions, game, action);
 			strategy_.setStartedJumpY(startJumpY);
