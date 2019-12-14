@@ -396,10 +396,10 @@ void setShootingAction(
 			if (shootingAngle > maxAngle) maxAngle = shootingAngle;
 		}
 
-		const int directionsCount = max(1, static_cast<int>((maxAngle - minAngle) / M_PI * 20));
+		const int directionsCount = abs(maxAngle - minAngle) < TOLERANCE ? 1 : ANGLE_SPLIT_COUNT;
 		const double deltaAngle = (maxAngle - minAngle) / directionsCount;
 
-		for (int i = 0; i < directionsCount; ++i)
+		for (int i = 0; i <= directionsCount; ++i)
 		{
 			const auto shootingAngle = minAngle + i * deltaAngle;
 			double spread;
@@ -436,7 +436,8 @@ void setShootingAction(
 		addShootingSimulations++;
 	}					
 
-	if (maxShootingProbability >= OK_SHOOTING_PROBABILITY)
+	if (maxShootingProbability >= OK_SHOOTING_PROBABILITY 
+		|| mePositions.size() == 1 && maxShootingProbability > TOLERANCE) // дальше я уже не пойду
 	{
 		action.shoot = canShootingTick == 0 && addShootingSimulations == 0;
 		action.aim = Vec2Double(cos(okShootingAngle), sin(okShootingAngle));
