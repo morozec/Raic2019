@@ -445,7 +445,7 @@ void setShootingAction(
 	{				
 		action.shoot = false;
 		const auto enemyPos = enemyPositions[canShootingTick][0];
-		const auto mePos = mePositions.size() < canShootingTick ? mePositions[canShootingTick] : mePositions.back();
+		const auto mePos = canShootingTick < mePositions.size() ? mePositions[canShootingTick] : mePositions.back();
 		action.aim = enemyPos - mePos;
 	}				
 
