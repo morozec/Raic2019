@@ -37,7 +37,7 @@ void prolongatePositions(vector<Vec2Double>& positions, const Vec2Double& unitSi
 	bool isFallingWhileJumpPadJumping = false;
 	bool isJumpPadJumpingWhileFalling = false;
 	
-	while (!Simulator::isUnitOnAir(lastPosition, unitSize, game))
+	while (Simulator::isUnitOnAir(lastPosition, unitSize, game))
 	{
 		lastPosition = Simulator::getUnitInTimePosition(lastPosition, unitSize, action, tickTime, jumpState, game);
 		positions.push_back(lastPosition);
