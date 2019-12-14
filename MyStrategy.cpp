@@ -273,25 +273,27 @@ vector<vector<Vec2Double>> getSimplePositionsSimulations(const Unit& enemy, cons
 }
 
 
-bool areAllPositionsShooting(
+double getSimpleProbability(
 	const Vec2Double& mePosition, const Vec2Double& meSize,
 	const vector<Vec2Double>& enemyPositions, const Vec2Double& enemySize, const Game& game)
 {
 	const auto bulletPosition = Vec2Double(mePosition.x, mePosition.y + meSize.y / 2);
+	int count = 0;
 	for (const auto& ep: enemyPositions)
 	{
 		const auto epCenter = Vec2Double(ep.x, ep.y + enemySize.y / 2);
 		auto squares = MathHelper::getLineSquares(bulletPosition, epCenter, 1);
 		const auto wall = find_if(squares.begin(), squares.end(), [game](const auto& p) {return game.level.tiles[p.first][p.second] == Tile::WALL; });
-		if (wall != squares.end()) return false;
-	}
-	return true;
+		if (wall == squares.end()) count++;
+	}	
+	return count * 1.0/enemyPositions.size();
 }
 
 
 void getAttackingData(
 	const Unit& me,	
-	vector<Vec2Double>& mePositions, 
+	vector<Vec2Double>& mePositions,
+	vector<double>& simpleProbabilities,
 	vector<JumpState>& meJumpStates,	
 	const Vec2Double& enemySize,
 	const vector<vector<Vec2Double>>& enemyPositions,
@@ -311,10 +313,10 @@ void getAttackingData(
 	while (counter < MAX_SIMULATIONS)
 	{
 		const auto curEnemyPositions = enemyPositions[counter];
-		if (areAllPositionsShooting(
-			lastMePosition, me.size,
-			curEnemyPositions, enemySize,
-			game)) 
+		const auto sp = getSimpleProbability(lastMePosition, me.size,
+			curEnemyPositions, enemySize, game);
+		simpleProbabilities.emplace_back(sp);
+		if (abs(sp - 1) < TOLERANCE)
 		{
 			if (counter == 0)
 			{
@@ -323,7 +325,7 @@ void getAttackingData(
 				meAction.velocity = 0;
 			}
 			return;
-		}
+		}		
 		
 		UnitAction action;
 		action.velocity = curEnemyPositions[0].x > lastMePosition.x ? INT_MAX : -INT_MAX;
@@ -345,7 +347,7 @@ void getAttackingData(
 
 
 void setShootingAction(
-	const Unit& me, const vector<Vec2Double>& mePositions, 
+	const Unit& me, const vector<Vec2Double>& mePositions, const vector<double>& meSimpleProbabilities,
 	const Vec2Double& enemySize, const vector<vector<Vec2Double>>& enemyPositions,
 	const Game& game, UnitAction& action)
 {
@@ -367,15 +369,23 @@ void setShootingAction(
 	{
 		const auto shootingTick = canShootingTick + addShootingSimulations;
 		Vec2Double meShootingPosition;//позиция, откуда произойдет выстрел
+		double meSimpleProbability;
 		if (shootingTick >= mePositions.size())
 		{
 			if (addShootingSimulations > 0) break;//стоим на месте. нет смысла симулировать дальше
 			meShootingPosition = mePositions.back();
+			meSimpleProbability = meSimpleProbabilities.back();
 		}
 		else
 		{
 			meShootingPosition = mePositions[shootingTick];
+			meSimpleProbability = meSimpleProbabilities[shootingTick];
 		}
+		if (abs(meSimpleProbability) < TOLERANCE)
+		{
+			addShootingSimulations++;
+			continue;
+		}		
 		
 		auto enemyShootingPositions = //позиции врага, начиная с тика выстрела
 			enemyPositions[shootingTick];
@@ -539,7 +549,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	drawBullets(debug, game, enemyBulletsSimulation, unit.playerId);
 	drawShootingSector(debug, unit, game);
 	const auto curStopRunawayTick = strategy_.getStopRunawayTick();
-	
+
+	vector<double> meSimpleProbabilities;
 	if (curStopRunawayTick == 0)
 	{
 		strategy_.setRunaway(GoNONE, -1);
@@ -575,9 +586,18 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			throw runtime_error("unknown runawayDirection");
 		}
 		auto jumpState = unit.jumpState;
-		auto mePositions = getActionPositions(unit.position, unit.size, action, 0, curStopRunawayTick, jumpState, game);
+		auto mePositions = getActionPositions(unit.position, unit.size, action, 0, curStopRunawayTick, jumpState, game);		
 		prolongatePositions(mePositions, unit.size, jumpState, game);
-		setShootingAction(unit, mePositions, nearestEnemy->size, enemyPositions, game, action);
+
+		
+		for (size_t i = 0; i < mePositions.size(); ++i)
+		{
+			const auto& mePosition = mePositions[i];
+			const auto& curEnemyPositions = enemyPositions[i];
+			const auto sp = getSimpleProbability(mePosition, unit.size, curEnemyPositions, nearestEnemy->size, game);
+			meSimpleProbabilities.emplace_back(sp);
+		}
+		setShootingAction(unit, mePositions,meSimpleProbabilities, nearestEnemy->size, enemyPositions, game, action);
 
 		strategy_.decreaseStopRunawayTick();
 		return action;
@@ -585,12 +605,13 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 	//setMoveToEnemyAction(unit, nearestEnemy->position, needGo, game, action, strategy_);
 	vector<Vec2Double> meAttackingPositions;
+	vector<double> meAttackingSimpleProbabilities;
 	vector<JumpState> meAttackingJumpStates;
 	UnitAction meAttackingAction;
 	auto startJumpY = strategy_.getStartedJumpY();
 	getAttackingData(
 		unit, 
-		meAttackingPositions, meAttackingJumpStates,
+		meAttackingPositions, meAttackingSimpleProbabilities, meAttackingJumpStates,
 		nearestEnemy->size, enemyPositions, meAttackingAction, startJumpY, game);
 
 	tuple<RunawayDirection, int, int, int> runawayAction;
@@ -677,10 +698,19 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 					runawayMeAttackingPositions.emplace_back(nextPos);
 				}
 				meAttackingPositions = runawayMeAttackingPositions;
+
+				meAttackingSimpleProbabilities.clear();
+				for (size_t i = 0; i < meAttackingPositions.size(); ++i)
+				{
+					const auto& mePosition = meAttackingPositions[i];
+					const auto& curEnemyPositions = enemyPositions[i];
+					const auto sp = getSimpleProbability(mePosition, unit.size, curEnemyPositions, nearestEnemy->size, game);
+					meAttackingSimpleProbabilities.emplace_back(sp);
+				}
 			}
 			
 			prolongatePositions(meAttackingPositions, unit.size, lastMeAttackingJumpState, game);
-			setShootingAction(unit, meAttackingPositions, nearestEnemy->size, enemyPositions, game, action);
+			setShootingAction(unit, meAttackingPositions, meAttackingSimpleProbabilities, nearestEnemy->size, enemyPositions, game, action);
 			strategy_.setStartedJumpY(startJumpY);
 			return action;			
 		}				
@@ -777,7 +807,15 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	
 	prolongatePositions(mePositions, unit.size, jumpState, game);
 	
-	setShootingAction(unit, mePositions, nearestEnemy->size, enemyPositions, game, action);
+	for (size_t i = 0; i < mePositions.size(); ++i)
+	{
+		const auto& mePosition = mePositions[i];
+		const auto& curEnemyPositions = enemyPositions[i];
+		const auto sp = getSimpleProbability(mePosition, unit.size, curEnemyPositions, nearestEnemy->size, game);
+		meSimpleProbabilities.emplace_back(sp);
+	}
+	
+	setShootingAction(unit, mePositions, meSimpleProbabilities, nearestEnemy->size, enemyPositions, game, action);
 	return action;
 }
 
