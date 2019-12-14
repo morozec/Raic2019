@@ -404,10 +404,20 @@ void setShootingAction(
 			if (shootingAngle > maxAngle) maxAngle = shootingAngle;
 		}
 
-		const int directionsCount = abs(maxAngle - minAngle) < TOLERANCE ? 1 : ANGLE_SPLIT_COUNT;
-		const double deltaAngle = (maxAngle - minAngle) / directionsCount;
-
-		for (int i = 0; i <= directionsCount; ++i)
+		int directionsCount;
+		double deltaAngle;
+		if (abs(maxAngle - minAngle) < TOLERANCE)
+		{
+			directionsCount = 1;
+			deltaAngle = 0;
+		}
+		else
+		{
+			directionsCount = ANGLE_SPLIT_COUNT;
+			deltaAngle = (maxAngle - minAngle) / (ANGLE_SPLIT_COUNT - 1);
+		}
+		
+		for (int i = 0; i < directionsCount; ++i)
 		{
 			const auto shootingAngle = minAngle + i * deltaAngle;
 			double spread;
