@@ -273,9 +273,18 @@ vector<vector<Vec2Double>> getSimplePositionsSimulations(const Unit& enemy, cons
 }
 
 
-bool areAllPositionsShooting(const Vec2Double& mePosition, const vector<Vec2Double>& enemyPositions)
+bool areAllPositionsShooting(
+	const Vec2Double& mePosition, const Vec2Double& meSize,
+	const vector<Vec2Double>& enemyPositions, const Vec2Double& enemySize, const Game& game)
 {
-	//TODO
+	const auto bulletPosition = Vec2Double(mePosition.x, mePosition.y + meSize.y / 2);
+	for (const auto& ep: enemyPositions)
+	{
+		const auto epCenter = Vec2Double(ep.x, ep.y + enemySize.y / 2);
+		auto squares = MathHelper::getLineSquares(bulletPosition, epCenter, 1);
+		const auto wall = find_if(squares.begin(), squares.end(), [game](const auto& p) {return game.level.tiles[p.first][p.second] == Tile::WALL; });
+		if (wall != squares.end()) return false;
+	}
 	return true;
 }
 
@@ -284,7 +293,8 @@ void getAttackingData(
 	const Unit& me,	
 	vector<Vec2Double>& mePositions, 
 	vector<JumpState>& meJumpStates, 
-	vector<UnitAction>& meActions, 
+	vector<UnitAction>& meActions,
+	const Vec2Double& enemySize,
 	const vector<vector<Vec2Double>>& enemyPositions,
 	size_t& startJumpY,
 	const Game& game)
@@ -301,7 +311,10 @@ void getAttackingData(
 	while (counter < MAX_SIMULATIONS)
 	{
 		const auto curEnemyPositions = enemyPositions[counter];
-		if (areAllPositionsShooting(lastMePosition, curEnemyPositions)) return;
+		if (areAllPositionsShooting(
+			lastMePosition, me.size,
+			curEnemyPositions, enemySize,
+			game)) return;
 		
 		UnitAction action;
 		action.velocity = curEnemyPositions[0].x > lastMePosition.x ? INT_MAX : -INT_MAX;
@@ -559,7 +572,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	getAttackingData(
 		unit, 
 		meAttackingPositions, meAttackingJumpStates, meAttackingActions,
-		enemyPositions, startJumpY, game);
+		nearestEnemy->size, enemyPositions, startJumpY, game);
 
 	tuple<RunawayDirection, int, int, int> runawayAction;
 	auto isSafeMove = strategy_.isSafeMove(unit, action, enemyBulletsSimulation, game);	
