@@ -63,8 +63,6 @@ void setJumpAndJumpDown(const Vec2Double& unitPosition, const JumpState& unitJum
 	bool considerYs,
 	UnitAction& action, size_t& startedJumpY)
 {
-
-	//TODO: выставить startedJumpY в стратегии
 	const auto isLeftWall = targetPosition.x < unitPosition.x - 1 &&
 		game.level.tiles[size_t(unitPosition.x - 1)][size_t(unitPosition.y)] == WALL;
 	const auto isRightWall = targetPosition.x > unitPosition.x + 1 &&
@@ -257,7 +255,7 @@ void getAttackingData(
 	vector<JumpState>& meJumpStates, 
 	vector<UnitAction>& meActions, 
 	const vector<vector<Vec2Double>>& enemyPositions,
-	size_t startJumpY,
+	size_t& startJumpY,
 	const Game& game)
 {
 	const auto tickTime = 1 / game.properties.ticksPerSecond;
@@ -278,6 +276,7 @@ void getAttackingData(
 		action.velocity = curEnemyPositions[0].x > lastMePosition.x ? INT_MAX : -INT_MAX;
 		setJumpAndJumpDown(
 			lastMePosition, lastMeJumpState, curEnemyPositions[0], game, false, action, lastStartJumpY);
+		if (counter == 0) startJumpY = lastStartJumpY;
 				
 		lastMePosition = Simulator::getUnitInTimePosition(lastMePosition, me.size, action, tickTime, lastMeJumpState, game);
 		meActions.emplace_back(action);
@@ -523,11 +522,12 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	//setMoveToEnemyAction(unit, nearestEnemy->position, needGo, game, action, strategy_);
 	vector<Vec2Double> meAttackingPositions;
 	vector<JumpState> meAttackingJumpStates;
-	vector<UnitAction> meAttackingActions;	
+	vector<UnitAction> meAttackingActions;
+	auto startJumpY = strategy_.getStartedJumpY();
 	getAttackingData(
 		unit, 
 		meAttackingPositions, meAttackingJumpStates, meAttackingActions,
-		enemyPositions, strategy_.getStartedJumpY(), game);
+		enemyPositions, startJumpY, game);
 
 	tuple<RunawayDirection, int, int, int> runawayAction;
 	auto isSafeMove = strategy_.isSafeMove(unit, action, enemyBulletsSimulation, game);	
@@ -561,6 +561,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 			//TODO: продлить meAttackingPositions
 			setShootingAction(unit, meAttackingPositions, nearestEnemy->size, enemyPositions, game, action);
+			strategy_.setStartedJumpY(startJumpY);
 			return action;			
 		}				
 	}
