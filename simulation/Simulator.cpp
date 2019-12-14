@@ -437,6 +437,8 @@ Vec2Double Simulator::getUnitInTimePosition(
 		}
 	}*/
 
+	auto isPlatformCross = !action.jumpDown && isFall && (leftBottomTile == PLATFORM || rightBottomTile == PLATFORM);
+
 	const auto squaresLD = MathHelper::getLineSquares(
 		{ unitPosition.x - unitSize.x / 2, unitPosition.y }, { nextX - unitSize.x / 2, nextY }, 1);
 	const auto squaresLU = MathHelper::getLineSquares(
@@ -487,7 +489,7 @@ Vec2Double Simulator::getUnitInTimePosition(
 	}
 	bool isJumpFinished = (isPadJump || wasJump) && jumpState.maxTime < time;		
 
-	if (canGoThrough && !isJumpPadCross && !becameOnAir && !isJumpFinished)
+	if (canGoThrough && !isPlatformCross && !isJumpPadCross && !becameOnAir && !isJumpFinished)
 	{
 		x = nextX;
 		y = nextY;
@@ -504,100 +506,7 @@ Vec2Double Simulator::getUnitInTimePosition(
 	const auto microTickTime = tickTime / game.properties.updatesPerTick;
 	const auto microTicksCount = static_cast<int>(round(time / microTickTime));
 
-	//if (!canGoThroughTop)
-	//{
-	//	const auto startTickVelocityX = velocityX;
-	//	const auto startTickVelocityY = velocityY;
-	//	for (int j = 0; j < microTicksCount; ++j)
-	//	{
-	//		nextX = x + velocityX * microTickTime;
-	//		nextY = y + velocityY * microTickTime;
-
-	//		leftBottomTile = game.level.tiles[size_t(nextX - unitSize.x / 2)][size_t(nextY)];
-	//		leftTopTile = game.level.tiles[size_t(nextX - unitSize.x / 2)][size_t(nextY + unitSize.y)];
-	//		rightTopTile = game.level.tiles[size_t(nextX + unitSize.x / 2)][size_t(nextY + unitSize.y)];
-	//		rightBottomTile = game.level.tiles[size_t(nextX + unitSize.x / 2)][size_t(nextY)];
-
-	//		canGoThrough =
-	//			canGoThroughTile(leftBottomTile, action.jumpDown) && canGoThroughTile(leftTopTile, action.jumpDown) &&
-	//			canGoThroughTile(rightTopTile, action.jumpDown) && canGoThroughTile(rightBottomTile, action.jumpDown);
-
-	//		if (canGoThrough)
-	//		{
-	//			x = nextX;
-	//			y = nextY;
-	//			continue;
-	//		}
-
-	//		if (abs(velocityX) > TOLERANCE)//отключаем горизонтальное движение
-	//		{
-	//			velocityX = 0;
-	//			nextX = x + velocityX * microTickTime;
-	//			nextY = y + velocityY * microTickTime;
-
-	//			leftBottomTile = game.level.tiles[size_t(nextX - unitSize.x / 2)][size_t(nextY)];
-	//			leftTopTile = game.level.tiles[size_t(nextX - unitSize.x / 2)][size_t(nextY + unitSize.y)];
-	//			rightTopTile = game.level.tiles[size_t(nextX + unitSize.x / 2)][size_t(nextY + unitSize.y)];
-	//			rightBottomTile = game.level.tiles[size_t(nextX + unitSize.x / 2)][size_t(nextY)];
-
-	//			canGoThrough =
-	//				canGoThroughTile(leftBottomTile, action.jumpDown) && canGoThroughTile(leftTopTile, action.jumpDown) &&
-	//				canGoThroughTile(rightTopTile, action.jumpDown) && canGoThroughTile(rightBottomTile, action.jumpDown);
-
-	//			if (canGoThrough)
-	//			{
-	//				x = nextX;
-	//				y = nextY;
-	//				continue;
-	//			}
-	//			else
-	//			{
-	//				velocityX = startTickVelocityX;
-	//			}
-	//		}
-
-	//		if (abs(velocityY) > TOLERANCE)//отключаем вертикальное движение
-	//		{
-	//			velocityY = -game.properties.unitFallSpeed;
-	//			nextX = x + velocityX * microTickTime;
-	//			nextY = y + velocityY * microTickTime;
-
-	//			leftBottomTile = game.level.tiles[size_t(nextX - unitSize.x / 2)][size_t(nextY)];
-	//			leftTopTile = game.level.tiles[size_t(nextX - unitSize.x / 2)][size_t(nextY + unitSize.y)];
-	//			rightTopTile = game.level.tiles[size_t(nextX + unitSize.x / 2)][size_t(nextY + unitSize.y)];
-	//			rightBottomTile = game.level.tiles[size_t(nextX + unitSize.x / 2)][size_t(nextY)];
-
-	//			canGoThrough =
-	//				canGoThroughTile(leftBottomTile, action.jumpDown) && canGoThroughTile(leftTopTile, action.jumpDown) &&
-	//				canGoThroughTile(rightTopTile, action.jumpDown) && canGoThroughTile(rightBottomTile, action.jumpDown);
-
-	//			if (canGoThrough)
-	//			{
-	//				x = nextX;
-	//				y = nextY;
-	//				continue;
-	//			}
-	//			else
-	//			{
-	//				velocityY = startTickVelocityY;
-	//			}
-	//		}
-
-	//		//отключаем оба движения
-	//		velocityX = 0;
-	//		velocityY = -game.properties.unitFallSpeed;
-	//		x += velocityX * microTickTime;
-	//		y += velocityY * microTickTime;			
-	//	}
-	//	
-	//	const Vec2Double newUnitPosition = { x, y };
-	//	jumpState.canJump = false;
-	//	jumpState.speed = 0;
-	//	jumpState.maxTime = 0;
-	//	jumpState.canCancel = false;
-	//	return newUnitPosition;
-	//}
-	
+		
 	if (!canGoThrough)
 	{
 		const auto startTickVelocityX = velocityX;
@@ -692,6 +601,40 @@ Vec2Double Simulator::getUnitInTimePosition(
 			else updateJumpState(jumpState, time, newUnitPosition, unitSize, isPadJump, wasJump, isJump, isFall, game);
 			return newUnitPosition;			
 		}		
+	}
+
+	else if (isPlatformCross)
+	{
+		for (int j = 0; j < microTicksCount; ++j)
+		{
+			const auto xj = x + velocityX * microTickTime;
+			const auto yj = y + velocityY * microTickTime;
+
+			if (game.level.tiles[size_t(xj - unitSize.x/2)][size_t(yj)] == PLATFORM ||
+				game.level.tiles[size_t(xj + unitSize.x / 2)][size_t(yj)] == PLATFORM)
+			{
+				if (size_t(y) > size_t(yj))//я до этого был тайлом выше
+				{
+					jumpState.canJump = true;
+					jumpState.speed = game.properties.unitJumpSpeed;
+					jumpState.maxTime = game.properties.unitJumpTime;
+					jumpState.canCancel = true;
+
+					const auto resY = floor(y);
+					const auto part = (resY - y) / (yj - y);
+					const auto resX = x + (xj - x) * part;
+
+					return { resX, resY };
+				}
+				else //платформа не повлияет на мое движение
+				{
+					return { nextX, nextY };
+				}
+			}
+			x = xj;
+			y = yj;
+		}
+		throw std::runtime_error("wrong platform simulation");
 	}
 
 	else if (isJumpPadCross)
