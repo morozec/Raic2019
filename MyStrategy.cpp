@@ -744,6 +744,12 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		runawayUnitAction.jumpDown = false;
 		runawayUnitAction.velocity = INT_MAX;
 	}
+	else if (runawayDirection == GoNONE)
+	{
+		runawayUnitAction.jump = false;
+		runawayUnitAction.jumpDown = false;
+		runawayUnitAction.velocity = 0;
+	}
 	else
 	{
 		throw runtime_error("unknown runawayDirection 2");
