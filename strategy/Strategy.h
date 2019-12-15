@@ -20,8 +20,8 @@ public:
 	static double getShootEnemyProbability(
 		const Vec2Double& meShootingPosition, const Vec2Double& meSize,
 		double shootingAngle, double spread,
-		const BulletParams& bulletParams,
-		std::vector<Vec2Double>& enemyPositions, const Vec2Double& enemySize,
+		const WeaponParams& weaponParams,
+		const std::vector<Vec2Double>& enemyPositions, const Vec2Double& enemySize,
 		const Game& game
 	);
 
@@ -45,7 +45,8 @@ public:
 
 	static bool isSafeMove(const Unit& unit, const UnitAction& action, const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, const Game& game);
 
-	static bool isBulletExplosionShootUnit(const Bullet& bullet, const Vec2Double& bulletCrossWallCenter,
+	static bool isBulletExplosionShootUnit(
+		const std::shared_ptr<ExplosionParams>& explosionParams, const Vec2Double& bulletCrossWallCenter,
 		const Vec2Double& unitPosition, const Vec2Double& unitSize);
 
 	int getRunawayDirection() const;

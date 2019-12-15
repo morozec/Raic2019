@@ -363,6 +363,11 @@ void setShootingAction(
 	auto maxShootingProbability = 0.0;
 	double okShootingAngle = 0;
 	int addShootingSimulations = 0;
+
+	/*const auto maxSpread = me.weapon->params.maxSpread;
+	const auto minSpread = me.weapon->params.minSpread;
+	const auto aimSpeed = me.weapon->params.aimSpeed;
+	const auto spreadDecrease = aimSpeed * tickTime;*/
 		
 	while (canShootingTick + addShootingSimulations < MAX_SIMULATIONS)
 	{
@@ -428,6 +433,17 @@ void setShootingAction(
 			}
 			else
 			{
+				/*spread = me.weapon->spread;
+				auto lastAngle = *(me.weapon->lastAngle);
+				
+				for (size_t t = 0; t < shootingTick; ++t)
+				{
+					spread += abs(lastAngle - shootingAngle);
+					spread = min(spread, maxSpread);
+					spread = max(minSpread, spread - spreadDecrease);
+					lastAngle = shootingAngle;
+				}*/
+				
 				spread = me.weapon->spread + abs(*(me.weapon->lastAngle) - shootingAngle);
 				spread = min(spread, me.weapon->params.maxSpread);
 				spread = max(
@@ -440,7 +456,7 @@ void setShootingAction(
 				me.size,
 				shootingAngle,
 				spread,
-				me.weapon->params.bullet,
+				me.weapon->params,
 				enemyShootingPositions,
 				enemySize,
 				game);

@@ -73,13 +73,13 @@ double Strategy::getShootEnemyProbability(
 double Strategy::getShootEnemyProbability(
 	const Vec2Double& meShootingPosition, const Vec2Double& meSize, 
 	double shootingAngle, double spread, 
-	const BulletParams& bulletParams,
-	std::vector<Vec2Double>& enemyPositions, const Vec2Double& enemySize, 
+	const WeaponParams& weaponParams,
+	const std::vector<Vec2Double>& enemyPositions, const Vec2Double& enemySize, 
 	const Game& game)
 {
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	const auto deltaAngle = spread / ANGLE_SPLIT_COUNT;
-	const auto halfBulletSize = bulletParams.size / 2;
+	const auto halfBulletSize = weaponParams.bullet.size / 2;
 	const auto startBulletPosition = Vec2Double(meShootingPosition.x, meShootingPosition.y + meSize.y / 2);
 	
 	auto shootingCount = 0;
@@ -87,7 +87,7 @@ double Strategy::getShootEnemyProbability(
 	for (auto i = -ANGLE_SPLIT_COUNT; i <= ANGLE_SPLIT_COUNT; ++i)
 	{
 		const auto angle = shootingAngle + deltaAngle * i;
-		auto bulletVelocity = Vec2Double(bulletParams.speed * cos(angle), bulletParams.speed * sin(angle));
+		auto bulletVelocity = Vec2Double(weaponParams.bullet.speed * cos(angle), weaponParams.bullet.speed * sin(angle));
 
 		const auto bulletSimulation = Simulator::getBulletSimulation(
 			startBulletPosition, bulletVelocity, halfBulletSize, game);
@@ -96,27 +96,53 @@ double Strategy::getShootEnemyProbability(
 		
 		const auto shootWallTick = static_cast<size_t>(ceil(bulletSimulation.targetCrossTime * game.properties.ticksPerSecond));
 
+
+
+		
+		
+		
+		
 		for (size_t j = 0; j < shootWallTick; ++j)
 		{
 			const auto& bp0 = bulletPositions.at(j);
 			const auto& bp1 = bulletPositions.at(j < shootWallTick - 1 ? j + 1 : -1);
 
 			const auto& ep0 = j < enemyPositions.size() ? enemyPositions[j] : enemyPositions.back();
-			auto& ep1 = j + 1 < enemyPositions.size() ? enemyPositions[j + 1] : enemyPositions.back();
+			const auto& ep1 = j + 1 < enemyPositions.size() ? enemyPositions[j + 1] : enemyPositions.back();
 
+			
 			if (j == shootWallTick - 1) // тик удара о стену
 			{
 				const auto thisTickTime = bulletSimulation.targetCrossTime - j / game.properties.ticksPerSecond;
 				const auto thisTickPart = thisTickTime / tickTime;
-				ep1 = ep0 + (ep1 - ep0) * thisTickPart;
-			}
+				const auto shootWallEp1 = ep0 + (ep1 - ep0) * thisTickPart;
+
+				if (isBulletExplosionShootUnit(
+					weaponParams.explosion, bulletPositions.at(-1), shootWallEp1, enemySize))
+				{
+					shootingCount++;
+					break;
+				}
+
+				if (isBulletMoveCrossUnitMove(
+					ep0, shootWallEp1, enemySize, bp0, bp1, halfBulletSize))
+				{
+					shootingCount++;
+					break;
+				}
+			}		
 			
-			if(isBulletMoveCrossUnitMove(
-				ep0, ep1, enemySize, bp0, bp1, halfBulletSize))
+			else
 			{
-				shootingCount++;
-				break;
+				if (isBulletMoveCrossUnitMove(
+					ep0, ep1, enemySize, bp0, bp1, halfBulletSize))
+				{
+					shootingCount++;
+					break;
+				}
 			}
+				
+			
 		}
 	}
 	return shootingCount * 1.0 / (ANGLE_SPLIT_COUNT * 2 + 1);
@@ -248,7 +274,7 @@ std::map<Bullet, int> Strategy::getShootMeBullets(
 					const auto bulletCrossWallCenter = Vec2Double(
 						bullet.position.x + bullet.velocity.x * bulletSimulation.targetCrossTime,
 						bullet.position.y + bullet.velocity.y * bulletSimulation.targetCrossTime);
-					if (isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, unitInTimePosition, meSize))
+					if (isBulletExplosionShootUnit(bullet.explosionParams, bulletCrossWallCenter, unitInTimePosition, meSize))
 					{
 						isShooting = true;
 					}
@@ -602,7 +628,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 								prevTickBulletPosition,
 								thisTickBulletPosition,
 								halfBulletSize) ||
-								!bulletExists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newJumpUnitPosition, unitSize))
+								!bulletExists && isBulletExplosionShootUnit(bullet.explosionParams, bulletCrossWallCenter, newJumpUnitPosition, unitSize))
 							{
 								thisTickUpDamage += bullet.damage;
 								gotUpBullets[bullet] = true;
@@ -640,7 +666,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 								prevTickBulletPosition,
 								thisTickBulletPosition,
 								halfBulletSize) ||
-								!bulletExists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newFallUnitPosition, unitSize))
+								!bulletExists && isBulletExplosionShootUnit(bullet.explosionParams, bulletCrossWallCenter, newFallUnitPosition, unitSize))
 							{
 								thisTickDownDamage += bullet.damage;
 								gotDownBullets[bullet] = true;
@@ -678,7 +704,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 								prevTickBulletPosition,
 								thisTickBulletPosition,
 								halfBulletSize) ||
-								!bulletExists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newGoLeftUnitPosition, unitSize))
+								!bulletExists && isBulletExplosionShootUnit(bullet.explosionParams, bulletCrossWallCenter, newGoLeftUnitPosition, unitSize))
 							{
 								thisTickLeftDamage += bullet.damage;
 								gotLeftBullets[bullet] = true;
@@ -716,7 +742,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 								prevTickBulletPosition,
 								thisTickBulletPosition,
 								halfBulletSize) ||
-								!bulletExists && isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, newGoRightUnitPosition, unitSize))
+								!bulletExists && isBulletExplosionShootUnit(bullet.explosionParams, bulletCrossWallCenter, newGoRightUnitPosition, unitSize))
 							{
 								thisTickRightDamage += bullet.damage;
 								gotRightBullets[bullet] = true;
@@ -873,7 +899,7 @@ bool Strategy::isSafeMove(
 			const auto bulletCrossWallCenter = Vec2Double(
 				bullet.position.x + bullet.velocity.x * bulletSimulation.targetCrossTime,
 				bullet.position.y + bullet.velocity.y * bulletSimulation.targetCrossTime);
-			if (isBulletExplosionShootUnit(bullet, bulletCrossWallCenter, unitInTimePosition, unit.size))
+			if (isBulletExplosionShootUnit(bullet.explosionParams, bulletCrossWallCenter, unitInTimePosition, unit.size))
 			{
 				return false;
 			}
@@ -882,12 +908,13 @@ bool Strategy::isSafeMove(
 	return true;
 }
 
-bool Strategy::isBulletExplosionShootUnit(const Bullet& bullet, const Vec2Double& bulletCrossWallCenter,
+bool Strategy::isBulletExplosionShootUnit(
+	const std::shared_ptr<ExplosionParams>& explosionParams, const Vec2Double& bulletCrossWallCenter,
 	const Vec2Double& unitPosition, const Vec2Double& unitSize)
 {
-	if (bullet.explosionParams == nullptr) return false;
+	if (explosionParams == nullptr) return false;
 
-	const auto radius = bullet.explosionParams->radius;
+	const auto radius = explosionParams->radius;
 
 	const auto unitLeft = unitPosition.x - unitSize.x / 2;
 	const auto unitRight = unitPosition.x + unitSize.x / 2;
