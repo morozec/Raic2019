@@ -5,6 +5,94 @@
 
 using namespace std;
 
+std::vector<std::pair<int, int>> MathHelper::getLineSquares2(const Vec2Double& start, const Vec2Double& end)
+{
+	std::vector<std::pair<int, int>> result;
+
+	if (abs(end.x - start.x) < TOLERANCE && abs(end.y - start.y) < TOLERANCE)
+	{
+		result.emplace_back(make_pair(static_cast<int>(start.x), static_cast<int>(start.y)));
+		return result;
+	}
+	if (abs(end.y - start.y) < TOLERANCE)
+	{
+		const int y = static_cast<int>(start.y);
+		const int stepX = end.x >= start.x ? 1 : -1;		
+		int x = static_cast<int>(start.x + TOLERANCE * stepX);
+		const int endX = static_cast<int>(end.x - TOLERANCE * stepX);
+		result.emplace_back(make_pair(x, y));
+
+		while (x != endX)
+		{
+			x += stepX;
+			result.emplace_back(make_pair(x, y));
+		}
+		return result;
+	}
+	if (abs(end.x - start.x) < TOLERANCE)
+	{
+		const int x = static_cast<int>(start.x);
+		const int stepY = end.y >= start.y ? 1 : -1;
+		int y = static_cast<int>(start.y + TOLERANCE * stepY);
+		const int endY = static_cast<int>(end.y - TOLERANCE * stepY);
+		result.emplace_back(make_pair(x, y));
+		
+		while (y != endY)
+		{
+			y += stepY;
+			result.emplace_back(make_pair(x, y));
+		}
+		return result;
+	}
+	
+	
+	const Vec2Double v = end - start;	
+
+	const int stepX = end.x >= start.x ? 1 : -1;
+	const int stepY = end.y >= start.y ? 1 : -1;
+
+	const auto correctStartX = start.x + TOLERANCE * stepX;
+	const auto correctStartY = start.y + TOLERANCE * stepY;
+	const auto correctEndX = end.x - TOLERANCE * stepX;
+	const auto correctEndY = end.y - TOLERANCE * stepY;
+	
+	
+	int x = static_cast<int>(correctStartX);
+	int y = static_cast<int>(correctStartY);
+	result.emplace_back(make_pair(x, y));
+
+	const int endX = static_cast<int>(correctEndX);
+	const int endY = static_cast<int>(correctEndY);
+
+	
+
+	const auto voxelBoundaryX = stepX > 0 ? trunc(correctStartX + stepX) : ceil(correctStartX + stepX);
+	const auto voxelBoundaryY = stepY > 0 ? trunc(correctStartY + stepY) : ceil(correctStartY + stepY);
+
+	auto tMaxX = (voxelBoundaryX - correctStartX) / v.x;
+	auto tMaxY = (voxelBoundaryY - correctStartY) / v.y;
+
+	const auto tDeltaX = stepX/v.x;
+	const auto tDeltaY = stepY/v.y;
+
+	while (x != endX || y != endY)
+	{
+		if (tMaxX < tMaxY)
+		{
+			tMaxX += tDeltaX;
+			x += stepX;
+		}
+		else
+		{
+			tMaxY += tDeltaY;
+			y += stepY;
+		}
+		result.emplace_back(make_pair(x, y));
+	}
+
+	return result;
+}
+
 Vec2Double MathHelper::getLinesCross(double x1, double y1, double x2, double y2, double x3, double y3, double x4, double y4) {
 	auto ua = ((x4 - x3)*(y1 - y3) - (y4 - y3)*(x1 - x3)) / ((y4 - y3)*(x2 - x1) - (x4 - x3)*(y2 - y1));
 	auto ub = ((x2 - x1)*(y1 - y3) - (y2 - y1)*(x1 - x3)) / ((y4 - y3)*(x2 - x1) - (x4 - x3)*(y2 - y1));
@@ -41,70 +129,70 @@ int GetSquareIndex(double value, int squareSide)
 /// <param name="end">End anchor point</param>
 /// <param name="squareSide">square side</param>
 /// <returns></returns>
-vector<pair<int, int>> MathHelper::getLineSquares(const Vec2Double& start, const Vec2Double& end, int squareSide)
-{
-	bool isInverse = false;
-	Vec2Double realStart, realEnd;
-
-	if (start.x <= end.x) {
-		isInverse = false;
-		realStart = start;
-		realEnd = end;
-	}
-	else {//invert anchor if start.X > end.X 
-		isInverse = true;
-		realStart = end;
-		realEnd = start;
-	}
-
-	//get step coeffs depending on start and end points position
-	auto xCoeff = realEnd.x > realStart.x ? 1 : -1;
-	auto yCoeff = realEnd.y > realStart.y ? 1 : -1;
-
-	//get left and top coords of containing start point square
-	auto startX = GetSquareIndex(realStart.x, squareSide) * squareSide;
-	auto startY = GetSquareIndex(realStart.y, squareSide) * squareSide;
-
-	//get left and top coords of containing end point square
-	auto endX = GetSquareIndex(realEnd.x, squareSide) * squareSide;
-	auto endY = GetSquareIndex(realEnd.y, squareSide) * squareSide;
-
-	//add containing start point square 
-	vector <pair<int, int>> result;
-	result.emplace_back(make_pair(GetSquareIndex(startX, squareSide), GetSquareIndex(startY, squareSide)));
-	
-	auto x = startX;
-	auto y = startY;
-
-	while (x != endX) //while anchor is not finished
-	{
-		auto newX = x + squareSide * xCoeff;//x coord of next x border
-		auto yReal = abs(end.x - start.x) < TOLERANCE ? start.y : start.y + (end.y - start.y) * (newX - start.x) / (end.x - start.x);//y coord of next x border 
-		auto newY = GetSquareIndex(yReal, squareSide) * squareSide;//top coord of containing yReal square 
-		while (y != newY) //look through current anchor [(x, y), (newX, newY)] 
-		{
-			y += squareSide * yCoeff;//y coord of next y border
-			result.emplace_back(make_pair(GetSquareIndex(x, squareSide), GetSquareIndex(y, squareSide)));//add all squares while y != newY  
-		}
-		result.emplace_back(make_pair(GetSquareIndex(newX, squareSide), GetSquareIndex(newY, squareSide)));//add final square for current anchor 
-		x = newX;
-	}
-
-	{//final step to add squares with x: endX - squareSide < x <= endX 
-		auto newY = GetSquareIndex(endY, squareSide) * squareSide;
-		while (y != newY)
-		{
-			y += squareSide * yCoeff;
-			result.emplace_back(make_pair(GetSquareIndex(x, squareSide), GetSquareIndex(y, squareSide)));
-		}
-	}
-
-	if (isInverse) {
-		reverse(result.begin(), result.end());
-	}
-
-	return result;
-}
+//vector<pair<int, int>> MathHelper::getLineSquares(const Vec2Double& start, const Vec2Double& end, int squareSide)
+//{
+//	bool isInverse = false;
+//	Vec2Double realStart, realEnd;
+//
+//	if (start.x <= end.x) {
+//		isInverse = false;
+//		realStart = start;
+//		realEnd = end;
+//	}
+//	else {//invert anchor if start.X > end.X 
+//		isInverse = true;
+//		realStart = end;
+//		realEnd = start;
+//	}
+//
+//	//get step coeffs depending on start and end points position
+//	auto xCoeff = realEnd.x > realStart.x ? 1 : -1;
+//	auto yCoeff = realEnd.y > realStart.y ? 1 : -1;
+//
+//	//get left and top coords of containing start point square
+//	auto startX = GetSquareIndex(realStart.x, squareSide) * squareSide;
+//	auto startY = GetSquareIndex(realStart.y, squareSide) * squareSide;
+//
+//	//get left and top coords of containing end point square
+//	auto endX = GetSquareIndex(realEnd.x, squareSide) * squareSide;
+//	auto endY = GetSquareIndex(realEnd.y, squareSide) * squareSide;
+//
+//	//add containing start point square 
+//	vector <pair<int, int>> result;
+//	result.emplace_back(make_pair(GetSquareIndex(startX, squareSide), GetSquareIndex(startY, squareSide)));
+//	
+//	auto x = startX;
+//	auto y = startY;
+//
+//	while (x != endX) //while anchor is not finished
+//	{
+//		auto newX = x + squareSide * xCoeff;//x coord of next x border
+//		auto yReal = abs(end.x - start.x) < TOLERANCE ? start.y : start.y + (end.y - start.y) * (newX - start.x) / (end.x - start.x);//y coord of next x border 
+//		auto newY = GetSquareIndex(yReal, squareSide) * squareSide;//top coord of containing yReal square 
+//		while (y != newY) //look through current anchor [(x, y), (newX, newY)] 
+//		{
+//			y += squareSide * yCoeff;//y coord of next y border
+//			result.emplace_back(make_pair(GetSquareIndex(x, squareSide), GetSquareIndex(y, squareSide)));//add all squares while y != newY  
+//		}
+//		result.emplace_back(make_pair(GetSquareIndex(newX, squareSide), GetSquareIndex(newY, squareSide)));//add final square for current anchor 
+//		x = newX;
+//	}
+//
+//	{//final step to add squares with x: endX - squareSide < x <= endX 
+//		auto newY = GetSquareIndex(endY, squareSide) * squareSide;
+//		while (y != newY)
+//		{
+//			y += squareSide * yCoeff;
+//			result.emplace_back(make_pair(GetSquareIndex(x, squareSide), GetSquareIndex(y, squareSide)));
+//		}
+//	}
+//
+//	if (isInverse) {
+//		reverse(result.begin(), result.end());
+//	}
+//
+//	return result;
+//}
 
 double MathHelper::getVectorLength(double x0, double y0, double x1, double y1)
 {

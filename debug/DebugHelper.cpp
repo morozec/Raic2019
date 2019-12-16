@@ -98,7 +98,7 @@ void drawShootingLine(
 		weaponPoistion,
 		angle, maxX, maxY);
 
-	const auto bulletTiles = MathHelper::getLineSquares(weaponPoistion, crossPoint, 1);
+	const auto bulletTiles = MathHelper::getLineSquares2(weaponPoistion, crossPoint);
 	const std::pair<int, int>* firstWallTile = nullptr;
 	for (const auto& bt : bulletTiles)
 	{

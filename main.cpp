@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include "mathcalc/MathHelper.h"
 
 class Runner {
 public:
@@ -48,5 +49,9 @@ int main(int argc, char *argv[]) {
   int port = argc < 3 ? 31003 : atoi(argv[2]);
   std::string token = argc < 4 ? "0000000000000000" : argv[3];
   Runner(host, port, token).run();
-  return 0;
+	/*Vec2Double start = { 18.000000000000217, 13.9 };
+	Vec2Double end = { 18, 13.9 };
+	const auto squares = MathHelper::getLineSquares2(start, end);
+	
+  return 0;*/
 }

@@ -185,10 +185,10 @@ BulletSimulation Simulator::getBulletSimulation(
 		bulletWallCrossCorner = bulletRD0;
 	}
 
-	const auto squaresLD = MathHelper::getLineSquares(bulletLD0, crossWallLD, 1);
-	const auto squaresLU = MathHelper::getLineSquares(bulletLU0, crossWallLU, 1);
-	const auto squaresRU = MathHelper::getLineSquares(bulletRU0, crossWallRU, 1);
-	const auto squaresRD = MathHelper::getLineSquares(bulletRD0, crossWallRD, 1);
+	const auto squaresLD = MathHelper::getLineSquares2(bulletLD0, crossWallLD);
+	const auto squaresLU = MathHelper::getLineSquares2(bulletLU0, crossWallLU);
+	const auto squaresRU = MathHelper::getLineSquares2(bulletRU0, crossWallRU);
+	const auto squaresRD = MathHelper::getLineSquares2(bulletRD0, crossWallRD);
 
 
 	const std::pair<int, int>* firstWallTileLD = nullptr;
@@ -439,14 +439,14 @@ Vec2Double Simulator::getUnitInTimePosition(
 
 	auto isPlatformCross = !action.jumpDown && isFall && (leftBottomTile == PLATFORM || rightBottomTile == PLATFORM);
 
-	const auto squaresLD = MathHelper::getLineSquares(
-		{ unitPosition.x - unitSize.x / 2, unitPosition.y }, { nextX - unitSize.x / 2, nextY }, 1);
-	const auto squaresLU = MathHelper::getLineSquares(
-		{ unitPosition.x - unitSize.x / 2, unitPosition.y + unitSize.y }, { nextX - unitSize.x / 2, nextY + unitSize.y }, 1);
-	const auto squaresRU = MathHelper::getLineSquares(
-		{ unitPosition.x + unitSize.x / 2, unitPosition.y + unitSize.y }, { nextX + unitSize.x / 2, nextY + unitSize.y }, 1);
-	const auto squaresRD = MathHelper::getLineSquares(
-		{ unitPosition.x + unitSize.x / 2, unitPosition.y }, { nextX + unitSize.x / 2, nextY }, 1);
+	const auto squaresLD = MathHelper::getLineSquares2(
+		{ unitPosition.x - unitSize.x / 2, unitPosition.y }, { nextX - unitSize.x / 2, nextY });
+	const auto squaresLU = MathHelper::getLineSquares2(
+		{ unitPosition.x - unitSize.x / 2, unitPosition.y + unitSize.y }, { nextX - unitSize.x / 2, nextY + unitSize.y });
+	const auto squaresRU = MathHelper::getLineSquares2(
+		{ unitPosition.x + unitSize.x / 2, unitPosition.y + unitSize.y }, { nextX + unitSize.x / 2, nextY + unitSize.y });
+	const auto squaresRD = MathHelper::getLineSquares2(
+		{ unitPosition.x + unitSize.x / 2, unitPosition.y }, { nextX + unitSize.x / 2, nextY });
 
 	auto isWallCross = false;
 	auto isJumpPadCross = false;

@@ -8,9 +8,11 @@
 
 class MathHelper {
 public:
+	static std::vector<std::pair<int, int>> getLineSquares2(const Vec2Double& start, const Vec2Double& end);
+	
 	static Vec2Double getLinesCross(double x1, double y1, double x2, double y2, double x3, double y3, double x4, double y4);
 	static bool areSegmentsCross(const Segment& s1, const Segment& s2);
-	static std::vector<std::pair<int, int>>getLineSquares(const Vec2Double& start, const Vec2Double& end, int squareSide);
+	//static std::vector<std::pair<int, int>>getLineSquares(const Vec2Double& start, const Vec2Double& end, int squareSide);
 	
 	static double getVectorLength(double x0, double y0, double x1, double y1);
 	static double getVectorLength(const Vec2Double& v);

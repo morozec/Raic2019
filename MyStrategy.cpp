@@ -283,7 +283,7 @@ double getSimpleProbability(
 	for (const auto& ep: enemyPositions)
 	{
 		const auto epCenter = Vec2Double(ep.x, ep.y + enemySize.y / 2);
-		auto squares = MathHelper::getLineSquares(bulletPosition, epCenter, 1);
+		auto squares = MathHelper::getLineSquares2(bulletPosition, epCenter);
 		const auto wall = find_if(squares.begin(), squares.end(), [game](const auto& p) {return game.level.tiles[p.first][p.second] == Tile::WALL; });
 		if (wall == squares.end()) count++;
 	}	
