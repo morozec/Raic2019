@@ -25,6 +25,8 @@ public:
 	static double getScalarMult(const Vec2Double& v1, const Vec2Double& v2);
 	static bool IsBetween(const Vec2Double& p0, const Vec2Double& p1, const Vec2Double& p2);
 	static bool IsBetween(double x0, double y0, double x1, double y1, double x2, double y2);
+
+	static double getMHDist(const Vec2Double& p0, const Vec2Double& p1);
 };
 
 

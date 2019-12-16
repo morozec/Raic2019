@@ -239,3 +239,8 @@ bool MathHelper::IsBetween(double x0, double y0, double x1, double y1, double x2
 	return (x1 - x0) * (x2 - x0) <= TOLERANCE && (y1 - y0) * (y2 - y0) <= TOLERANCE;
 }
 
+double MathHelper::getMHDist(const Vec2Double& p0, const Vec2Double& p1)
+{
+	return abs(p1.x - p0.x) + abs(p1.y - p0.y);
+}
+

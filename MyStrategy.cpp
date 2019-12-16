@@ -290,6 +290,76 @@ double getSimpleProbability(
 	return count * 1.0/enemyPositions.size();
 }
 
+void getHealingData(
+	const Unit& me,
+	vector<Vec2Double>& mePositions,
+	vector<JumpState>& meJumpStates,
+	const LootBox& lootBox,
+	UnitAction& meAction,
+	size_t& startJumpY,
+	const Game& game
+)
+{
+	const auto tickTime = 1 / game.properties.ticksPerSecond;
+
+	auto lastMePosition = me.position;
+	auto lastMeJumpState = me.jumpState;
+	auto lastStartJumpY = startJumpY;
+
+	mePositions.emplace_back(lastMePosition);
+	meJumpStates.emplace_back(lastMeJumpState);
+
+	const auto lootBoxLeft = lootBox.position.x - lootBox.size.x / 2;
+	const auto lootBoxRight = lootBox.position.x + lootBox.size.x / 2;
+	const auto lootBoxBottom = lootBox.position.y;
+	const auto lootBoxTop = lootBox.position.y + lootBox.size.y;
+	const auto lootBoxLB = Vec2Double(lootBoxLeft, lootBoxBottom);
+	const auto lootBoxLT = Vec2Double(lootBoxLeft, lootBoxTop);
+	const auto lootBoxRT = Vec2Double(lootBoxRight, lootBoxTop);
+	const auto lootBoxRB = Vec2Double(lootBoxRight, lootBoxBottom);
+
+	int counter = 1;
+	while (counter < MAX_SIMULATIONS)
+	{
+		const auto meLeft = lastMePosition.x - me.size.x / 2;
+		const auto meRight = lastMePosition.x + me.size.x / 2;
+		const auto meBottom = lastMePosition.y;
+		const auto meTop = lastMePosition.y + me.size.y;
+
+		const auto isCross =
+			lootBoxLB.x >= meLeft && lootBoxLB.x <= meRight && lootBoxLB.y >= meBottom && lootBoxLB.y <= meTop ||
+			lootBoxLT.x >= meLeft && lootBoxLT.x <= meRight && lootBoxLT.y >= meBottom && lootBoxLT.y <= meTop ||
+			lootBoxRT.x >= meLeft && lootBoxRT.x <= meRight && lootBoxRT.y >= meBottom && lootBoxRT.y <= meTop ||
+			lootBoxRB.x >= meLeft && lootBoxRB.x <= meRight && lootBoxRB.y >= meBottom && lootBoxRB.y <= meTop;
+		if (isCross)
+		{
+			if (counter == 1)
+			{
+				meAction.jump = false;
+				meAction.jumpDown = false;
+				meAction.velocity = 0;
+			}
+			return;
+		}
+
+		UnitAction action;
+		action.velocity = lootBox.position.x > lastMePosition.x ? INT_MAX : -INT_MAX;
+		setJumpAndJumpDown(
+			lastMePosition, lastMeJumpState, lootBox.position, game, false, action, lastStartJumpY);
+
+		if (counter == 1) {
+			startJumpY = lastStartJumpY;
+			meAction = action;
+		}
+
+		lastMePosition = Simulator::getUnitInTimePosition(lastMePosition, me.size, action, tickTime, lastMeJumpState, game);
+		mePositions.emplace_back(lastMePosition);
+		meJumpStates.emplace_back(lastMeJumpState);
+		
+		counter++;
+	}
+}
+
 
 void getAttackingData(
 	const Unit& me,	
@@ -633,10 +703,58 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	vector<JumpState> meAttackingJumpStates;
 	UnitAction meAttackingAction;
 	auto startJumpY = strategy_.getStartedJumpY();
-	getAttackingData(
-		unit, 
-		meAttackingPositions, meAttackingJumpStates,
-		nearestEnemy->size, enemyPositions, meAttackingAction, startJumpY, game);
+
+	bool needHeal = false;
+	for (const auto& enemy: game.units)
+	{
+		if (enemy.playerId == unit.playerId) continue;
+		if (enemy.health > unit.health)
+		{
+			needHeal = true;
+			break;
+		}
+	}
+
+	const LootBox* nearestHPLootBox = nullptr;
+	double minMHDist = INT_MAX;
+	
+	if (needHeal)
+	{
+		for (const auto& lb:game.lootBoxes)
+		{
+			if (std::dynamic_pointer_cast<Item::HealthPack>(lb.item))
+			{
+				const auto mhDist = MathHelper::getMHDist(unit.position, lb.position);
+				bool hasCloserEnemies = false;
+				for (const auto& enemy: game.units )
+				{
+					if (enemy.playerId == unit.playerId) continue;
+					if (MathHelper::getMHDist(enemy.position, lb.position) < mhDist)
+					{
+						hasCloserEnemies = true;
+						break;
+					}
+				}
+				if (hasCloserEnemies) continue;
+
+				if (mhDist < minMHDist)
+				{
+					nearestHPLootBox = &lb;
+					minMHDist = mhDist;
+				}
+			}			
+		}
+	}
+
+	if (nearestHPLootBox != nullptr)
+		getHealingData(
+			unit, meAttackingPositions, meAttackingJumpStates,
+			*nearestHPLootBox, meAttackingAction, startJumpY, game	);
+	else
+		getAttackingData(
+			unit, 
+			meAttackingPositions, meAttackingJumpStates,
+			nearestEnemy->size, enemyPositions, meAttackingAction, startJumpY, game);
 
 	tuple<RunawayDirection, int, int, int> runawayAction;
 	auto isSafeMove = strategy_.isSafeMove(unit, meAttackingAction, enemyBulletsSimulation, game);
