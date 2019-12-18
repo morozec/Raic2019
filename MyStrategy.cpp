@@ -290,6 +290,16 @@ double getSimpleProbability(
 	return count * 1.0/enemyPositions.size();
 }
 
+bool areRectCross(double left1, double right1, double bottom1, double top1,
+	double left2, double right2, double bottom2, double top2)
+{
+	const auto isHorCross = left2 >= left1 && left2 <= right1 || right2 >= left1 && right2 <= right1;
+	const auto isVertCross = bottom2 >= bottom1 && bottom2 <= top1 ||  top2 >= bottom1 && top2 <= top1;
+	
+	const auto isCross = isHorCross && isVertCross;
+	return isCross;
+}
+
 void getHealingData(
 	const Unit& me,
 	vector<Vec2Double>& mePositions,
@@ -313,10 +323,6 @@ void getHealingData(
 	const auto lootBoxRight = lootBox.position.x + lootBox.size.x / 2;
 	const auto lootBoxBottom = lootBox.position.y;
 	const auto lootBoxTop = lootBox.position.y + lootBox.size.y;
-	const auto lootBoxLB = Vec2Double(lootBoxLeft, lootBoxBottom);
-	const auto lootBoxLT = Vec2Double(lootBoxLeft, lootBoxTop);
-	const auto lootBoxRT = Vec2Double(lootBoxRight, lootBoxTop);
-	const auto lootBoxRB = Vec2Double(lootBoxRight, lootBoxBottom);
 
 	int counter = 1;
 	while (counter < MAX_SIMULATIONS)
@@ -326,11 +332,10 @@ void getHealingData(
 		const auto meBottom = lastMePosition.y;
 		const auto meTop = lastMePosition.y + me.size.y;
 
-		const auto isCross =
-			lootBoxLB.x >= meLeft && lootBoxLB.x <= meRight && lootBoxLB.y >= meBottom && lootBoxLB.y <= meTop ||
-			lootBoxLT.x >= meLeft && lootBoxLT.x <= meRight && lootBoxLT.y >= meBottom && lootBoxLT.y <= meTop ||
-			lootBoxRT.x >= meLeft && lootBoxRT.x <= meRight && lootBoxRT.y >= meBottom && lootBoxRT.y <= meTop ||
-			lootBoxRB.x >= meLeft && lootBoxRB.x <= meRight && lootBoxRB.y >= meBottom && lootBoxRB.y <= meTop;
+		const auto isCross = areRectCross(
+			meLeft, meRight, meBottom, meTop, 
+			lootBoxLeft, lootBoxRight, lootBoxBottom, lootBoxTop);
+			
 		if (isCross)
 		{
 			if (counter == 1)
@@ -383,23 +388,18 @@ void getAttackingData(
 	while (counter < MAX_SIMULATIONS)
 	{
 		const auto curEnemyPositions = enemyPositions[counter];
-		const auto sp = getSimpleProbability(lastMePosition, me.size,
-			curEnemyPositions, enemySize, game);
-		if (abs(sp - 1) < TOLERANCE)
+		const auto curEnemyPosition = curEnemyPositions[0];
+		
+		if (areRectCross(lastMePosition.x - me.size.x / 2, lastMePosition.x + me.size.x / 2, lastMePosition.y, lastMePosition.y + me.size.y,
+			curEnemyPosition.x - enemySize.x / 2, curEnemyPosition.x + enemySize.x / 2, curEnemyPosition.y, curEnemyPosition.y + enemySize.y))
 		{
-			if (counter == 1)
-			{
-				meAction.jump = false;
-				meAction.jumpDown = false;
-				meAction.velocity = 0;
-			}
 			return;
 		}		
 		
 		UnitAction action;
-		action.velocity = curEnemyPositions[0].x > lastMePosition.x ? INT_MAX : -INT_MAX;
+		action.velocity = curEnemyPosition.x > lastMePosition.x ? INT_MAX : -INT_MAX;
 		setJumpAndJumpDown(
-			lastMePosition, lastMeJumpState, curEnemyPositions[0], game, false, action, lastStartJumpY);
+			lastMePosition, lastMeJumpState, curEnemyPosition, game, false, action, lastStartJumpY);
 
 		if (counter == 1) {
 			startJumpY = lastStartJumpY;
@@ -546,11 +546,11 @@ void setShootingAction(
 		action.shoot = canShootingTick == 0 && addShootingSimulations == 0;
 		action.aim = Vec2Double(cos(okShootingAngle), sin(okShootingAngle));
 	}
-	else if (mePositions.size() == 1 && maxShootingProbability > TOLERANCE)// дальше я уже не пойду
-	{
-		action.shoot = canShootingTick == 0;
-		action.aim = Vec2Double(cos(okShootingAngle), sin(okShootingAngle));
-	}
+	//else if (mePositions.size() == 1 && maxShootingProbability > TOLERANCE)// дальше я уже не пойду
+	//{
+	//	action.shoot = canShootingTick == 0;
+	//	action.aim = Vec2Double(cos(okShootingAngle), sin(okShootingAngle));
+	//}
 	else
 	{				
 		action.shoot = false;
@@ -746,11 +746,11 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		}
 	}
 
-	if (nearestHPLootBox != nullptr)
+	/*if (nearestHPLootBox != nullptr)
 		getHealingData(
 			unit, meAttackingPositions, meAttackingJumpStates,
 			*nearestHPLootBox, meAttackingAction, startJumpY, game	);
-	else
+	else*/
 		getAttackingData(
 			unit, 
 			meAttackingPositions, meAttackingJumpStates,
