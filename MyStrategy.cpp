@@ -430,8 +430,101 @@ void setShootingAction(
 {
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	const auto movingTime = me.weapon->fireTimer != nullptr ? *(me.weapon->fireTimer) - TOLERANCE : 0;
-	
+
 	const auto canShootingTick = static_cast<int>(ceil(movingTime / tickTime));
+
+	if (canShootingTick == 1 && movingTime < tickTime)//выстрел в рамках тика 0-1
+	{
+		double maxProbability = 0.0;
+		double okShootingAngle = 0.0;
+		
+		Vec2Double meShootingPosition;//позиция, откуда произойдет выстрел
+		if (mePositions.size() == 1)
+		{
+			meShootingPosition = mePositions[0];
+		}
+		else
+		{
+			const auto part = movingTime / tickTime;
+			const auto x0 = mePositions[0].x;
+			const auto y0 = mePositions[0].y;
+			const auto x1 = mePositions[1].x;
+			const auto y1 = mePositions[1].y;
+			meShootingPosition = { x0 + (x1 - x0) * part, y0 + (y1 - y0) * part };
+		}
+		
+		const auto enemyShootingPositions = enemyPositions[movingTime < tickTime/2 ? 0 : 1]; //позиции врага, начиная с тика выстрела
+		double minAngle = INT_MAX;
+		double maxAngle = -INT_MAX;
+		for (const auto& ep : enemyShootingPositions)
+		{
+			const auto shootingVector = ep - meShootingPosition;
+			double shootingAngle;
+			if (abs(shootingVector.x) > TOLERANCE) {
+				shootingAngle = atan2(shootingVector.y, shootingVector.x);
+			}
+			else
+			{
+				shootingAngle = shootingVector.y > 0 ? M_PI / 2 : -M_PI / 2;
+			}
+			if (shootingAngle < minAngle) minAngle = shootingAngle;
+			if (shootingAngle > maxAngle) maxAngle = shootingAngle;
+		}
+
+		int directionsCount;
+		double deltaAngle;
+		if (abs(maxAngle - minAngle) < TOLERANCE)
+		{
+			directionsCount = 1;
+			deltaAngle = 0;
+		}
+		else
+		{
+			directionsCount = ANGLE_SPLIT_COUNT;
+			deltaAngle = (maxAngle - minAngle) / (ANGLE_SPLIT_COUNT - 1);
+		}
+
+		for (int i = 0; i < directionsCount; ++i)
+		{
+			const auto shootingAngle = minAngle + i * deltaAngle;
+			double spread;
+			if (me.weapon->lastAngle == nullptr)
+			{
+				spread = me.weapon->spread;
+			}
+			else
+			{
+				spread = me.weapon->spread + abs(*(me.weapon->lastAngle) - shootingAngle);
+				spread = min(spread, me.weapon->params.maxSpread);
+				spread = max(
+					me.weapon->params.minSpread,
+					spread - me.weapon->params.aimSpeed * movingTime);
+			}
+
+			const auto probability = Strategy::getShootEnemyProbability(
+				meShootingPosition,
+				me.size,
+				shootingAngle,
+				spread,
+				me.weapon->params,
+				enemyShootingPositions,
+				enemySize,
+				game);
+
+			if (probability > maxProbability)
+			{
+				maxProbability = probability;
+				okShootingAngle = shootingAngle;	
+			}
+		}
+
+		if (maxProbability > OK_SHOOTING_PROBABILITY)
+		{
+			action.shoot = true;
+			action.aim = Vec2Double(cos(okShootingAngle), sin(okShootingAngle));
+			return;
+		}
+	}
 
 	//const auto canSimulateMore = abs(action.velocity) > TOLERANCE || Simulator::isUnitOnAir(meShootingPosition, me.size, game);
 		
