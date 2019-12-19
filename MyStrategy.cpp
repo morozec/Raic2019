@@ -90,13 +90,13 @@ vector<Vec2Double> getActionPositions(
 
 
 void setJumpAndJumpDown(const Vec2Double& unitPosition, const JumpState& unitJumpState, 
-	const Vec2Double& targetPosition, const Game& game,
+	const Vec2Double& targetPosition, const Vec2Double& targetSize, const Game& game,
 	bool considerYs,
 	UnitAction& action, size_t& startedJumpY)
 {
-	const auto isLeftWall = targetPosition.x < unitPosition.x - 1 &&
+	const auto isLeftWall = targetPosition.x < unitPosition.x && targetPosition.x - targetSize.x/2 < size_t(unitPosition.x) &&
 		game.level.tiles[size_t(unitPosition.x - 1)][size_t(unitPosition.y)] == WALL;
-	const auto isRightWall = targetPosition.x > unitPosition.x + 1 &&
+	const auto isRightWall = targetPosition.x > unitPosition.x && targetPosition.x + targetSize.x/2 > size_t(unitPosition.x + 1) &&
 		game.level.tiles[size_t(unitPosition.x + 1)][size_t(unitPosition.y)] == WALL;
 	const auto isSameColumnHigher = 
 		targetPosition.y > unitPosition.y && targetPosition.x >= unitPosition.x - 1 && targetPosition.x <= unitPosition.x + 1;
@@ -161,18 +161,18 @@ void setJumpAndJumpDown(const Vec2Double& unitPosition, const JumpState& unitJum
 	}	
 }
 
-void setMoveToWeaponAction(const Unit& unit, const Vec2Double& weaponPosition, const Game& game,
+void setMoveToWeaponAction(const Unit& unit, const LootBox& weapon, const Game& game,
 	UnitAction& action, Strategy& strategy)
 {
 	auto startedJumpY = strategy.getStartedJumpY();
 	setJumpAndJumpDown(
-		unit.position, unit.jumpState, weaponPosition, game, true, action, startedJumpY);
+		unit.position, unit.jumpState, weapon.position, weapon.size, game, true, action, startedJumpY);
 	strategy.setStartedJumpY(startedJumpY);
 	
-	if (abs(weaponPosition.x - unit.position.x) < TOLERANCE)
+	if (abs(weapon.position.x - unit.position.x) < TOLERANCE)
 		action.velocity = 0;
 	else
-		action.velocity = weaponPosition.x > unit.position.x ? INT_MAX : -INT_MAX;
+		action.velocity = weapon.position.x > unit.position.x ? INT_MAX : -INT_MAX;
 
 	action.shoot = false;
 	action.reload = false;
@@ -350,7 +350,7 @@ void getHealingData(
 		UnitAction action;
 		action.velocity = lootBox.position.x > lastMePosition.x ? INT_MAX : -INT_MAX;
 		setJumpAndJumpDown(
-			lastMePosition, lastMeJumpState, lootBox.position, game, false, action, lastStartJumpY);
+			lastMePosition, lastMeJumpState, lootBox.position, lootBox.size, game, false, action, lastStartJumpY);
 
 		if (counter == 1) {
 			startJumpY = lastStartJumpY;
@@ -399,7 +399,7 @@ void getAttackingData(
 		UnitAction action;
 		action.velocity = curEnemyPosition.x > lastMePosition.x ? INT_MAX : -INT_MAX;
 		setJumpAndJumpDown(
-			lastMePosition, lastMeJumpState, curEnemyPosition, game, false, action, lastStartJumpY);
+			lastMePosition, lastMeJumpState, curEnemyPosition, enemySize, game, false, action, lastStartJumpY);
 
 		if (counter == 1) {
 			startJumpY = lastStartJumpY;
@@ -618,7 +618,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	if (unit.weapon == nullptr)
 	{
 		if (nearestWeapon != nullptr) {
-			setMoveToWeaponAction(unit, nearestWeapon->position, game, action, strategy_);
+			setMoveToWeaponAction(unit, *nearestWeapon, game, action, strategy_);
 		}
 		return action;
 	}
