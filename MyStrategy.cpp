@@ -1010,10 +1010,6 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	
 	if (minNoAttackDamage >= minAttackDamage)
 	{
-		const auto nextTickMeAttackPosition = meAttackingPositions.size() == 1 ? meAttackingPositions[0] : meAttackingPositions[1];
-		const auto nextTickMeAttackingJumpState =
-			meAttackingJumpStates.size() == 1 ? meAttackingJumpStates[0] : meAttackingJumpStates[1];
-		
 		const auto runawayDirection = std::get<0>(attackRunawayAction);
 		const auto runawayStartTick = std::get<1>(attackRunawayAction);
 		const auto runawayStopTick = std::get<2>(attackRunawayAction);
