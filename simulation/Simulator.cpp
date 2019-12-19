@@ -439,7 +439,7 @@ Vec2Double Simulator::getUnitInTimePosition(
 		}
 	}*/
 
-	auto isPlatformCross = !action.jumpDown && isFall && (leftBottomTile == PLATFORM || rightBottomTile == PLATFORM);
+	auto isPlatformCross = !action.jumpDown && (isFall || wasJump && !isJump) && (leftBottomTile == PLATFORM || rightBottomTile == PLATFORM);
 
 	const auto squaresLD = MathHelper::getLineSquares2(
 		{ unitPosition.x - unitSize.x / 2, unitPosition.y }, { nextX - unitSize.x / 2, nextY });
