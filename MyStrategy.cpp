@@ -423,10 +423,8 @@ void setShootingAction(
 	const Game& game, UnitAction& action)
 {
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
-	auto movingTime = me.weapon->fireTimer != nullptr ? *(me.weapon->fireTimer) : 0;
-	if (abs(movingTime) < TOLERANCE) movingTime = 0;
+	const auto movingTime = me.weapon->fireTimer != nullptr ? *(me.weapon->fireTimer) - TOLERANCE : 0;
 	
-
 	const auto canShootingTick = static_cast<size_t>(ceil(movingTime / tickTime));
 
 	//const auto canSimulateMore = abs(action.velocity) > TOLERANCE || Simulator::isUnitOnAir(meShootingPosition, me.size, game);
