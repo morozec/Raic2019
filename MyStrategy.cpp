@@ -389,9 +389,9 @@ void getAttackingData(
 	{
 		const auto curEnemyPositions = enemyPositions[counter];
 		const auto curEnemyPosition = curEnemyPositions[0];
-		
-		if (areRectCross(lastMePosition.x - me.size.x / 2, lastMePosition.x + me.size.x / 2, lastMePosition.y, lastMePosition.y + me.size.y,
-			curEnemyPosition.x - enemySize.x / 2, curEnemyPosition.x + enemySize.x / 2, curEnemyPosition.y, curEnemyPosition.y + enemySize.y))
+
+		if (abs(lastMePosition.x - curEnemyPosition.x) < me.size.x/2 + enemySize.x/2 + TOLERANCE &&
+			abs(lastMePosition.y - curEnemyPosition.y) < me.size.y + TOLERANCE)		
 		{
 			if (counter == 1)
 			{
