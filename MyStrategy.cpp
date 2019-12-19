@@ -247,7 +247,7 @@ vector<Vec2Double> getSimplePositions(
 
 		if (isJumpPadJumping && !jumpState.canJump && !jumpState.canCancel)
 			isFallingWhileJumpPadJumping = true;//перешли из прыжка на батуте в падение
-		if (isFalling && jumpState.canJump && !jumpState.canCancel)
+		if ((isFalling || isJumping) && jumpState.canJump && !jumpState.canCancel)
 			isJumpPadJumpingWhileFalling = true;//перешли из падения в прыжок на батуте
 	}
 
