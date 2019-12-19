@@ -756,12 +756,16 @@ Vec2Double Simulator::getUnitInTimePosition(
 			microTicksGone++;
 			x += velocityX * microTickTime;
 			y += velocityY * microTickTime;
-			if (isUnitOnAir({ x, y }, unitSize, game)) break;
+			if (isUnitOnAir({ x, y }, unitSize, game)) {
+				y -= game.properties.unitFallSpeed * microTickTime;//уже начали падать
+				break;
+			}
 		}
 
 		bool isOnJumpPad = false;
 		velocityY = -game.properties.unitFallSpeed;
-		for (int j = 0; j < microTicksCount - microTicksGone; ++j)
+		const auto microTicksLeft = microTicksCount - microTicksGone;
+		for (int j = 0; j < microTicksLeft; ++j)
 		{
 			microTicksGone++;
 			x += velocityX * microTickTime;
