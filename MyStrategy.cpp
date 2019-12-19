@@ -425,7 +425,7 @@ void setShootingAction(
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	const auto movingTime = me.weapon->fireTimer != nullptr ? *(me.weapon->fireTimer) - TOLERANCE : 0;
 	
-	const auto canShootingTick = static_cast<size_t>(ceil(movingTime / tickTime));
+	const auto canShootingTick = static_cast<int>(ceil(movingTime / tickTime));
 
 	//const auto canSimulateMore = abs(action.velocity) > TOLERANCE || Simulator::isUnitOnAir(meShootingPosition, me.size, game);
 		
@@ -438,9 +438,17 @@ void setShootingAction(
 	const auto minSpread = me.weapon->params.minSpread;
 	const auto aimSpeed = me.weapon->params.aimSpeed;
 	const auto spreadDecrease = aimSpeed * tickTime;*/
+
+	map<int, double> allProbabilities;
+	map<int, double> allShootingAngles;
+	map<int, double> allSpreads;
 		
 	while (canShootingTick + addShootingSimulations < MAX_SIMULATIONS)
 	{
+		double curMaxShootingProbability = 0.0;
+		double curOkShootingAngle = 0.0;
+		double curSpread = 0.0;
+		
 		const auto shootingTick = canShootingTick + addShootingSimulations;
 		Vec2Double meShootingPosition;//позиция, откуда произойдет выстрел
 		double meSimpleProbability;
@@ -461,8 +469,7 @@ void setShootingAction(
 			continue;
 		}		
 		
-		auto enemyShootingPositions = //позиции врага, начиная с тика выстрела
-			enemyPositions[shootingTick];
+		const auto enemyShootingPositions = enemyPositions[shootingTick]; //позиции врага, начиная с тика выстрела
 		double minAngle = INT_MAX;
 		double maxAngle = -INT_MAX;
 		for (const auto& ep : enemyShootingPositions)
@@ -502,18 +509,7 @@ void setShootingAction(
 				spread = me.weapon->spread;
 			}
 			else
-			{
-				/*spread = me.weapon->spread;
-				auto lastAngle = *(me.weapon->lastAngle);
-				
-				for (size_t t = 0; t < shootingTick; ++t)
-				{
-					spread += abs(lastAngle - shootingAngle);
-					spread = min(spread, maxSpread);
-					spread = max(minSpread, spread - spreadDecrease);
-					lastAngle = shootingAngle;
-				}*/
-				
+			{	
 				spread = me.weapon->spread + abs(*(me.weapon->lastAngle) - shootingAngle);
 				spread = min(spread, me.weapon->params.maxSpread);
 				spread = max(
@@ -529,22 +525,96 @@ void setShootingAction(
 				me.weapon->params,
 				enemyShootingPositions,
 				enemySize,
-				game);
-			if (probability > maxShootingProbability)
+				game);			
+
+			if (probability > curMaxShootingProbability)
 			{
-				maxShootingProbability = probability;
-				okShootingAngle = shootingAngle;
-			}
+				curMaxShootingProbability = probability;
+				curOkShootingAngle = shootingAngle;
+				curSpread = spread;
+			}	
 		}
 
-		if (maxShootingProbability >= OK_SHOOTING_PROBABILITY) break;
+		allProbabilities[shootingTick] = curMaxShootingProbability;
+		allShootingAngles[shootingTick] = curOkShootingAngle;
+		allSpreads[shootingTick] = curSpread;
+
+		if (curMaxShootingProbability >= OK_SHOOTING_PROBABILITY)
+		{
+			maxShootingProbability = curMaxShootingProbability;
+			okShootingAngle = curOkShootingAngle;
+			break;
+		}
+
 		addShootingSimulations++;
 	}					
 
 	if (maxShootingProbability >= OK_SHOOTING_PROBABILITY) 
 	{
-		action.shoot = canShootingTick == 0 && addShootingSimulations == 0;
-		action.aim = Vec2Double(cos(okShootingAngle), sin(okShootingAngle));
+		auto okAddShootingSimulations2 = -1;
+		auto maxProb2 = 0.5;
+		auto addShootingSimulations2 = 0;
+		auto okShootingAngle2 = 0.0;
+		
+		const auto shootDelay = static_cast<int>(ceil((me.weapon->params.fireRate - TOLERANCE) / tickTime));
+		while (canShootingTick + addShootingSimulations2 < canShootingTick + addShootingSimulations - shootDelay)
+		{
+			const auto shootingTick2 = canShootingTick + addShootingSimulations2;
+			const auto prob2 = allProbabilities[shootingTick2];
+			if (prob2 < maxProb2)
+			{
+				addShootingSimulations2++;
+				continue;
+			}
+			const auto angle2 = allShootingAngles[shootingTick2];
+
+			
+			const auto bestShootingTick = canShootingTick + addShootingSimulations;
+			//позиция, откуда произойдет выстрел
+			Vec2Double meShootingPosition =  
+				bestShootingTick >= mePositions.size() ?
+				mePositions.back() :
+				mePositions[bestShootingTick];
+
+			auto spread = allSpreads[shootingTick2];//разброс в момент первого выстрела
+			spread = min(me.weapon->params.maxSpread, spread + me.weapon->params.recoil);//отдача
+			spread = min(me.weapon->params.maxSpread, spread + abs(angle2 - okShootingAngle));//новое прицеливание
+			//затухание разброса
+			spread = max(
+				me.weapon->params.minSpread, 
+				spread - me.weapon->params.aimSpeed*((bestShootingTick - shootingTick2) / game.properties.ticksPerSecond)); 			
+			
+			const auto enemyShootingPositions = enemyPositions[bestShootingTick]; //позиции врага, начиная с тика выстрела
+			const auto newBestShootProbability = Strategy::getShootEnemyProbability(
+				meShootingPosition,
+				me.size,
+				okShootingAngle,
+				spread,
+				me.weapon->params,
+				enemyShootingPositions,
+				enemySize,
+				game);
+			
+			if (newBestShootProbability > maxShootingProbability - TOLERANCE)
+			{
+				okAddShootingSimulations2 = addShootingSimulations2;
+				maxProb2 = prob2;
+				okShootingAngle2 = angle2;
+			}
+
+			addShootingSimulations2++;
+		}
+
+		if (okAddShootingSimulations2 != -1)
+		{
+			action.shoot = canShootingTick == 0 && okAddShootingSimulations2 == 0;
+			action.aim = Vec2Double(cos(okShootingAngle2), sin(okShootingAngle2));
+		}
+		else
+		{
+			action.shoot = canShootingTick == 0 && addShootingSimulations == 0;
+			action.aim = Vec2Double(cos(okShootingAngle), sin(okShootingAngle));
+		}
 	}
 	//else if (mePositions.size() == 1 && maxShootingProbability > TOLERANCE)// дальше я уже не пойду
 	//{
