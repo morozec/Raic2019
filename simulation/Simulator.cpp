@@ -1095,7 +1095,7 @@ bool Simulator::isUnitOnUnit(const Vec2Double& unitPosition, const Vec2Double& u
 	{
 		if (abs(unitPosition.y - unit.position.y) < unitSize.y + TOLERANCE &&
 			abs(unitPosition.y - unit.position.y) > unitSize.y - TOLERANCE &&
-			abs(unitPosition.x - unit.position.x) < unitSize.x/2)
+			abs(unitPosition.x - unit.position.x) < unitSize.x / 2 + unit.size.x/2)
 		{
 			return true;
 		}
