@@ -117,28 +117,28 @@ void setJumpAndJumpDown(const Vec2Double& unitPosition, const JumpState& unitJum
 		if (isLeftWall && unitJumpState.canJump && unitJumpState.canCancel)
 		{
 			auto wallHeight = 0;
-			while (game.level.tiles[size_t(unitPosition.x - 1)][size_t(unitPosition.y + wallHeight)] == WALL)
+			while (game.level.tiles[size_t(unitPosition.x - 1)][size_t(unitPosition.y + TOLERANCE + wallHeight)] == WALL)
 			{
 				wallHeight++;
 			}
 			const auto maxJumpHeight = unitJumpState.speed * unitJumpState.maxTime;
 			if (maxJumpHeight < wallHeight)
 			{
-				startedJumpY = size_t(unitPosition.y);
+				startedJumpY = size_t(unitPosition.y + TOLERANCE);
 			}
 		}
 
 		else if (isRightWall && unitJumpState.canJump && unitJumpState.canCancel)
 		{
 			auto wallHeight = 0;
-			while (game.level.tiles[size_t(unitPosition.x + 1)][size_t(unitPosition.y + wallHeight)] == WALL)
+			while (game.level.tiles[size_t(unitPosition.x + 1)][size_t(unitPosition.y + TOLERANCE + wallHeight)] == WALL)
 			{
 				wallHeight++;
 			}
 			const auto maxJumpHeight = unitJumpState.speed * unitJumpState.maxTime;
 			if (maxJumpHeight < wallHeight)
 			{
-				startedJumpY = size_t(unitPosition.y);
+				startedJumpY = size_t(unitPosition.y + TOLERANCE);
 			}
 		}
 		else if (isSameColumnHigher)
@@ -147,7 +147,7 @@ void setJumpAndJumpDown(const Vec2Double& unitPosition, const JumpState& unitJum
 			const auto maxJumpHeight = unitJumpState.speed * unitJumpState.maxTime;
 			if (maxJumpHeight < jumpHeight)
 			{
-				startedJumpY = size_t(unitPosition.y);
+				startedJumpY = size_t(unitPosition.y + TOLERANCE);
 			}
 		}
 		
