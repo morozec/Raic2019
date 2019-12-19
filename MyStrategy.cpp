@@ -847,8 +847,6 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 	if (isSafeMove)
 	{
-		auto jumpState = unit.jumpState;
-
 		const auto nextTickMeAttackPosition = meAttackingPositions.size() == 1 ? meAttackingPositions[0] : meAttackingPositions[1];
 		const auto nextTickMeAttackingJumpState = 
 			meAttackingJumpStates.size() == 1 ? meAttackingJumpStates[0] : meAttackingJumpStates[1];
@@ -858,7 +856,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			enemyBulletsSimulation, 1, game);
 		
 		runawayAction = strategy_.getRunawayAction(
-			nextTickMeAttackPosition, unit.size, unit.playerId, jumpState,
+			nextTickMeAttackPosition, unit.size, unit.playerId, nextTickMeAttackingJumpState,
 			nextTickShootMeBullets, enemyBulletsSimulation, 1,
 			true, true, true, true,
 			game);
@@ -916,7 +914,6 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	
 	if (minNoAttackDamage >= minAttackDamage)
 	{
-		auto jumpState = unit.jumpState;
 		const auto nextTickMeAttackPosition = meAttackingPositions.size() == 1 ? meAttackingPositions[0] : meAttackingPositions[1];
 		const auto nextTickMeAttackingJumpState =
 			meAttackingJumpStates.size() == 1 ? meAttackingJumpStates[0] : meAttackingJumpStates[1];
@@ -926,7 +923,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			enemyBulletsSimulation, 1, game);
 
 		runawayAction = strategy_.getRunawayAction(
-			nextTickMeAttackPosition, unit.size, unit.playerId, jumpState,
+			nextTickMeAttackPosition, unit.size, unit.playerId, nextTickMeAttackingJumpState,
 			nextTickShootMeBullets, enemyBulletsSimulation, 1,
 			true, true, true, true,
 			game);
