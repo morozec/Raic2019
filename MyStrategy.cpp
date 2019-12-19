@@ -488,7 +488,7 @@ void setShootingAction(
 			}
 			else
 			{
-				shootingAngle = shootingVector.y > 0 ? M_PI : -M_PI;
+				shootingAngle = shootingVector.y > 0 ? M_PI/2 : -M_PI/2;
 			}
 			if (shootingAngle < minAngle) minAngle = shootingAngle;
 			if (shootingAngle > maxAngle) maxAngle = shootingAngle;
