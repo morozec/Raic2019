@@ -1009,12 +1009,11 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		}
 	}
 
-	//TODO!!!
-	/*if (nearestHPLootBox != nullptr)
+	if (nearestHPLootBox != nullptr)
 		getHealingData(
 			unit, meAttackingPositions, meAttackingJumpStates,
 			*nearestHPLootBox, meAttackingAction, startJumpY, game	);
-	else*/
+	else
 		getAttackingData(
 			unit, 
 			meAttackingPositions, meAttackingJumpStates,
