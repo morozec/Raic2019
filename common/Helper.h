@@ -11,6 +11,7 @@ constexpr auto SHOOTING_PROBABILITY = 0.33;
 constexpr auto WALKING_PROBABILITY = 0.5;
 
 const double OK_SHOOTING_PROBABILITY = 0.85;
+const double NOT_BAD_SHOOTING_PROBABILITY = 0.5;
 const int MAX_SIMULATIONS = 100;
 
 Vec2Float vec2DoubleToVec2Float(const Vec2Double& vec2Double);

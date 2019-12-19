@@ -432,8 +432,8 @@ void setShootingAction(
 	
 	auto maxShootingProbability = 0.0;
 	double okShootingAngle = 0;
-	int addShootingSimulations = 0;
-
+	int okAddShootingSimulations = -1;
+	
 	/*const auto maxSpread = me.weapon->params.maxSpread;
 	const auto minSpread = me.weapon->params.minSpread;
 	const auto aimSpeed = me.weapon->params.aimSpeed;
@@ -442,7 +442,8 @@ void setShootingAction(
 	map<int, double> allProbabilities;
 	map<int, double> allShootingAngles;
 	map<int, double> allSpreads;
-		
+
+	int addShootingSimulations = 0;
 	while (canShootingTick + addShootingSimulations < MAX_SIMULATIONS)
 	{
 		double curMaxShootingProbability = 0.0;
@@ -539,31 +540,32 @@ void setShootingAction(
 		allShootingAngles[shootingTick] = curOkShootingAngle;
 		allSpreads[shootingTick] = curSpread;
 
-		if (curMaxShootingProbability >= OK_SHOOTING_PROBABILITY)
+		if (curMaxShootingProbability > maxShootingProbability)
 		{
 			maxShootingProbability = curMaxShootingProbability;
 			okShootingAngle = curOkShootingAngle;
-			break;
+			okAddShootingSimulations = addShootingSimulations;
+			if (maxShootingProbability >= OK_SHOOTING_PROBABILITY) break;
 		}
 
 		addShootingSimulations++;
 	}					
 
-	if (maxShootingProbability >= OK_SHOOTING_PROBABILITY) 
+	if (maxShootingProbability >= NOT_BAD_SHOOTING_PROBABILITY) 
 	{
 		while (true)
 		{
 			auto okAddShootingSimulations2 = -1;
-			auto maxProb2 = 0.5;
+			auto maxProb2 = NOT_BAD_SHOOTING_PROBABILITY;
 			auto addShootingSimulations2 = 0;
 			auto okShootingAngle2 = 0.0;
 
 			const auto shootDelay = static_cast<int>(ceil((me.weapon->params.fireRate - TOLERANCE) / tickTime));
-			while (canShootingTick + addShootingSimulations2 < canShootingTick + addShootingSimulations - shootDelay)
+			while (canShootingTick + addShootingSimulations2 < canShootingTick + okAddShootingSimulations - shootDelay)
 			{
 				const auto shootingTick2 = canShootingTick + addShootingSimulations2;
 				const auto prob2 = allProbabilities[shootingTick2];
-				if (prob2 < maxProb2)
+				if (prob2 < maxProb2 + TOLERANCE)
 				{
 					addShootingSimulations2++;
 					continue;
@@ -571,7 +573,7 @@ void setShootingAction(
 				const auto angle2 = allShootingAngles[shootingTick2];
 
 
-				const auto bestShootingTick = canShootingTick + addShootingSimulations;
+				const auto bestShootingTick = canShootingTick + okAddShootingSimulations;
 				//позиция, откуда произойдет выстрел
 				Vec2Double meShootingPosition =
 					bestShootingTick >= mePositions.size() ?
@@ -609,7 +611,7 @@ void setShootingAction(
 
 			if (okAddShootingSimulations2 != -1)
 			{
-				addShootingSimulations = okAddShootingSimulations2;
+				okAddShootingSimulations = okAddShootingSimulations2;
 				maxShootingProbability = maxProb2;
 				okShootingAngle = okShootingAngle2;
 				
@@ -618,12 +620,12 @@ void setShootingAction(
 			}
 			else
 			{
-				action.shoot = canShootingTick == 0 && addShootingSimulations == 0;
+				action.shoot = canShootingTick == 0 && okAddShootingSimulations == 0;
 				action.aim = Vec2Double(cos(okShootingAngle), sin(okShootingAngle));
 				break;
 			}
 		}
-	}
+	}	
 	//else if (mePositions.size() == 1 && maxShootingProbability > TOLERANCE)// дальше я уже не пойду
 	//{
 	//	action.shoot = canShootingTick == 0;
