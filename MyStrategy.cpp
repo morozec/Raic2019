@@ -122,7 +122,7 @@ void setJumpAndJumpDown(const Vec2Double& unitPosition, const JumpState& unitJum
 				wallHeight++;
 			}
 			const auto maxJumpHeight = unitJumpState.speed * unitJumpState.maxTime;
-			if (maxJumpHeight < wallHeight)
+			if (startedJumpY == 0 && maxJumpHeight < wallHeight)
 			{
 				startedJumpY = size_t(unitPosition.y + TOLERANCE);
 			}
@@ -136,7 +136,7 @@ void setJumpAndJumpDown(const Vec2Double& unitPosition, const JumpState& unitJum
 				wallHeight++;
 			}
 			const auto maxJumpHeight = unitJumpState.speed * unitJumpState.maxTime;
-			if (maxJumpHeight < wallHeight)
+			if (startedJumpY == 0 && maxJumpHeight < wallHeight)
 			{
 				startedJumpY = size_t(unitPosition.y + TOLERANCE);
 			}
@@ -145,7 +145,7 @@ void setJumpAndJumpDown(const Vec2Double& unitPosition, const JumpState& unitJum
 		{
 			const auto jumpHeight = targetPosition.y - unitPosition.y;			
 			const auto maxJumpHeight = unitJumpState.speed * unitJumpState.maxTime;
-			if (maxJumpHeight < jumpHeight)
+			if (startedJumpY == 0 && maxJumpHeight < jumpHeight)
 			{
 				startedJumpY = size_t(unitPosition.y + TOLERANCE);
 			}
