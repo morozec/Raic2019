@@ -558,20 +558,40 @@ Vec2Double Simulator::getUnitInTimePosition(
 				!(canGoThroughTile(leftBottomTile) && canGoThroughTile(leftTopTile) &&
 					canGoThroughTile(rightTopTile) && canGoThroughTile(rightBottomTile));
 			if (!isWallCross)
-			{
-				y = nextY;
-				continue;
-			}
+			{		
 
-			if (startTickVelocityY > TOLERANCE)//был прыжок
-			{
-				velocityY = -game.properties.unitFallSpeed;
-				y = y + velocityY * microTickTime;
-				jumpStopped = true;
+				if (isPlatformCross)//проверим пересечение с платформой
+				{
+					if (game.level.tiles[size_t(nextX - unitSize.x / 2)][size_t(nextY)] == PLATFORM ||
+						game.level.tiles[size_t(nextX + unitSize.x / 2)][size_t(nextY)] == PLATFORM)
+					{
+						if (size_t(y) > size_t(nextY))//я до этого был тайлом выше
+						{
+							jumpState.canJump = true;
+							jumpState.speed = game.properties.unitJumpSpeed;
+							jumpState.maxTime = game.properties.unitJumpTime;
+							jumpState.canCancel = true;
+
+							y = floor(y);
+							velocityY = 0;
+							continue;
+						}						
+					}
+				}
+				y = nextY;
 			}
-			else //было падение
+			else
 			{
-				y = trunc(y);
+				if (startTickVelocityY > TOLERANCE)//был прыжок
+				{
+					velocityY = -game.properties.unitFallSpeed;
+					y = y + velocityY * microTickTime;
+					jumpStopped = true;
+				}
+				else //было падение
+				{
+					y = trunc(y);
+				}
 			}
 			
 			
@@ -685,11 +705,7 @@ Vec2Double Simulator::getUnitInTimePosition(
 					jumpState.maxTime = game.properties.unitJumpTime;
 					jumpState.canCancel = true;
 
-					const auto resY = floor(y);
-					const auto part = (resY - y) / (yj - y);
-					const auto resX = x + (xj - x) * part;
-
-					return { resX, resY };
+					return { nextX, floor(y) };
 				}
 				else //платформа не повлияет на мое движение
 				{
