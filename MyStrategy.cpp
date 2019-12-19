@@ -393,6 +393,12 @@ void getAttackingData(
 		if (areRectCross(lastMePosition.x - me.size.x / 2, lastMePosition.x + me.size.x / 2, lastMePosition.y, lastMePosition.y + me.size.y,
 			curEnemyPosition.x - enemySize.x / 2, curEnemyPosition.x + enemySize.x / 2, curEnemyPosition.y, curEnemyPosition.y + enemySize.y))
 		{
+			if (counter == 1)
+			{
+				meAction.jump = false;
+				meAction.jumpDown = false;
+				meAction.velocity = 0;
+			}
 			return;
 		}		
 		
