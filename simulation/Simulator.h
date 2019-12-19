@@ -35,6 +35,7 @@ public:
 	static bool isUnitOnPlatform(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game);
 	static bool isUnitOnAir(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game);
 	static bool isUnitOnJumpPad(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game);
+	static bool isUnitOnUnit(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game);
 
 private:
 	

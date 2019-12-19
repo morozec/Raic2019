@@ -1073,7 +1073,10 @@ bool Simulator::isUnitOnPlatform(const Vec2Double& unitPosition, const Vec2Doubl
 
 bool Simulator::isUnitOnAir(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game)
 {
-	return !isUnitOnWall(unitPosition, unitSize, game) && !isUnitOnLadder(unitPosition, unitSize, game) && !isUnitOnPlatform(unitPosition, unitSize, game);
+	return !isUnitOnWall(unitPosition, unitSize, game) &&
+		!isUnitOnLadder(unitPosition, unitSize, game) &&
+		!isUnitOnPlatform(unitPosition, unitSize, game) &&
+		!isUnitOnUnit(unitPosition, unitSize, game);
 }
 
 bool Simulator::isUnitOnJumpPad(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game)
@@ -1083,6 +1086,21 @@ bool Simulator::isUnitOnJumpPad(const Vec2Double& unitPosition, const Vec2Double
 		game.level.tiles[size_t(unitPosition.x - unitSize.x / 2)][size_t(unitPosition.y + unitSize.y)] == JUMP_PAD ||
 		game.level.tiles[size_t(unitPosition.x + unitSize.x / 2)][size_t(unitPosition.y + unitSize.y)] == JUMP_PAD ||
 		game.level.tiles[size_t(unitPosition.x + unitSize.x / 2)][size_t(unitPosition.y)] == JUMP_PAD;
+}
+
+bool Simulator::isUnitOnUnit(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game)
+{
+	
+	for (const auto& unit: game.units)
+	{
+		if (abs(unitPosition.y - unit.position.y) < unitSize.y + TOLERANCE &&
+			abs(unitPosition.y - unit.position.y) > unitSize.y - TOLERANCE &&
+			abs(unitPosition.x - unit.position.x) < unitSize.x/2)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 
