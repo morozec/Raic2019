@@ -21,7 +21,8 @@ MyStrategy::MyStrategy()
 }
 
 
-void prolongatePositions(vector<Vec2Double>& positions, const Vec2Double& unitSize, JumpState& jumpState, const Game& game)
+void prolongatePositions(
+	vector<Vec2Double>& positions, const Vec2Double& unitSize, int unitId, JumpState& jumpState, const Game& game)
 {
 	const auto tickTime = 1 / game.properties.ticksPerSecond;
 	auto lastPosition = positions.back();
@@ -37,9 +38,9 @@ void prolongatePositions(vector<Vec2Double>& positions, const Vec2Double& unitSi
 	bool isFallingWhileJumpPadJumping = false;
 	bool isJumpPadJumpingWhileFalling = false;
 	
-	while (positions.size() < MAX_SIMULATIONS && Simulator::isUnitOnAir(lastPosition, unitSize, game))
+	while (positions.size() < MAX_SIMULATIONS && Simulator::isUnitOnAir(lastPosition, unitSize, unitId, game))
 	{
-		lastPosition = Simulator::getUnitInTimePosition(lastPosition, unitSize, action, tickTime, jumpState, game);
+		lastPosition = Simulator::getUnitInTimePosition(lastPosition, unitSize, unitId, action, tickTime, jumpState, game);
 		positions.push_back(lastPosition);
 
 		if (isFallingWhileJumpPadJumping && jumpState.canJump && !jumpState.canCancel) break;//новый цикл прыжка на батуте
@@ -58,7 +59,8 @@ inline bool operator<(const Bullet& lhs, const Bullet& rhs)
 }
 
 vector<Vec2Double> getActionPositions(
-	const Vec2Double& unitPosition, const Vec2Double& unitSize, const UnitAction& action, int startTick, int stopTick, JumpState& jumpState, const Game& game)
+	const Vec2Double& unitPosition, const Vec2Double& unitSize, int unitId,
+	const UnitAction& action, int startTick, int stopTick, JumpState& jumpState, const Game& game)
 {
 	if (startTick < 0 || stopTick < 0) throw runtime_error("getActionPositions tick is negative");
 	
@@ -74,14 +76,14 @@ vector<Vec2Double> getActionPositions(
 	for (int i = 0; i < startTick; ++i)
 	{
 		const auto nextPos = Simulator::getUnitInTimePosition(
-			positions.back(), unitSize, waitAction, tickTime, jumpState, game);
+			positions.back(), unitSize, unitId, waitAction, tickTime, jumpState, game);
 		positions.emplace_back(nextPos);
 	}
 
 	for (int i = 0; i < stopTick - startTick; ++i)
 	{
 		const auto nextPos = Simulator::getUnitInTimePosition(
-			positions.back(), unitSize, action, tickTime, jumpState, game);
+			positions.back(), unitSize, unitId, action, tickTime, jumpState, game);
 		positions.emplace_back(nextPos);
 	}
 	
@@ -198,14 +200,14 @@ void setMoveToWeaponAction(const Unit& unit, const LootBox& weapon, const Game& 
 //}
 
 vector<Vec2Double> getSimplePositions(
-	const Vec2Double& unitPosition, const Vec2Double& unitSize, JumpState& unitJumpState, const Game& game)
+	const Vec2Double& unitPosition, const Vec2Double& unitSize, int unitId, JumpState& unitJumpState, const Game& game)
 {
 	const auto tickTime = 1 / game.properties.ticksPerSecond;
 	
 	vector<Vec2Double> positions;
 	positions.emplace_back(unitPosition);
 
-	const auto isOnAir = Simulator::isUnitOnAir(unitPosition, unitSize, game);
+	const auto isOnAir = Simulator::isUnitOnAir(unitPosition, unitSize, unitId, game);
 	const auto isFalling = !unitJumpState.canJump && !unitJumpState.canCancel;
 	const auto isJumping = isOnAir && unitJumpState.canJump && unitJumpState.canCancel;
 	const auto isJumpPadJumping = unitJumpState.canJump && !unitJumpState.canCancel;
@@ -231,10 +233,10 @@ vector<Vec2Double> getSimplePositions(
 
 	bool isFallingWhileJumpPadJumping = false;
 	bool isJumpPadJumpingWhileFalling = false;
-	while (Simulator::isUnitOnAir(positions.back(), unitSize, game))
+	while (Simulator::isUnitOnAir(positions.back(), unitSize, unitId, game))
 	{
 		const auto nextPos = Simulator::getUnitInTimePosition(
-			positions.back(), unitSize, action, tickTime, jumpState, game);
+			positions.back(), unitSize, unitId, action, tickTime, jumpState, game);
 		if (positions.size() == 1) unitJumpState = jumpState;//обновляем jumpState после тика 1 TODO
 		
 		positions.emplace_back(nextPos);
@@ -257,14 +259,14 @@ vector<vector<Vec2Double>> getSimplePositionsSimulations(const Unit& enemy, cons
 
 	auto lastEnemyPosition = enemy.position;
 	auto lastEnemyJumpState = enemy.jumpState;
-	auto curEnemyPositions = getSimplePositions(lastEnemyPosition, enemy.size, lastEnemyJumpState, game);
+	auto curEnemyPositions = getSimplePositions(lastEnemyPosition, enemy.size, enemy.id, lastEnemyJumpState, game);
 	enemyPositions.emplace_back(curEnemyPositions);
 
 	int counter = 1;
 	while (counter < MAX_SIMULATIONS)
 	{
 		lastEnemyPosition = curEnemyPositions.size() == 1 ? curEnemyPositions[0] : curEnemyPositions[1];
-		curEnemyPositions = getSimplePositions(lastEnemyPosition, enemy.size, lastEnemyJumpState, game);
+		curEnemyPositions = getSimplePositions(lastEnemyPosition, enemy.size, enemy.id, lastEnemyJumpState, game);
 		enemyPositions.emplace_back(curEnemyPositions);
 
 		counter++;
@@ -357,7 +359,7 @@ void getHealingData(
 			meAction = action;
 		}
 
-		lastMePosition = Simulator::getUnitInTimePosition(lastMePosition, me.size, action, tickTime, lastMeJumpState, game);
+		lastMePosition = Simulator::getUnitInTimePosition(lastMePosition, me.size, me.id, action, tickTime, lastMeJumpState, game);
 		mePositions.emplace_back(lastMePosition);
 		meJumpStates.emplace_back(lastMeJumpState);
 		
@@ -412,7 +414,7 @@ void getAttackingData(
 			meAction = action;
 		}
 		
-		lastMePosition = Simulator::getUnitInTimePosition(lastMePosition, me.size, action, tickTime, lastMeJumpState, game);	
+		lastMePosition = Simulator::getUnitInTimePosition(lastMePosition, me.size, me.id, action, tickTime, lastMeJumpState, game);	
 		mePositions.emplace_back(lastMePosition);		
 		meJumpStates.emplace_back(lastMeJumpState);
 		
@@ -800,7 +802,7 @@ void initAttackAction(
 
 		lastMeAttackingJumpState = nextTickMeAttackingJumpState;
 		auto nextPositions = getActionPositions(
-			nextTickMeAttackPosition, unit.size, runawayAttackAction,
+			nextTickMeAttackPosition, unit.size, unit.id, runawayAttackAction,
 			runawayStartTick, runawayStopTick, lastMeAttackingJumpState,
 			game);
 		for (const auto& nextPos : nextPositions)
@@ -810,7 +812,7 @@ void initAttackAction(
 		meAttackingPositions = runawayMeAttackingPositions;
 	}
 
-	prolongatePositions(meAttackingPositions, unit.size, lastMeAttackingJumpState, game);
+	prolongatePositions(meAttackingPositions, unit.size, unit.id, lastMeAttackingJumpState, game);
 
 	for (size_t i = 0; i < meAttackingPositions.size(); ++i)
 	{
@@ -942,8 +944,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			throw runtime_error("unknown runawayDirection");
 		}
 		auto jumpState = unit.jumpState;
-		auto mePositions = getActionPositions(unit.position, unit.size, action, 0, curStopRunawayTick, jumpState, game);		
-		prolongatePositions(mePositions, unit.size, jumpState, game);
+		auto mePositions = getActionPositions(unit.position, unit.size, unit.id, action, 0, curStopRunawayTick, jumpState, game);		
+		prolongatePositions(mePositions, unit.size, unit.id, jumpState, game);
 
 		
 		for (size_t i = 0; i < mePositions.size(); ++i)
@@ -1042,10 +1044,11 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	const auto nextTickShootMeBullets = strategy_.getShootMeBullets(
 		nextTickMeAttackPosition, unit.size, nextTickMeAttackingJumpState,
 		unit.playerId,
+		unit.id,
 		nextTickEnemyBulletsSimulation, 1, game);
 	
 	attackRunawayAction = strategy_.getRunawayAction(
-		nextTickMeAttackPosition, unit.size, unit.playerId, nextTickMeAttackingJumpState,
+		nextTickMeAttackPosition, unit.size, unit.playerId, unit.id, nextTickMeAttackingJumpState,
 		nextTickShootMeBullets, nextTickEnemyBulletsSimulation, 1,
 		true, true, true, true,
 		game);
@@ -1090,10 +1093,10 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	action.velocity = 0;
 
 	const auto shootMeBullets = strategy_.getShootMeBullets(
-		unit.position, unit.size, unit.jumpState, unit.playerId,
+		unit.position, unit.size, unit.jumpState, unit.playerId, unit.id,
 		enemyBulletsSimulation, 0, game);
 	const auto noAttackRunawayAction = strategy_.getRunawayAction(
-		unit.position, unit.size, unit.playerId, unit.jumpState,
+		unit.position, unit.size, unit.playerId, unit.id, unit.jumpState,
 		shootMeBullets, enemyBulletsSimulation, 0,
 		checkUp, checkDown, checkLeft, checkRight,
 		game);
@@ -1180,9 +1183,9 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	JumpState jumpState = unit.jumpState;
 	auto mePositions = runawayDirection == GoNONE ?
 		vector<Vec2Double>{ unit.position } :
-		getActionPositions(unit.position, unit.size, runawayUnitAction, startRunawayTick, stopRunawayTick, jumpState, game);
+		getActionPositions(unit.position, unit.size, unit.id, runawayUnitAction, startRunawayTick, stopRunawayTick, jumpState, game);
 	
-	prolongatePositions(mePositions, unit.size, jumpState, game);
+	prolongatePositions(mePositions, unit.size, unit.id, jumpState, game);
 	
 	for (size_t i = 0; i < mePositions.size(); ++i)
 	{

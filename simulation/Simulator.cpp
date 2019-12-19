@@ -355,18 +355,19 @@ BulletSimulation Simulator::getBulletSimulation(
 
 
 Vec2Double Simulator::getUnitInTimePosition(
-	const Vec2Double& unitPosition, const Vec2Double& unitSize, const UnitAction& action, double time,
+	const Vec2Double& unitPosition, const Vec2Double& unitSize, int unitId,
+	const UnitAction& action, double time,
 	JumpState& jumpState,
 	const Game& game)
 {
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	if (time > tickTime + TOLERANCE) throw std::runtime_error("impossible to simulate unit for more then 1 tick");
+	const auto isOnAir = isUnitOnAir(unitPosition, unitSize, unitId, game);
 	
 	if (!action.jump && !action.jumpDown && abs(action.velocity) < TOLERANCE &&
-		!isUnitOnAir(unitPosition, unitSize, game))
+		!isOnAir)
 		return unitPosition;
-
-	const auto isOnAir = isUnitOnAir(unitPosition, unitSize, game);
+	
 	const auto isOnLadder = isUnitOnLadder(unitPosition, unitSize, game);
 	const auto isOnPlatform = isUnitOnPlatform(unitPosition, unitSize, game);
 
@@ -415,7 +416,7 @@ Vec2Double Simulator::getUnitInTimePosition(
 		canGoThroughTile(leftBottomTile) && 
 		canGoThroughTile(rightBottomTile);*/
 
-	auto becameOnAir = !isOnAir && !isJump && isUnitOnAir({ nextX, nextY }, unitSize, game);
+	auto becameOnAir = !isOnAir && !isJump && isUnitOnAir({ nextX, nextY }, unitSize, unitId, game);
 
 	/*auto canGoAction = false;
 	if (abs(velocityX - actionVelocityX) > TOLERANCE)
@@ -509,15 +510,31 @@ Vec2Double Simulator::getUnitInTimePosition(
 			}
 		}
 	}
-	bool isJumpFinished = (isPadJump || wasJump) && jumpState.maxTime < time;		
+	bool isJumpFinished = (isPadJump || wasJump) && jumpState.maxTime < time;
 
-	if (!isWallCross && !isPlatformCross && !isJumpPadCross && !becameOnAir && !isJumpFinished)
+	const Unit* bottomUnit = nullptr;
+	if (isFall || wasJump && !isJump)
+	{
+		for (const auto& unit : game.units)
+		{
+			if (unit.id == unitId) continue;
+			if (y > unit.position.y + unit.size.y &&
+				nextY < unit.position.y + unit.size.y &&
+				abs(nextX - unit.position.x) < unitSize.x/2 + unit.size.x/2)
+			{
+				bottomUnit = &unit;
+				break;
+			}
+		}
+	}
+
+	if (!isWallCross && !isPlatformCross && !isJumpPadCross && !becameOnAir && !isJumpFinished && bottomUnit == nullptr)
 	{
 		x = nextX;
 		y = nextY;
 
 		const Vec2Double newUnitPosition = { x, y };
-		updateJumpState(jumpState, time, newUnitPosition, unitSize, isPadJump, wasJump, isJump, isFall, game);		
+		updateJumpState(jumpState, time, newUnitPosition, unitSize, unitId, isPadJump, wasJump, isJump, isFall, game);		
 		return newUnitPosition;
 	}
 
@@ -720,6 +737,39 @@ Vec2Double Simulator::getUnitInTimePosition(
 		throw std::runtime_error("wrong platform simulation");
 	}
 
+	else if (bottomUnit != nullptr)
+	{
+		for (int j = 0; j < microTicksCount; ++j)
+		{
+			const auto xj = x + velocityX * microTickTime;
+			const auto yj = y + velocityY * microTickTime;
+
+			if (yj < bottomUnit->position.y + bottomUnit->size.y)
+			{
+				if (y > bottomUnit->position.y + bottomUnit->size.y) //до этого я был сверху
+				{
+					jumpState.canJump = true;
+					jumpState.speed = game.properties.unitJumpSpeed;
+					jumpState.maxTime = game.properties.unitJumpTime;
+					jumpState.canCancel = true;
+
+					return { nextX, bottomUnit->position.y + bottomUnit->size.y };
+				}				
+				
+				else //врезаемся в вертикальную сторону юнита
+				{
+					return { velocityX > 0 ? 
+						bottomUnit->position.x - bottomUnit->size.x/2 :
+						bottomUnit->position.x + bottomUnit->size.x / 2,
+						nextY };
+				}
+			}
+			x = xj;
+			y = yj;
+		}
+		throw std::runtime_error("wrong unit on unit simulation");
+	}
+
 	else if (isJumpPadCross)
 	{
 		int microTicksGone = 0;
@@ -756,7 +806,7 @@ Vec2Double Simulator::getUnitInTimePosition(
 			microTicksGone++;
 			x += velocityX * microTickTime;
 			y += velocityY * microTickTime;
-			if (isUnitOnAir({ x, y }, unitSize, game)) {
+			if (isUnitOnAir({ x, y }, unitSize, unitId, game)) {
 				y -= game.properties.unitFallSpeed * microTickTime;//уже начали падать
 				break;
 			}
@@ -821,7 +871,7 @@ Vec2Double Simulator::getUnitInTimePosition(
 		if (size_t(y + TOLERANCE) != size_t(y)) y += TOLERANCE;
 		
 		const Vec2Double newUnitPosition = { x, y };
-		updateJumpState(jumpState, time, newUnitPosition, unitSize, isPadJump, wasJump, isJump, isFall, game);
+		updateJumpState(jumpState, time, newUnitPosition, unitSize, unitId, isPadJump, wasJump, isJump, isFall, game);
 		return newUnitPosition;
 	}
 
@@ -917,7 +967,7 @@ Vec2Double Simulator::getUnitInTimePosition(
 		jumpState.maxTime = 0;
 		jumpState.canCancel = false;
 	}
-	else updateJumpState(jumpState, time, newUnitPosition, unitSize, isPadJump, wasJump, isJump, isFall, game);
+	else updateJumpState(jumpState, time, newUnitPosition, unitSize, unitId, isPadJump, wasJump, isJump, isFall, game);
 	return newUnitPosition;
 }
 
@@ -979,7 +1029,7 @@ void Simulator::getPolygon(const Vec2Double rect[4], const Vec2Double newRect[4]
 }
 
 void Simulator::updateJumpState(JumpState& jumpState, double time,
-	const Vec2Double& unitPosition, const Vec2Double& unitSize,
+	const Vec2Double& unitPosition, const Vec2Double& unitSize, int unitId,
 	bool isPadJump, bool wasJump, bool isJump, bool isFall,
 	const Game& game)
 {
@@ -1006,7 +1056,7 @@ void Simulator::updateJumpState(JumpState& jumpState, double time,
 
 	if (wasJump && !isJump) //прекратили прыжок
 	{
-		if (isUnitOnAir(unitPosition, unitSize, game)) //мы в воздухе. падаем
+		if (isUnitOnAir(unitPosition, unitSize, unitId, game)) //мы в воздухе. падаем
 		{
 			jumpState.canJump = false;
 			jumpState.speed = 0;
@@ -1024,7 +1074,7 @@ void Simulator::updateJumpState(JumpState& jumpState, double time,
 
 	if (isFall) //падаем
 	{
-		if (!isUnitOnAir(unitPosition, unitSize, game)) //встаем на землю. падение кончено
+		if (!isUnitOnAir(unitPosition, unitSize, unitId, game)) //встаем на землю. падение кончено
 		{
 			jumpState.canJump = true;
 			jumpState.speed = game.properties.unitJumpSpeed;
@@ -1071,12 +1121,12 @@ bool Simulator::isUnitOnPlatform(const Vec2Double& unitPosition, const Vec2Doubl
 		size_t(unitPosition.y - TOLERANCE) != size_t(unitPosition.y + TOLERANCE);
 }
 
-bool Simulator::isUnitOnAir(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game)
+bool Simulator::isUnitOnAir(const Vec2Double& unitPosition, const Vec2Double& unitSize, int unitId, const Game& game)
 {
 	return !isUnitOnWall(unitPosition, unitSize, game) &&
 		!isUnitOnLadder(unitPosition, unitSize, game) &&
 		!isUnitOnPlatform(unitPosition, unitSize, game) &&
-		!isUnitOnUnit(unitPosition, unitSize, game);
+		!isUnitOnUnit(unitPosition, unitSize, unitId, game);
 }
 
 bool Simulator::isUnitOnJumpPad(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game)
@@ -1088,11 +1138,12 @@ bool Simulator::isUnitOnJumpPad(const Vec2Double& unitPosition, const Vec2Double
 		game.level.tiles[size_t(unitPosition.x + unitSize.x / 2)][size_t(unitPosition.y)] == JUMP_PAD;
 }
 
-bool Simulator::isUnitOnUnit(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game)
+bool Simulator::isUnitOnUnit(const Vec2Double& unitPosition, const Vec2Double& unitSize, int unitId, const Game& game)
 {
 	
 	for (const auto& unit: game.units)
 	{
+		if (unitId == unit.id) continue;
 		if (abs(unitPosition.y - unit.position.y) < unitSize.y + TOLERANCE &&
 			abs(unitPosition.y - unit.position.y) > unitSize.y - TOLERANCE &&
 			abs(unitPosition.x - unit.position.x) < unitSize.x / 2 + unit.size.x/2)

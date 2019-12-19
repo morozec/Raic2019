@@ -23,7 +23,7 @@ public:
 	
 	//unit simulation	
 	static Vec2Double getUnitInTimePosition(
-		const Vec2Double& unitPosition, const Vec2Double& unitSize, const UnitAction& action, double time, JumpState& jumpState, const Game& game);
+		const Vec2Double& unitPosition, const Vec2Double& unitSize, int unitId, const UnitAction& action, double time, JumpState& jumpState, const Game& game);
 	static void getPolygon(const Vec2Double& unitPos, const Vec2Double& newUnitPos, const Vec2Double& unitSize, Vec2Double polygon[6]);
 	static void getPolygon(const Vec2Double& bulletPos, const Vec2Double& newBulletPos, double halfBulletSize,
 		Vec2Double polygon[6]);
@@ -33,9 +33,9 @@ public:
 	static bool isUnitOnWall(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game);
 	static bool isUnitOnLadder(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game);
 	static bool isUnitOnPlatform(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game);
-	static bool isUnitOnAir(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game);
+	static bool isUnitOnAir(const Vec2Double& unitPosition, const Vec2Double& unitSize, int unitId, const Game& game);
 	static bool isUnitOnJumpPad(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game);
-	static bool isUnitOnUnit(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game);
+	static bool isUnitOnUnit(const Vec2Double& unitPosition, const Vec2Double& unitSize, int unitId, const Game& game);
 
 private:
 	
@@ -48,7 +48,7 @@ private:
 	static inline void getPolygon(const Vec2Double rect[4], const Vec2Double newRect[4], Vec2Double polygon[6]);
 
 	static void updateJumpState(JumpState& jumpState, double time,
-		const Vec2Double& unitPosition, const Vec2Double& unitSize,
+		const Vec2Double& unitPosition, const Vec2Double& unitSize, int unitId,
 		bool isPadJump, bool wasJump, bool isJump, bool isFall, const Game& game);
 
 };

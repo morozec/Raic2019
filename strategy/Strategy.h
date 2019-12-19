@@ -28,7 +28,7 @@ public:
 
 	static std::map<Bullet, BulletSimulation> getEnemyBulletsSimulation(const Game& game, int mePlayerId);
 	std::map<Bullet, int>  getShootMeBullets(
-		const Vec2Double& mePosition, const Vec2Double& meSize, const JumpState& meJumpState, int mePlayerId,
+		const Vec2Double& mePosition, const Vec2Double& meSize, const JumpState& meJumpState, int mePlayerId, int meUnitId,
 		const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, int addTicks,
 		const Game& game) const;
 	
@@ -37,7 +37,7 @@ public:
 		const Vec2Double& bulletPos, const Vec2Double& newBulletPos, double halfBulletSize);
 
 	std::tuple<RunawayDirection, int, int, int> getRunawayAction(
-		const Vec2Double& unitPosition, const Vec2Double& unitSize, int unitPlayerId,
+		const Vec2Double& unitPosition, const Vec2Double& unitSize, int unitPlayerId, int unitId,
 		const JumpState& jumpState,
 		const std::map<Bullet, int>& shootingMeBullets,
 		const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, int addTicks,
