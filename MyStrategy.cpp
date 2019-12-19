@@ -1,3 +1,5 @@
+#define _USE_MATH_DEFINES
+
 #include "MyStrategy.hpp"
 #include <utility>
 #include <climits>
@@ -11,7 +13,6 @@
 #include "simulation/Simulator.h"
 #include <iostream>
 #include <algorithm>
-#include <corecrt_math_defines.h>
 
 using namespace std;
 
