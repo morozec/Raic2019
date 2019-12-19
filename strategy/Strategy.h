@@ -6,6 +6,7 @@
 #include "RunawayDirection.h"
 #include "../model/UnitAction.hpp"
 #include "../simulation/BulletSimulation.h"
+#include <set>
 
 
 class Strategy
@@ -43,7 +44,7 @@ public:
 		bool checkUp, bool checkDown, bool checkLeft, bool checkRight,
 		const Game& game) const;
 
-	static bool isSafeMove(const Unit& unit, const UnitAction& action, const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, const Game& game);
+	static std::set<Bullet> isSafeMove(const Unit& unit, const UnitAction& action, const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, const Game& game);
 
 	static bool isBulletExplosionShootUnit(
 		const std::shared_ptr<ExplosionParams>& explosionParams, const Vec2Double& bulletCrossWallCenter,

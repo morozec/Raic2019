@@ -861,10 +861,10 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 }
 
 
-
-bool Strategy::isSafeMove(
+std::set<Bullet> Strategy::isSafeMove(
 	const Unit& unit, const UnitAction& action, const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, const Game& game)
 {
+	std::set<Bullet> thisTickShootMeBullets;
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	for (const auto& item : enemyBulletsSimulations)
 	{
@@ -892,7 +892,8 @@ bool Strategy::isSafeMove(
 			bullet.size / 2.0);
 		if (cross)
 		{
-			return false;
+			thisTickShootMeBullets.insert(bullet);
+			continue;
 		}
 		if (!exists)
 		{
@@ -901,11 +902,12 @@ bool Strategy::isSafeMove(
 				bullet.position.y + bullet.velocity.y * bulletSimulation.targetCrossTime);
 			if (isBulletExplosionShootUnit(bullet.explosionParams, bulletCrossWallCenter, unitInTimePosition, unit.size))
 			{
-				return false;
+				thisTickShootMeBullets.insert(bullet);
+				continue;
 			}
 		}
 	}
-	return true;
+	return thisTickShootMeBullets;
 }
 
 bool Strategy::isBulletExplosionShootUnit(

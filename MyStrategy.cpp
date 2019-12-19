@@ -841,47 +841,59 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			meAttackingPositions, meAttackingJumpStates,
 			nearestEnemy->size, enemyPositions, meAttackingAction, startJumpY, game);
 
-	tuple<RunawayDirection, int, int, int> runawayAction;
-	auto isSafeMove = strategy_.isSafeMove(unit, meAttackingAction, enemyBulletsSimulation, game);
-	auto minAttackDamage = INT_MAX;
-
-	if (isSafeMove)
+	tuple<RunawayDirection, int, int, int> attackRunawayAction;
+	const auto thisTickShootMeBullets = strategy_.isSafeMove(unit, meAttackingAction, enemyBulletsSimulation, game);
+	int minAttackDamage = 0;
+	
+	map<Bullet, BulletSimulation> nextTickEnemyBulletsSimulation;	
+	for (const auto& ebs: enemyBulletsSimulation)
 	{
-		const auto nextTickMeAttackPosition = meAttackingPositions.size() == 1 ? meAttackingPositions[0] : meAttackingPositions[1];
-		const auto nextTickMeAttackingJumpState = 
-			meAttackingJumpStates.size() == 1 ? meAttackingJumpStates[0] : meAttackingJumpStates[1];
-		const auto nextTickShootMeBullets = strategy_.getShootMeBullets(
-			nextTickMeAttackPosition, unit.size, nextTickMeAttackingJumpState,
-			unit.playerId,
-			enemyBulletsSimulation, 1, game);
-		
-		runawayAction = strategy_.getRunawayAction(
-			nextTickMeAttackPosition, unit.size, unit.playerId, nextTickMeAttackingJumpState,
-			nextTickShootMeBullets, enemyBulletsSimulation, 1,
-			true, true, true, true,
-			game);
-
-		minAttackDamage = std::get<3>(runawayAction);
-		
-		if (minAttackDamage == 0)
+		if (thisTickShootMeBullets.count(ebs.first) == 0)
 		{
-			const auto runawayDirection = std::get<0>(runawayAction);
-			const auto runawayStartTick = std::get<1>(runawayAction);
-			const auto runawayStopTick = std::get<2>(runawayAction);
-			
-			debug.draw(CustomData::Log(
-				to_string(runawayDirection) + " " +
-				to_string(runawayStartTick + 1) + " " +
-				to_string(runawayStopTick + 1) + " " +
-				to_string(minAttackDamage) + "\n"));
-
-			initAttackAction(unit, meAttackingPositions, meAttackingJumpStates,
-				nextTickMeAttackingJumpState, nextTickMeAttackPosition, meSimpleProbabilities,
-				enemyPositions, nearestEnemy->size, startJumpY,
-				runawayAction, meAttackingAction, action, strategy_, game);		
-			return action;			
-		}				
+			nextTickEnemyBulletsSimulation[ebs.first] = ebs.second;
+		}
+		else
+		{
+			minAttackDamage += ebs.first.damage;
+			if (ebs.first.explosionParams != nullptr) minAttackDamage += ebs.first.explosionParams->damage;
+		}
 	}
+	
+	const auto nextTickMeAttackPosition = meAttackingPositions.size() == 1 ? meAttackingPositions[0] : meAttackingPositions[1];
+	const auto nextTickMeAttackingJumpState = 
+		meAttackingJumpStates.size() == 1 ? meAttackingJumpStates[0] : meAttackingJumpStates[1];
+	const auto nextTickShootMeBullets = strategy_.getShootMeBullets(
+		nextTickMeAttackPosition, unit.size, nextTickMeAttackingJumpState,
+		unit.playerId,
+		nextTickEnemyBulletsSimulation, 1, game);
+	
+	attackRunawayAction = strategy_.getRunawayAction(
+		nextTickMeAttackPosition, unit.size, unit.playerId, nextTickMeAttackingJumpState,
+		nextTickShootMeBullets, nextTickEnemyBulletsSimulation, 1,
+		true, true, true, true,
+		game);
+
+	minAttackDamage += std::get<3>(attackRunawayAction);
+	
+	if (minAttackDamage == 0)
+	{
+		const auto runawayDirection = std::get<0>(attackRunawayAction);
+		const auto runawayStartTick = std::get<1>(attackRunawayAction);
+		const auto runawayStopTick = std::get<2>(attackRunawayAction);
+		
+		debug.draw(CustomData::Log(
+			to_string(runawayDirection) + " " +
+			to_string(runawayStartTick + 1) + " " +
+			to_string(runawayStopTick + 1) + " " +
+			to_string(minAttackDamage) + "\n"));
+
+		initAttackAction(unit, meAttackingPositions, meAttackingJumpStates,
+			nextTickMeAttackingJumpState, nextTickMeAttackPosition, meSimpleProbabilities,
+			enemyPositions, nearestEnemy->size, startJumpY,
+			attackRunawayAction, meAttackingAction, action, strategy_, game);
+		return action;			
+	}				
+	
 
 	//идти на врага нельзя. пробуем стоять
 	
@@ -903,13 +915,13 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	const auto shootMeBullets = strategy_.getShootMeBullets(
 		unit.position, unit.size, unit.jumpState, unit.playerId,
 		enemyBulletsSimulation, 0, game);
-	runawayAction = strategy_.getRunawayAction(
+	const auto noAttackRunawayAction = strategy_.getRunawayAction(
 		unit.position, unit.size, unit.playerId, unit.jumpState,
 		shootMeBullets, enemyBulletsSimulation, 0,
 		checkUp, checkDown, checkLeft, checkRight,
 		game);
 
-	const auto minNoAttackDamage = std::get<3>(runawayAction);	
+	const auto minNoAttackDamage = std::get<3>(noAttackRunawayAction);
 	
 	
 	if (minNoAttackDamage >= minAttackDamage)
@@ -917,20 +929,10 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		const auto nextTickMeAttackPosition = meAttackingPositions.size() == 1 ? meAttackingPositions[0] : meAttackingPositions[1];
 		const auto nextTickMeAttackingJumpState =
 			meAttackingJumpStates.size() == 1 ? meAttackingJumpStates[0] : meAttackingJumpStates[1];
-		const auto nextTickShootMeBullets = strategy_.getShootMeBullets(
-			nextTickMeAttackPosition, unit.size, nextTickMeAttackingJumpState,
-			unit.playerId,
-			enemyBulletsSimulation, 1, game);
-
-		runawayAction = strategy_.getRunawayAction(
-			nextTickMeAttackPosition, unit.size, unit.playerId, nextTickMeAttackingJumpState,
-			nextTickShootMeBullets, enemyBulletsSimulation, 1,
-			true, true, true, true,
-			game);
-
-		const auto runawayDirection = std::get<0>(runawayAction);
-		const auto runawayStartTick = std::get<1>(runawayAction);
-		const auto runawayStopTick = std::get<2>(runawayAction);
+		
+		const auto runawayDirection = std::get<0>(attackRunawayAction);
+		const auto runawayStartTick = std::get<1>(attackRunawayAction);
+		const auto runawayStopTick = std::get<2>(attackRunawayAction);
 		
 		debug.draw(CustomData::Log(
 			to_string(runawayDirection) + " " +
@@ -941,20 +943,19 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		initAttackAction(unit, meAttackingPositions, meAttackingJumpStates,
 			nextTickMeAttackingJumpState, nextTickMeAttackPosition, meSimpleProbabilities,
 			enemyPositions, nearestEnemy->size, startJumpY,
-			runawayAction, meAttackingAction, action, strategy_, game);
+			attackRunawayAction, meAttackingAction, action, strategy_, game);
 		return action;
 	}
 
+	const auto runawayDirection = std::get<0>(noAttackRunawayAction);
+	const auto startRunawayTick = std::get<1>(noAttackRunawayAction);
+	const auto stopRunawayTick = std::get<2>(noAttackRunawayAction);
+	
 	debug.draw(CustomData::Log(
-		to_string(std::get<0>(runawayAction)) + " " +
-		to_string(std::get<1>(runawayAction)) + " " +
-		to_string(std::get<2>(runawayAction)) + " " +
-		to_string(minNoAttackDamage) + "\n"));
-
-
-	const auto runawayDirection = std::get<0>(runawayAction);
-	const auto startRunawayTick = std::get<1>(runawayAction);
-	const auto stopRunawayTick = std::get<2>(runawayAction);
+		to_string(runawayDirection) + " " +
+		to_string(startRunawayTick) + " " +
+		to_string(stopRunawayTick) + " " +
+		to_string(minNoAttackDamage) + "\n"));		
 
 
 	UnitAction runawayUnitAction;
