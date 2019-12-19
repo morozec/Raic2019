@@ -401,6 +401,8 @@ Vec2Double Simulator::getUnitInTimePosition(
 	
 	auto nextX = x + velocityX * time;
 	auto nextY = y + velocityY * time;
+	if (size_t(nextX + TOLERANCE) != size_t(nextX)) nextX += TOLERANCE;
+	if (size_t(nextY + TOLERANCE) != size_t(nextY)) nextY += TOLERANCE;
 
 	auto leftBottomTile = game.level.tiles[size_t(nextX - unitSize.x / 2)][size_t(nextY)];
 	auto leftTopTile = game.level.tiles[size_t(nextX - unitSize.x / 2)][size_t(nextY + unitSize.y)];
@@ -735,6 +737,9 @@ Vec2Double Simulator::getUnitInTimePosition(
 		x += velocityX * timeLeft;
 		y += velocityY * timeLeft;
 
+		if (size_t(x + TOLERANCE) != size_t(x)) x += TOLERANCE;
+		if (size_t(y + TOLERANCE) != size_t(y)) y += TOLERANCE;
+
 		const Vec2Double newUnitPosition = { x, y };
 		jumpState.canJump = true;
 		jumpState.speed = game.properties.jumpPadJumpSpeed;
@@ -788,6 +793,10 @@ Vec2Double Simulator::getUnitInTimePosition(
 			jumpState.maxTime = 0;
 			jumpState.canCancel = false;
 		}
+
+		if (size_t(x + TOLERANCE) != size_t(x)) x += TOLERANCE;
+		if (size_t(y + TOLERANCE) != size_t(y)) y += TOLERANCE;
+		
 		const Vec2Double newUnitPosition = { x, y };
 		return newUnitPosition;
 	}
@@ -803,6 +812,9 @@ Vec2Double Simulator::getUnitInTimePosition(
 		velocityY = -game.properties.unitFallSpeed;
 		x += velocityX * (microTickTime * fallMicroTicksCount);
 		y += velocityY * (microTickTime * fallMicroTicksCount);
+		
+		if (size_t(x + TOLERANCE) != size_t(x)) x += TOLERANCE;
+		if (size_t(y + TOLERANCE) != size_t(y)) y += TOLERANCE;
 		
 		const Vec2Double newUnitPosition = { x, y };
 		updateJumpState(jumpState, time, newUnitPosition, unitSize, isPadJump, wasJump, isJump, isFall, game);
@@ -889,6 +901,9 @@ Vec2Double Simulator::getUnitInTimePosition(
 	//		y += velocityY * microTickTime;
 	//	}
 	//}
+	if (size_t(x + TOLERANCE) != size_t(x)) x += TOLERANCE;
+	if (size_t(y + TOLERANCE) != size_t(y)) y += TOLERANCE;
+
 	
 	const Vec2Double newUnitPosition = { x, y };
 	if (jumpStopped)
