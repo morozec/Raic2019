@@ -46,7 +46,7 @@ private:
 
 int main(int argc, char *argv[]) {
   std::string host = argc < 2 ? "127.0.0.1" : argv[1];
-  int port = argc < 3 ? 31001 : atoi(argv[2]);
+  int port = argc < 3 ? 31003 : atoi(argv[2]);
   std::string token = argc < 4 ? "0000000000000000" : argv[3];
   Runner(host, port, token).run();
 	/*Vec2Double start = { 18.449999999, 24.8000000009954 };
