@@ -9,12 +9,12 @@ std::vector<std::pair<int, int>> MathHelper::getLineSquares2(const Vec2Double& s
 {
 	std::vector<std::pair<int, int>> result;
 
-	if (std::abs(end.x - start.x) < 2 * TOLERANCE && std::abs(end.y - start.y) < 2 * TOLERANCE)
+	if (std::abs(end.x - start.x) < 4 * TOLERANCE && std::abs(end.y - start.y) < 4 * TOLERANCE)
 	{
 		result.emplace_back(make_pair(static_cast<int>(start.x), static_cast<int>(start.y)));
 		return result;
 	}
-	if (std::abs(end.y - start.y) < 2 * TOLERANCE)
+	if (std::abs(end.y - start.y) < 4 * TOLERANCE)
 	{
 		const int y = static_cast<int>(start.y);
 		const int stepX = end.x >= start.x ? 1 : -1;		
@@ -29,7 +29,7 @@ std::vector<std::pair<int, int>> MathHelper::getLineSquares2(const Vec2Double& s
 		}
 		return result;
 	}
-	if (std::abs(end.x - start.x) < 2 * TOLERANCE)
+	if (std::abs(end.x - start.x) < 4 * TOLERANCE)
 	{
 		const int x = static_cast<int>(start.x);
 		const int stepY = end.y >= start.y ? 1 : -1;

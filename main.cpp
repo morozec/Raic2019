@@ -49,8 +49,8 @@ int main(int argc, char *argv[]) {
   int port = argc < 3 ? 31003 : atoi(argv[2]);
   std::string token = argc < 4 ? "0000000000000000" : argv[3];
   Runner(host, port, token).run();
-	/*Vec2Double start = { 18.449999999, 24.8000000009954 };
-	Vec2Double end = { 39, 14.1935820330609 };
+	/*Vec2Double start = { 24.016666666679747, 23.000000999999848  };
+	Vec2Double end = { 1, 22.999998870798812 };
 	const auto squares = MathHelper::getLineSquares2(start, end);*/
 	
   return 0;
