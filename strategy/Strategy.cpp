@@ -247,7 +247,7 @@ std::map<Bullet, int> Strategy::getShootMeBullets(
 					mePositions[tick] = unitInTimePosition;
 					meJumpStates[tick] = unitInTimeJumpState;
 				}
-				const bool isShooting = bullet.playerId != mePlayerId && isBulletMoveCrossUnitMove(
+				const bool isShooting = bullet.unitId != meUnitId && isBulletMoveCrossUnitMove(
 					mePositions.at(tick - 1), unitInTimePosition, meSize,
 					bulletPositions[tick - 1], bulletInTimePosition, bullet.size / 2.0);
 				if (isShooting)
@@ -265,7 +265,7 @@ std::map<Bullet, int> Strategy::getShootMeBullets(
 				const auto unitInTimePosition =
 					Simulator::getUnitInTimePosition(
 						mePositions.at(tick - 1), meSize, meUnitId, action, thisTickBulletTime, unitInTimeJumpState, game);
-				auto isShooting = bullet.playerId != mePlayerId && isBulletMoveCrossUnitMove(
+				auto isShooting = bullet.unitId != meUnitId && isBulletMoveCrossUnitMove(
 					mePositions.at(tick - 1), unitInTimePosition, meSize,
 					bulletPositions[tick - 1], bulletInTimePosition, bullet.size / 2.0);
 				if (!isShooting)
@@ -622,7 +622,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 
 							action.jump = false;
 
-							if (bullet.playerId != unitPlayerId && isBulletMoveCrossUnitMove(
+							if (bullet.unitId != unitId && isBulletMoveCrossUnitMove(
 								jumpUnitPosition,
 								newJumpUnitPosition,
 								unitSize,
@@ -661,7 +661,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 
 							action.jumpDown = false;
 
-							if (bullet.playerId != unitPlayerId && isBulletMoveCrossUnitMove(
+							if (bullet.unitId != unitId && isBulletMoveCrossUnitMove(
 								fallUnitPosition,
 								newFallUnitPosition,
 								unitSize,
@@ -700,7 +700,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 
 							action.velocity = 0;
 
-							if (bullet.playerId != unitPlayerId && isBulletMoveCrossUnitMove(
+							if (bullet.unitId != unitId && isBulletMoveCrossUnitMove(
 								goLeftUnitPosition,
 								newGoLeftUnitPosition,
 								unitSize,
@@ -739,7 +739,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 
 							action.velocity = 0;
 
-							if (bullet.playerId != unitPlayerId && isBulletMoveCrossUnitMove(
+							if (bullet.unitId != unitId && isBulletMoveCrossUnitMove(
 								goRightUnitPosition,
 								newGoRightUnitPosition,
 								unitSize,
@@ -888,7 +888,7 @@ std::set<Bullet> Strategy::isSafeMove(
 		const auto unitInTimePosition = Simulator::getUnitInTimePosition(
 			unit.position, unit.size, unit.id, action, unitTime, jumpState, game);			
 		
-		const auto cross = bullet.playerId != unit.playerId && isBulletMoveCrossUnitMove(
+		const auto cross = bullet.unitId != unit.id && isBulletMoveCrossUnitMove(
 			unit.position,
 			unitInTimePosition,
 			unit.size,
