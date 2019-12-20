@@ -385,8 +385,7 @@ void getAttackingData(
 	auto lastStartJumpY = startJumpY;
 	mePositions.emplace_back(lastMePosition);	
 	meJumpStates.emplace_back(lastMeJumpState);
-
-	if (isMonkeyMode && !me.jumpState.canJump && !me.jumpState.canCancel) isMonkeyMode = false;
+	
 
 	int counter = 1;
 	while (counter < MAX_SIMULATIONS)
@@ -914,6 +913,17 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		strategy_.isInit = true;
 	}
 	
+
+	auto isMonkeyMode = strategy_.getIsMonkeyMode(unit.id);
+	if (isMonkeyMode &&
+		(!unit.jumpState.canJump && !unit.jumpState.canCancel ||
+			!Simulator::isUnitOnAir(unit.position, unit.size, unit.id, game)))
+	{
+		strategy_.setIsMonkeyMode(unit.id, false);
+		isMonkeyMode = false;
+	}
+	
+	
 	/*
 	Vec2Double crossPointCur;
 	double minDist2Cur = INT_MAX;
@@ -1051,7 +1061,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	vector<JumpState> meAttackingJumpStates;
 	UnitAction meAttackingAction;
 	auto startJumpY = strategy_.getStartedJumpY(unit.id);
-	auto isMonkeyMode = strategy_.getIsMonkeyMode(unit.id);
+	
 
 	bool needHeal = unit.health < game.properties.unitMaxHealth / 2;
 	if (!needHeal)
