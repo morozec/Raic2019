@@ -828,7 +828,7 @@ void initAttackAction(
 	const vector<vector<Vec2Double>>& enemyPositions, const Vec2Double& enemySize,
 	int startJumpY, bool isMonkeyMode,
 	tuple<RunawayDirection, int, int, int> runawayAction,
-	const UnitAction& meAttackingAction, UnitAction& action, Strategy strategy, const Game& game)
+	const UnitAction& meAttackingAction, UnitAction& action, Strategy& strategy, const Game& game)
 {
 	const auto runawayDirection = std::get<0>(runawayAction);
 	const auto runawayStartTick = std::get<1>(runawayAction);
