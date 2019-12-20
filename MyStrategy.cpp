@@ -167,10 +167,10 @@ void setJumpAndJumpDown(const Vec2Double& unitPosition, const JumpState& unitJum
 void setMoveToWeaponAction(const Unit& unit, const LootBox& weapon, const Game& game,
 	UnitAction& action, Strategy& strategy)
 {
-	auto startedJumpY = strategy.getStartedJumpY();
+	auto startedJumpY = strategy.getStartedJumpY(unit.id);
 	setJumpAndJumpDown(
 		unit.position, unit.jumpState, weapon.position, weapon.size, game, true, action, startedJumpY);
-	strategy.setStartedJumpY(startedJumpY);
+	strategy.setStartedJumpY(unit.id, startedJumpY);
 	
 	if (abs(weapon.position.x - unit.position.x) < TOLERANCE)
 		action.velocity = 0;
@@ -824,12 +824,23 @@ void initAttackAction(
 	}
 
 	setShootingAction(unit, meAttackingPositions, meSimpleProbabilities, enemySize, enemyPositions, game, action);
-	strategy.setStartedJumpY(startJumpY);
+	strategy.setStartedJumpY(unit.id, startJumpY);
 }
 
 UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
                                  Debug& debug)
 {
+	if (!strategy_.isInit)
+	{
+		for (const auto& u : game.units)
+		{
+			if (u.playerId != unit.playerId) continue;
+			strategy_.setRunaway(u.id, GoNONE, -1);
+			strategy_.setStartedJumpY(u.id, 0);
+		}
+		strategy_.isInit = true;
+	}
+	
 	/*
 	Vec2Double crossPointCur;
 	double minDist2Cur = INT_MAX;
@@ -907,16 +918,16 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 	drawBullets(debug, game, enemyBulletsSimulation, unit.playerId);
 	drawShootingSector(debug, unit, game);
-	const auto curStopRunawayTick = strategy_.getStopRunawayTick();
+	const auto curStopRunawayTick = strategy_.getStopRunawayTick(unit.id);
 
 	vector<double> meSimpleProbabilities;
 	if (curStopRunawayTick == 0)
 	{
-		strategy_.setRunaway(GoNONE, -1);
+		strategy_.setRunaway(unit.id, GoNONE, -1);
 	}
 	else if (curStopRunawayTick > 0)
 	{
-		const auto runawayDirection = strategy_.getRunawayDirection();
+		const auto runawayDirection = strategy_.getRunawayDirection(unit.id);
 		if (runawayDirection == GoUP)
 		{
 			action.jump = true;
@@ -958,7 +969,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		}
 		setShootingAction(unit, mePositions,meSimpleProbabilities, nearestEnemy->size, enemyPositions, game, action);
 
-		strategy_.decreaseStopRunawayTick();
+		strategy_.decreaseStopRunawayTick(unit.id);
 		return action;
 	}
 
@@ -966,7 +977,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	vector<Vec2Double> meAttackingPositions;
 	vector<JumpState> meAttackingJumpStates;
 	UnitAction meAttackingAction;
-	auto startJumpY = strategy_.getStartedJumpY();
+	auto startJumpY = strategy_.getStartedJumpY(unit.id);
 
 	bool needHeal = false;
 	for (const auto& enemy: game.units)
@@ -1174,7 +1185,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	
 	if (startRunawayTick == 0)
 	{		
-		strategy_.setRunaway(runawayDirection, stopRunawayTick - 1);
+		strategy_.setRunaway(unit.id, runawayDirection, stopRunawayTick - 1);
 		action.jump = runawayUnitAction.jump;
 		action.jumpDown = runawayUnitAction.jumpDown;
 		action.velocity = runawayUnitAction.velocity;

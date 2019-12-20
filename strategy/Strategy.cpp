@@ -936,35 +936,35 @@ bool Strategy::isBulletExplosionShootUnit(
 }
 
 
-int Strategy::getRunawayDirection() const
+int Strategy::getRunawayDirection(int id) const
 {
-	return runaway_direction_;
+	return runaway_directions_.at(id);
 }
 
-int Strategy::getStopRunawayTick() const
+int Strategy::getStopRunawayTick(int id) const
 {
-	return stop_runaway_tick_;
+	return stop_runaway_ticks_.at(id);
 }
 
-void Strategy::setRunaway(RunawayDirection runaway_direction, int sjt)
+void Strategy::setRunaway(int id, RunawayDirection runaway_direction, int srt)
 {
-	runaway_direction_ = runaway_direction;
-	stop_runaway_tick_ = sjt;
+	runaway_directions_[id] = runaway_direction;
+	stop_runaway_ticks_[id] = srt;
 }
 
-void Strategy::decreaseStopRunawayTick()
+void Strategy::decreaseStopRunawayTick(int id)
 {
-	if (stop_runaway_tick_ >= 0) stop_runaway_tick_--;
+	if (stop_runaway_ticks_.at(id) >= 0) stop_runaway_ticks_[id]--;
 }
 
-size_t Strategy::getStartedJumpY() const
+size_t Strategy::getStartedJumpY(int id) const
 {
-	return startedJumpY_;
+	return startedJumpYs_.at(id);
 }
 
-void Strategy::setStartedJumpY(size_t newStartedJumpY)
+void Strategy::setStartedJumpY(int id,size_t newStartedJumpY)
 {
-	startedJumpY_ = newStartedJumpY;
+	startedJumpYs_[id] = newStartedJumpY;
 }
 
 

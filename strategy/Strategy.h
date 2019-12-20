@@ -50,18 +50,18 @@ public:
 		const std::shared_ptr<ExplosionParams>& explosionParams, const Vec2Double& bulletCrossWallCenter,
 		const Vec2Double& unitPosition, const Vec2Double& unitSize);
 
-	int getRunawayDirection() const;
-	int getStopRunawayTick() const;
-	void setRunaway(RunawayDirection runaway_direction, int sjt);
-	void decreaseStopRunawayTick();
+	int getRunawayDirection(int id) const;
+	int getStopRunawayTick(int id) const;
+	void setRunaway(int id, RunawayDirection runaway_direction, int srt);
+	void decreaseStopRunawayTick(int id);
 
-	size_t getStartedJumpY() const;
-	void setStartedJumpY(size_t newStartedJumpY);
-	
+	size_t getStartedJumpY(int id) const;
+	void setStartedJumpY(int id, size_t newStartedJumpY);
+
+	bool isInit = false;
 
 private:
-	int stop_runaway_tick_ = -1;
-	RunawayDirection runaway_direction_ = GoNONE;
-
-	size_t startedJumpY_ = 0;
+	std::map<int, int> stop_runaway_ticks_;
+	std::map<int, RunawayDirection> runaway_directions_;
+	std::map<int, size_t> startedJumpYs_;
 };
