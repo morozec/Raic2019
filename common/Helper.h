@@ -3,12 +3,12 @@
 #include "../model/Vec2Float.hpp"
 #include "../model/Vec2Double.hpp"
 
-class Bullet;
 constexpr auto TOLERANCE = 1E-6;
 constexpr auto TILE_SIZE = 1;
 constexpr auto ANGLE_SPLIT_COUNT = 10;
-constexpr auto SHOOTING_PROBABILITY = 0.33;
 constexpr auto WALKING_PROBABILITY = 0.5;
+constexpr auto SAFE_SHOOTING_DIST = 7.0;
+constexpr auto SAFE_SHOOTING_PROBABILITY = 0.33;
 
 const double OK_SHOOTING_PROBABILITY = 0.85;
 const double NOT_BAD_SHOOTING_PROBABILITY = 0.5;

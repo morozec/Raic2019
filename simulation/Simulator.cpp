@@ -67,7 +67,9 @@ bool Simulator::getBulletPointRectangleFirstCrossPoint(const Vec2Double& bulletP
 	
 	const auto cpLeft = MathHelper::getLinesCross(x0, y0, x1, y1,
 		xLeft, yDown, xLeft, yUp);
-	if (MathHelper::IsBetween(xLeft, cpLeft.y, xLeft, yDown, xLeft, yUp))
+	if ((cpLeft.x - x0) * (x1- x0) > 0 &&
+		(cpLeft.y - y0) * (y1 - y0) > 0 &&
+		MathHelper::IsBetween(xLeft, cpLeft.y, xLeft, yDown, xLeft, yUp))
 	{
 		hasCross = true;
 		const auto dist2 = MathHelper::getVectorLength2(bulletPos, cpLeft);
@@ -80,7 +82,9 @@ bool Simulator::getBulletPointRectangleFirstCrossPoint(const Vec2Double& bulletP
 
 	const auto cpUp = MathHelper::getLinesCross(x0, y0, x1, y1,
 		xLeft, yUp, xRight, yUp);
-	if (MathHelper::IsBetween(cpUp.x, yUp, xLeft, yUp, xRight, yUp))
+	if ((cpUp.x - x0) * (x1 - x0) > 0 &&
+		(cpUp.y - y0) * (y1 - y0) > 0 &&
+		MathHelper::IsBetween(cpUp.x, yUp, xLeft, yUp, xRight, yUp))
 	{
 		hasCross = true;
 		const auto dist2 = MathHelper::getVectorLength2(bulletPos, cpUp);
@@ -93,7 +97,9 @@ bool Simulator::getBulletPointRectangleFirstCrossPoint(const Vec2Double& bulletP
 
 	const auto cpRight = MathHelper::getLinesCross(x0, y0, x1, y1,
 		xRight, yUp, xRight, yDown);
-	if (MathHelper::IsBetween(xRight, cpRight.y, xRight, yUp, xRight, yDown))
+	if ((cpRight.x - x0) * (x1 - x0) > 0 &&
+		(cpRight.y - y0) * (y1 - y0) > 0 &&
+		MathHelper::IsBetween(xRight, cpRight.y, xRight, yUp, xRight, yDown))
 	{
 		hasCross = true;
 		const auto dist2 = MathHelper::getVectorLength2(bulletPos, cpRight);
@@ -106,7 +112,9 @@ bool Simulator::getBulletPointRectangleFirstCrossPoint(const Vec2Double& bulletP
 
 	const auto cpDown = MathHelper::getLinesCross(x0, y0, x1, y1,
 		xRight, yDown, xLeft, yDown);
-	if (MathHelper::IsBetween(cpDown.x, yDown, xRight, yDown, xLeft, yDown))
+	if ((cpDown.x - x0) * (x1 - x0) > 0 &&
+		(cpDown.y - y0) * (y1 - y0) > 0 &&
+		MathHelper::IsBetween(cpDown.x, yDown, xRight, yDown, xLeft, yDown))
 	{
 		hasCross = true;
 		const auto dist2 = MathHelper::getVectorLength2(bulletPos, cpDown);

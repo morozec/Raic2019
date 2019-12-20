@@ -1,6 +1,7 @@
 #define _USE_MATH_DEFINES
 
 #include "MyStrategy.hpp"
+#include "common/Helper.h"
 #include <utility>
 #include <climits>
 #include <map>
@@ -424,6 +425,24 @@ void getAttackingData(
 }
 
 
+bool isSafeShoot(const Unit& me, const Game& game)
+{
+	for (const auto& unit: game.units)
+	{
+		if (unit.playerId != me.playerId) continue;
+		if (unit.id == me.id) continue;
+
+		const auto dist = MathHelper::getMHDist(me.position, unit.position);
+		if (dist > SAFE_SHOOTING_DIST) continue;
+
+		const auto probability = Strategy::getShootEnemyProbability(me, unit, game, me.weapon->spread);
+		if (probability < SAFE_SHOOTING_PROBABILITY) continue;
+
+		return false;
+	}
+	return true;
+}
+
 
 
 void setShootingAction(
@@ -523,7 +542,16 @@ void setShootingAction(
 
 		if (maxProbability > OK_SHOOTING_PROBABILITY)
 		{
-			action.shoot = true;
+			const auto isSafe = isSafeShoot(me, game);
+			if (isSafe)
+			{
+				action.shoot = true;
+			}
+			else
+			{
+				action.shoot = false;
+			}
+			
 			action.aim = Vec2Double(cos(okShootingAngle), sin(okShootingAngle));
 			return;
 		}
@@ -722,7 +750,23 @@ void setShootingAction(
 			}
 			else
 			{
-				action.shoot = canShootingTick == 0 && okAddShootingSimulations == 0;
+				if (canShootingTick == 0 && okAddShootingSimulations == 0)
+				{
+					const auto isSafe = isSafeShoot(me, game);
+					if (isSafe)
+					{
+						action.shoot = true;
+					}
+					else
+					{
+						action.shoot = false;
+					}
+				}
+				else
+				{
+					action.shoot = false;
+				}
+				
 				action.aim = Vec2Double(cos(okShootingAngle), sin(okShootingAngle));
 				break;
 			}
