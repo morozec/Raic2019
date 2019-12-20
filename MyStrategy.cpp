@@ -1053,14 +1053,17 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	auto startJumpY = strategy_.getStartedJumpY(unit.id);
 	auto isMonkeyMode = strategy_.getIsMonkeyMode(unit.id);
 
-	bool needHeal = false;
-	for (const auto& enemy: game.units)
+	bool needHeal = unit.health < game.properties.unitMaxHealth / 2;
+	if (!needHeal)
 	{
-		if (enemy.playerId == unit.playerId) continue;
-		if (enemy.health > unit.health)
+		for (const auto& enemy : game.units)
 		{
-			needHeal = true;
-			break;
+			if (enemy.playerId == unit.playerId) continue;
+			if (enemy.health > unit.health)
+			{
+				needHeal = true;
+				break;
+			}
 		}
 	}
 
