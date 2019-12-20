@@ -371,7 +371,7 @@ void getHealingData(
 		setJumpAndJumpDown(
 			lastMePosition, me.size, lastMeJumpState,
 			me.playerId, me.id,
-			lootBox.position, lootBox.size, game, false, action, lastStartJumpY);
+			lootBox.position, lootBox.size, game, true, action, lastStartJumpY);
 
 		if (counter == 1) {
 			startJumpY = lastStartJumpY;
