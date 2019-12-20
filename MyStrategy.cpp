@@ -213,6 +213,8 @@ vector<Vec2Double> getSimplePositions(
 	const auto isFalling = !unitJumpState.canJump && !unitJumpState.canCancel;
 	const auto isJumping = isOnAir && unitJumpState.canJump && unitJumpState.canCancel;
 	const auto isJumpPadJumping = unitJumpState.canJump && !unitJumpState.canCancel;
+
+	if (isJumping) return positions;// не симулируем прыгуна
 	
 	UnitAction action;
 	if (isFalling || //падает
@@ -222,13 +224,7 @@ vector<Vec2Double> getSimplePositions(
 		action.jump = false;
 		action.jumpDown = false;
 		action.velocity = 0;
-	}
-	else if (isJumping) //прыгает
-	{
-		action.jump = false;
-		action.jumpDown = false;
-		action.velocity = 0;
-	}
+	}	
 	else throw runtime_error("unknown enemy position");
 
 	auto jumpState = unitJumpState;
