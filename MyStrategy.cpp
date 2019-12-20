@@ -1049,7 +1049,6 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		}
 	}
 
-	if (minAttackDamage > 0) cerr << "mad: " << minAttackDamage << endl;
 	
 	const auto nextTickMeAttackPosition = meAttackingPositions.size() == 1 ? meAttackingPositions[0] : meAttackingPositions[1];
 	const auto nextTickMeAttackingJumpState = 
@@ -1084,7 +1083,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			nextTickMeAttackingJumpState, nextTickMeAttackPosition, meSimpleProbabilities,
 			enemyPositions, nearestEnemy->size, startJumpY,
 			attackRunawayAction, meAttackingAction, action, strategy_, game);
-		cerr << game.currentTick << ": (" << unit.id << "-0) " << action.jump << " " << action.jumpDown << " " << action.velocity << "\n";
+		//cerr << game.currentTick << ": (" << unit.id << "-0) " << action.jump << " " << action.jumpDown << " " << action.velocity << "\n";
 		return action;			
 	}				
 	
@@ -1134,7 +1133,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			nextTickMeAttackingJumpState, nextTickMeAttackPosition, meSimpleProbabilities,
 			enemyPositions, nearestEnemy->size, startJumpY,
 			attackRunawayAction, meAttackingAction, action, strategy_, game);
-		cerr << game.currentTick << ": (" << unit.id << "-1) " << action.jump << " " << action.jumpDown << " " << action.velocity << "\n";
+		//cerr << game.currentTick << ": (" << unit.id << "-1) " << action.jump << " " << action.jumpDown << " " << action.velocity << "\n";
 		return action;
 	}
 
@@ -1211,7 +1210,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	
 	setShootingAction(unit, mePositions, meSimpleProbabilities, nearestEnemy->size, enemyPositions, game, action);
-	cerr << game.currentTick << ": (" <<unit.id << "-2) " << action.jump << " " << action.jumpDown << " " << action.velocity <<  "\n";
+	//cerr << game.currentTick << ": (" <<unit.id << "-2) " << action.jump << " " << action.jumpDown << " " << action.velocity <<  "\n";
 	return action;
 }
 

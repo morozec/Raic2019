@@ -9,12 +9,12 @@ std::vector<std::pair<int, int>> MathHelper::getLineSquares2(const Vec2Double& s
 {
 	std::vector<std::pair<int, int>> result;
 
-	if (abs(end.x - start.x) < 2 * TOLERANCE && abs(end.y - start.y) < 2 * TOLERANCE)
+	if (std::abs(end.x - start.x) < 2 * TOLERANCE && std::abs(end.y - start.y) < 2 * TOLERANCE)
 	{
 		result.emplace_back(make_pair(static_cast<int>(start.x), static_cast<int>(start.y)));
 		return result;
 	}
-	if (abs(end.y - start.y) < 2 * TOLERANCE)
+	if (std::abs(end.y - start.y) < 2 * TOLERANCE)
 	{
 		const int y = static_cast<int>(start.y);
 		const int stepX = end.x >= start.x ? 1 : -1;		
@@ -29,7 +29,7 @@ std::vector<std::pair<int, int>> MathHelper::getLineSquares2(const Vec2Double& s
 		}
 		return result;
 	}
-	if (abs(end.x - start.x) < 2 * TOLERANCE)
+	if (std::abs(end.x - start.x) < 2 * TOLERANCE)
 	{
 		const int x = static_cast<int>(start.x);
 		const int stepY = end.y >= start.y ? 1 : -1;
@@ -275,6 +275,6 @@ bool MathHelper::IsBetween(double x0, double y0, double x1, double y1, double x2
 
 double MathHelper::getMHDist(const Vec2Double& p0, const Vec2Double& p1)
 {
-	return abs(p1.x - p0.x) + abs(p1.y - p0.y);
+	return std::abs(p1.x - p0.x) + std::abs(p1.y - p0.y);
 }
 

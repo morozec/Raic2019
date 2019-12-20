@@ -20,22 +20,22 @@ inline bool operator<(const Bullet& lhs, const Bullet& rhs)
 
 Vec2Double getShootingCrossBorderPoint(const Vec2Double& position, double lastAngle, double maxX, double maxY)
 {
-	if (abs(lastAngle) < TOLERANCE)
+	if (std::abs(lastAngle) < TOLERANCE)
 	{
 		return Vec2Double(maxX, position.y);
 	}
 
-	if (abs(lastAngle - M_PI) < TOLERANCE)
+	if (std::abs(lastAngle - M_PI) < TOLERANCE)
 	{
 		return Vec2Double(0, position.y);
 	}
 
-	if (abs(lastAngle - M_PI / 2) < TOLERANCE)
+	if (std::abs(lastAngle - M_PI / 2) < TOLERANCE)
 	{
 		return Vec2Double(position.x, 0);
 	}
 
-	if (abs(lastAngle + M_PI / 2) < TOLERANCE)
+	if (std::abs(lastAngle + M_PI / 2) < TOLERANCE)
 	{
 		return Vec2Double(position.x, maxY);
 	}
@@ -45,7 +45,7 @@ Vec2Double getShootingCrossBorderPoint(const Vec2Double& position, double lastAn
 	const auto x2 = position.x + cos(lastAngle);
 	const auto y2 = position.y + sin(lastAngle);
 
-	if (abs(lastAngle) < M_PI / 2)
+	if (std::abs(lastAngle) < M_PI / 2)
 	{
 		const auto vertCross = MathHelper::getLinesCross(x1, y1, x2, y2, maxX, 0, maxX, maxY);
 		if (vertCross.y >= 0 && vertCross.y < maxY)

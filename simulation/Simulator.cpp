@@ -364,7 +364,7 @@ Vec2Double Simulator::getUnitInTimePosition(
 	if (time > tickTime + TOLERANCE) throw std::runtime_error("impossible to simulate unit for more then 1 tick");
 	const auto isOnAir = isUnitOnAir(unitPosition, unitSize, unitId, game);
 	
-	if (!action.jump && !action.jumpDown && abs(action.velocity) < TOLERANCE &&
+	if (!action.jump && !action.jumpDown && std::abs(action.velocity) < TOLERANCE &&
 		!isOnAir)
 		return unitPosition;
 	
@@ -520,7 +520,7 @@ Vec2Double Simulator::getUnitInTimePosition(
 			if (unit.id == unitId) continue;
 			if (y > unit.position.y + unit.size.y &&
 				nextY < unit.position.y + unit.size.y &&
-				abs(nextX - unit.position.x) < unitSize.x/2 + unit.size.x/2)
+				std::abs(nextX - unit.position.x) < unitSize.x/2 + unit.size.x/2)
 			{
 				bottomUnit = &unit;
 				break;
@@ -1144,9 +1144,9 @@ bool Simulator::isUnitOnUnit(const Vec2Double& unitPosition, const Vec2Double& u
 	for (const auto& unit: game.units)
 	{
 		if (unitId == unit.id) continue;
-		if (abs(unitPosition.y - unit.position.y) < unitSize.y + TOLERANCE &&
-			abs(unitPosition.y - unit.position.y) > unitSize.y - TOLERANCE &&
-			abs(unitPosition.x - unit.position.x) < unitSize.x / 2 + unit.size.x/2)
+		if (std::abs(unitPosition.y - unit.position.y) < unitSize.y + TOLERANCE &&
+			std::abs(unitPosition.y - unit.position.y) > unitSize.y - TOLERANCE &&
+			std::abs(unitPosition.x - unit.position.x) < unitSize.x / 2 + unit.size.x/2)
 		{
 			return true;
 		}

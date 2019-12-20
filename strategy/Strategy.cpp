@@ -151,7 +151,6 @@ double Strategy::getShootEnemyProbability(
 std::map<Bullet, BulletSimulation> Strategy::getEnemyBulletsSimulation(const Game& game, int mePlayerId)
 {
 	std::map<Bullet, BulletSimulation> simulations;
-	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	for (const auto& bullet: game.bullets)
 	{
 		if (bullet.playerId == mePlayerId && bullet.explosionParams == nullptr) continue;
@@ -308,7 +307,8 @@ bool Strategy::isBulletMoveCrossUnitMove(
 		bulletSegments[i] = Segment(bulletPolygon[i], bulletPolygon[endIndex]);
 	}
 
-	const auto isStaticUnit = abs(unitPos.x - newUnitPos.x) < TOLERANCE && abs(unitPos.y - newUnitPos.y) < TOLERANCE;	
+	const auto isStaticUnit = std ::abs(unitPos.x - newUnitPos.x) < TOLERANCE && 
+		std ::abs(unitPos.y - newUnitPos.y) < TOLERANCE;	
 
 	if (isStaticUnit)
 	{
@@ -928,10 +928,10 @@ bool Strategy::isBulletExplosionShootUnit(
 	const auto unitBottom = unitPosition.y;
 	const auto unitTop = unitPosition.y + unitSize.y;
 
-	if (abs(bulletCrossWallCenter.x - unitLeft) <= radius && abs(bulletCrossWallCenter.y - unitBottom) <= radius) return true;
-	if (abs(bulletCrossWallCenter.x - unitLeft) <= radius && abs(bulletCrossWallCenter.y - unitTop) <= radius) return true;
-	if (abs(bulletCrossWallCenter.x - unitRight) <= radius && abs(bulletCrossWallCenter.y - unitTop) <= radius) return true;
-	if (abs(bulletCrossWallCenter.x - unitRight) <= radius && abs(bulletCrossWallCenter.y - unitBottom) <= radius) return true;
+	if (std::abs(bulletCrossWallCenter.x - unitLeft) <= radius && std::abs(bulletCrossWallCenter.y - unitBottom) <= radius) return true;
+	if (std::abs(bulletCrossWallCenter.x - unitLeft) <= radius && std::abs(bulletCrossWallCenter.y - unitTop) <= radius) return true;
+	if (std::abs(bulletCrossWallCenter.x - unitRight) <= radius && std::abs(bulletCrossWallCenter.y - unitTop) <= radius) return true;
+	if (std::abs(bulletCrossWallCenter.x - unitRight) <= radius && std::abs(bulletCrossWallCenter.y - unitBottom) <= radius) return true;
 	return false;
 }
 
