@@ -68,7 +68,7 @@ std::vector<std::pair<int, int>> MathHelper::getLineSquares2(const Vec2Double& s
 	//auto correctEndY = abs(end.y - roundEndY) <= TOLERANCE ? roundEndY : end.y;
 	////correctEndY -= TOLERANCE * stepY;
 
-	const auto correctStartX = start.x + 2*TOLERANCE * stepY;
+	const auto correctStartX = start.x + 2*TOLERANCE * stepX;
 	//if (std::modf(correctStartX, &intPart) == 0.0) correctStartX += TOLERANCE * stepX;
 	const auto correctStartY = start.y + 2*TOLERANCE * stepY;
 	//if (std::modf(correctStartY, &intPart) == 0.0) correctStartY += TOLERANCE * stepY;
