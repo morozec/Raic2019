@@ -967,4 +967,14 @@ void Strategy::setStartedJumpY(int id,size_t newStartedJumpY)
 	startedJumpYs_[id] = newStartedJumpY;
 }
 
+bool Strategy::getIsMonkeyMode(int id) const
+{
+	return isMonkeyMode_.at(id);
+}
+
+void Strategy::setIsMonkeyMode(int id, bool isMonkeyMode)
+{
+	isMonkeyMode_[id] = isMonkeyMode;
+}
+
 

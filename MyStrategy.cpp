@@ -376,8 +376,10 @@ void getAttackingData(
 	vector<JumpState>& meJumpStates,	
 	const Vec2Double& enemySize,
 	const vector<vector<Vec2Double>>& enemyPositions,
+	double enemyFireTimer,
 	UnitAction& meAction,
 	size_t& startJumpY,
+	bool& isMonkeyMode,
 	const Game& game)
 {
 	const auto tickTime = 1 / game.properties.ticksPerSecond;
@@ -386,31 +388,60 @@ void getAttackingData(
 	auto lastMeJumpState = me.jumpState;
 	auto lastStartJumpY = startJumpY;
 	mePositions.emplace_back(lastMePosition);	
-	meJumpStates.emplace_back(lastMeJumpState);	
+	meJumpStates.emplace_back(lastMeJumpState);
+
+	if (isMonkeyMode && !me.jumpState.canJump && !me.jumpState.canCancel) isMonkeyMode = false;
 
 	int counter = 1;
 	while (counter < MAX_SIMULATIONS)
 	{
-		const auto curEnemyPositions = enemyPositions[counter];
-		const auto curEnemyPosition = curEnemyPositions[0];
-
-		if (abs(lastMePosition.x - curEnemyPosition.x) < me.size.x/2 + enemySize.x/2 + TOLERANCE &&
-			abs(lastMePosition.y - curEnemyPosition.y) < me.size.y + TOLERANCE)		
-		{
-			if (counter == 1)
-			{
-				meAction.jump = false;
-				meAction.jumpDown = false;
-				meAction.velocity = 0;
-			}
-			return;
-		}		
-		
 		UnitAction action;
-		action.velocity = curEnemyPosition.x > lastMePosition.x ? INT_MAX : -INT_MAX;
-		setJumpAndJumpDown(
-			lastMePosition, lastMeJumpState, curEnemyPosition, enemySize, game, false, action, lastStartJumpY);
+		
+		if (isMonkeyMode && lastMeJumpState.canJump && lastMeJumpState.canCancel)
+		{
+			action.velocity = 0;
+			action.jump = true;
+			action.jumpDown = false;
+		}
+		else
+		{
 
+			const auto curEnemyPositions = enemyPositions[counter];
+			const auto curEnemyPosition = curEnemyPositions[0];
+
+			const auto enemyFireTick = static_cast<int>(enemyFireTimer / tickTime) ;
+			if (!isMonkeyMode && counter == 1 &&
+				!Simulator::isUnitOnAir(lastMePosition, me.size, me.id, game) && 
+				enemyFireTick < MONKEY_FIRE_TICK &&
+				MathHelper::getMHDist(curEnemyPosition, lastMePosition) < MONKEY_DIST)
+			{
+				isMonkeyMode = true;
+				action.jump = true;
+				action.jumpDown = false;
+				action.velocity = 0;
+			}
+
+			else {
+
+				if (abs(lastMePosition.x - curEnemyPosition.x) < me.size.x / 2 + enemySize.x / 2 + TOLERANCE &&
+					abs(lastMePosition.y - curEnemyPosition.y) < me.size.y + TOLERANCE)
+				{
+					if (counter == 1)
+					{
+						meAction.jump = false;
+						meAction.jumpDown = false;
+						meAction.velocity = 0;
+					}
+					return;
+				}
+
+				action.velocity = curEnemyPosition.x > lastMePosition.x ? INT_MAX : -INT_MAX;
+				setJumpAndJumpDown(
+					lastMePosition, lastMeJumpState, curEnemyPosition, enemySize, game, false, action, lastStartJumpY);
+			}			
+
+		}
+			
 		if (counter == 1) {
 			startJumpY = lastStartJumpY;
 			meAction = action;
@@ -795,7 +826,7 @@ void initAttackAction(
 	const JumpState& nextTickMeAttackingJumpState, const Vec2Double& nextTickMeAttackPosition,
 	vector<double>& meSimpleProbabilities,
 	const vector<vector<Vec2Double>>& enemyPositions, const Vec2Double& enemySize,
-	int startJumpY,
+	int startJumpY, bool isMonkeyMode,
 	tuple<RunawayDirection, int, int, int> runawayAction,
 	const UnitAction& meAttackingAction, UnitAction& action, Strategy strategy, const Game& game)
 {
@@ -869,6 +900,7 @@ void initAttackAction(
 
 	setShootingAction(unit, meAttackingPositions, meSimpleProbabilities, enemySize, enemyPositions, game, action);
 	strategy.setStartedJumpY(unit.id, startJumpY);
+	strategy.setIsMonkeyMode(unit.id, isMonkeyMode);
 }
 
 UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
@@ -881,6 +913,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			if (u.playerId != unit.playerId) continue;
 			strategy_.setRunaway(u.id, GoNONE, -1);
 			strategy_.setStartedJumpY(u.id, 0);
+			strategy_.setIsMonkeyMode(u.id, false);
 		}
 		strategy_.isInit = true;
 	}
@@ -1022,6 +1055,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	vector<JumpState> meAttackingJumpStates;
 	UnitAction meAttackingAction;
 	auto startJumpY = strategy_.getStartedJumpY(unit.id);
+	auto isMonkeyMode = strategy_.getIsMonkeyMode(unit.id);
 
 	bool needHeal = false;
 	for (const auto& enemy: game.units)
@@ -1070,10 +1104,17 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			unit, meAttackingPositions, meAttackingJumpStates,
 			*nearestHPLootBox, meAttackingAction, startJumpY, game	);
 	else
+	{
+		double enemyFireTimer = INT_MAX;
+		if (nearestEnemy->weapon != nullptr) enemyFireTimer = *(nearestEnemy->weapon)->fireTimer;
+		
 		getAttackingData(
-			unit, 
+			unit,
 			meAttackingPositions, meAttackingJumpStates,
-			nearestEnemy->size, enemyPositions, meAttackingAction, startJumpY, game);
+			nearestEnemy->size, enemyPositions,
+			enemyFireTimer,
+			meAttackingAction, startJumpY, isMonkeyMode, game);
+	}
 
 	tuple<RunawayDirection, int, int, int> attackRunawayAction;
 	const auto thisTickShootMeBullets = strategy_.isSafeMove(unit, meAttackingAction, enemyBulletsSimulation, game);
@@ -1125,7 +1166,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 		initAttackAction(unit, meAttackingPositions, meAttackingJumpStates,
 			nextTickMeAttackingJumpState, nextTickMeAttackPosition, meSimpleProbabilities,
-			enemyPositions, nearestEnemy->size, startJumpY,
+			enemyPositions, nearestEnemy->size, startJumpY, isMonkeyMode,
 			attackRunawayAction, meAttackingAction, action, strategy_, game);
 		//cerr << game.currentTick << ": (" << unit.id << "-0) " << action.jump << " " << action.jumpDown << " " << action.velocity << "\n";
 		return action;			
@@ -1175,7 +1216,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		
 		initAttackAction(unit, meAttackingPositions, meAttackingJumpStates,
 			nextTickMeAttackingJumpState, nextTickMeAttackPosition, meSimpleProbabilities,
-			enemyPositions, nearestEnemy->size, startJumpY,
+			enemyPositions, nearestEnemy->size, startJumpY, isMonkeyMode,
 			attackRunawayAction, meAttackingAction, action, strategy_, game);
 		//cerr << game.currentTick << ": (" << unit.id << "-1) " << action.jump << " " << action.jumpDown << " " << action.velocity << "\n";
 		return action;
