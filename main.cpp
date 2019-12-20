@@ -46,12 +46,12 @@ private:
 
 int main(int argc, char *argv[]) {
   std::string host = argc < 2 ? "127.0.0.1" : argv[1];
-  int port = argc < 3 ? 31003 : atoi(argv[2]);
+  int port = argc < 3 ? 31001 : atoi(argv[2]);
   std::string token = argc < 4 ? "0000000000000000" : argv[3];
   Runner(host, port, token).run();
-	/*Vec2Double start = { 18.000000000000217, 13.9 };
-	Vec2Double end = { 18, 13.9 };
-	const auto squares = MathHelper::getLineSquares2(start, end);
+	/*Vec2Double start = { 18.449999999, 24.8000000009954 };
+	Vec2Double end = { 39, 14.1935820330609 };
+	const auto squares = MathHelper::getLineSquares2(start, end);*/
 	
-  return 0;*/
+  return 0;
 }

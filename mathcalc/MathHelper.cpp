@@ -9,12 +9,12 @@ std::vector<std::pair<int, int>> MathHelper::getLineSquares2(const Vec2Double& s
 {
 	std::vector<std::pair<int, int>> result;
 
-	if (abs(end.x - start.x) < TOLERANCE && abs(end.y - start.y) < TOLERANCE)
+	if (abs(end.x - start.x) < 2 * TOLERANCE && abs(end.y - start.y) < 2 * TOLERANCE)
 	{
 		result.emplace_back(make_pair(static_cast<int>(start.x), static_cast<int>(start.y)));
 		return result;
 	}
-	if (abs(end.y - start.y) < TOLERANCE)
+	if (abs(end.y - start.y) < 2 * TOLERANCE)
 	{
 		const int y = static_cast<int>(start.y);
 		const int stepX = end.x >= start.x ? 1 : -1;		
@@ -29,7 +29,7 @@ std::vector<std::pair<int, int>> MathHelper::getLineSquares2(const Vec2Double& s
 		}
 		return result;
 	}
-	if (abs(end.x - start.x) < TOLERANCE)
+	if (abs(end.x - start.x) < 2 * TOLERANCE)
 	{
 		const int x = static_cast<int>(start.x);
 		const int stepY = end.y >= start.y ? 1 : -1;
@@ -51,15 +51,31 @@ std::vector<std::pair<int, int>> MathHelper::getLineSquares2(const Vec2Double& s
 	const int stepX = end.x >= start.x ? 1 : -1;
 	const int stepY = end.y >= start.y ? 1 : -1;
 
-	double intPart;	
-	auto correctStartX = start.x + TOLERANCE * stepX;
-	if (std::modf(correctStartX, &intPart) == 0.0) correctStartX += TOLERANCE * stepX;
-	auto correctStartY = start.y + TOLERANCE * stepY;
-	if (std::modf(correctStartY, &intPart) == 0.0) correctStartY += TOLERANCE * stepY;
-	auto correctEndX = end.x - TOLERANCE * stepX;
-	if (std::modf(correctEndX, &intPart) == 0.0) correctEndX -= TOLERANCE * stepX;
-	auto correctEndY = end.y - TOLERANCE * stepY;
-	if (std::modf(correctEndY, &intPart) == 0.0) correctEndY -= TOLERANCE * stepY;
+	////double intPart;
+	//const auto roundStartX = round(start.x);
+	//auto correctStartX = abs(start.x - roundStartX) <= TOLERANCE ? roundStartX : start.x;
+	////correctStartX += TOLERANCE * stepX;
+	//
+	//const auto roundStartY = round(start.y);
+	//auto correctStartY = abs(start.y - roundStartY) <= TOLERANCE ? roundStartY : start.y;
+	////correctStartY += TOLERANCE * stepY;
+
+	//const auto roundEndX = round(end.x);
+	//auto correctEndX = abs(end.x - roundEndX) <= TOLERANCE ? roundEndX : end.x;
+	////correctEndX -= TOLERANCE * stepX;
+
+	//const auto roundEndY = round(end.y);
+	//auto correctEndY = abs(end.y - roundEndY) <= TOLERANCE ? roundEndY : end.y;
+	////correctEndY -= TOLERANCE * stepY;
+
+	const auto correctStartX = start.x + 2*TOLERANCE * stepY;
+	//if (std::modf(correctStartX, &intPart) == 0.0) correctStartX += TOLERANCE * stepX;
+	const auto correctStartY = start.y + 2*TOLERANCE * stepY;
+	//if (std::modf(correctStartY, &intPart) == 0.0) correctStartY += TOLERANCE * stepY;
+	const auto correctEndX = end.x - 2*TOLERANCE * stepX;
+	//if (std::modf(correctEndX, &intPart) == 0.0) correctEndX -= TOLERANCE * stepX;
+	const auto correctEndY = end.y - 2*TOLERANCE * stepY;
+	//if (std::modf(correctEndY, &intPart) == 0.0) correctEndY -= TOLERANCE * stepY;
 	
 	
 	int x = static_cast<int>(correctStartX);
@@ -74,20 +90,33 @@ std::vector<std::pair<int, int>> MathHelper::getLineSquares2(const Vec2Double& s
 	const auto voxelBoundaryX = stepX > 0 ? trunc(correctStartX + stepX) : ceil(correctStartX + stepX);
 	const auto voxelBoundaryY = stepY > 0 ? trunc(correctStartY + stepY) : ceil(correctStartY + stepY);
 
-	auto tMaxX = (voxelBoundaryX - correctStartX) / v.x;
-	auto tMaxY = (voxelBoundaryY - correctStartY) / v.y;
+	auto tMaxX = (voxelBoundaryX - start.x) / v.x;
+	auto tMaxY = (voxelBoundaryY - start.y) / v.y;
 
 	const auto tDeltaX = stepX/v.x;
 	const auto tDeltaY = stepY/v.y;
 
 	while (x != endX || y != endY)
 	{
-		if (tMaxX < tMaxY)
+		if (x != endX && y != endY)
+		{
+			if (tMaxX < tMaxY)
+			{
+				tMaxX += tDeltaX;
+				x += stepX;
+			}
+			else
+			{
+				tMaxY += tDeltaY;
+				y += stepY;
+			}
+		}
+		else if (x != endX)
 		{
 			tMaxX += tDeltaX;
 			x += stepX;
 		}
-		else
+		else// y != endY
 		{
 			tMaxY += tDeltaY;
 			y += stepY;
