@@ -1169,7 +1169,11 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	else
 	{
 		double enemyFireTimer = INT_MAX;
-		if (nearestEnemy->weapon != nullptr) enemyFireTimer = *(nearestEnemy->weapon)->fireTimer;
+		if (nearestEnemy->weapon != nullptr)
+		{
+			const auto ft = (*nearestEnemy->weapon).fireTimer;
+			enemyFireTimer = ft == nullptr ? 0 : *ft;
+		}
 		
 		getAttackingData(
 			unit,
