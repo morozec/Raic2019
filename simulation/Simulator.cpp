@@ -226,10 +226,10 @@ BulletSimulation Simulator::getBulletSimulation(
 		double minDist2Cur = INT_MAX;
 		auto hasWallCross = getBulletPointRectangleFirstCrossPoint(bulletLD0, bulletVelocity,
 			xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
-		if (!hasWallCross)
+		/*if (!hasWallCross)
 		{
 			throw std::runtime_error("no wall cross");
-		}
+		}*/
 		if (minDist2Cur < minWallCrossPointDist2)
 		{
 			minWallCrossPointDist2 = minDist2Cur;
@@ -266,9 +266,9 @@ BulletSimulation Simulator::getBulletSimulation(
 		double minDist2Cur = INT_MAX;
 		auto hasWallCross = getBulletPointRectangleFirstCrossPoint(bulletLU0, bulletVelocity,
 			xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
-		if (!hasWallCross) {
+		/*if (!hasWallCross) {
 			throw std::runtime_error("no wall cross");
-		}
+		}*/
 		if (minDist2Cur < minWallCrossPointDist2)
 		{
 			minWallCrossPointDist2 = minDist2Cur;
@@ -304,9 +304,9 @@ BulletSimulation Simulator::getBulletSimulation(
 		double minDist2Cur = INT_MAX;
 		auto hasWallCross = getBulletPointRectangleFirstCrossPoint(bulletRU0, bulletVelocity,
 			xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
-		if (!hasWallCross) {
+		/*if (!hasWallCross) {
 			throw std::runtime_error("no wall cross");
-		}
+		}*/
 		if (minDist2Cur < minWallCrossPointDist2)
 		{
 			minWallCrossPointDist2 = minDist2Cur;
@@ -343,9 +343,9 @@ BulletSimulation Simulator::getBulletSimulation(
 		double minDist2Cur = INT_MAX;
 		auto hasWallCross = getBulletPointRectangleFirstCrossPoint(bulletRD0, bulletVelocity,
 			xLeft, yDown, xRight, yUp, crossPointCur, minDist2Cur);
-		if (!hasWallCross) {
+		/*if (!hasWallCross) {
 			throw std::runtime_error("no wall cross");
-		}
+		}*/
 		if (minDist2Cur < minWallCrossPointDist2)
 		{
 			minWallCrossPointDist2 = minDist2Cur;
