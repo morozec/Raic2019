@@ -51,10 +51,15 @@ std::vector<std::pair<int, int>> MathHelper::getLineSquares2(const Vec2Double& s
 	const int stepX = end.x >= start.x ? 1 : -1;
 	const int stepY = end.y >= start.y ? 1 : -1;
 
-	const auto correctStartX = start.x + TOLERANCE * stepX;
-	const auto correctStartY = start.y + TOLERANCE * stepY;
-	const auto correctEndX = end.x - TOLERANCE * stepX;
-	const auto correctEndY = end.y - TOLERANCE * stepY;
+	double intPart;	
+	auto correctStartX = start.x + TOLERANCE * stepX;
+	if (std::modf(correctStartX, &intPart) == 0.0) correctStartX += TOLERANCE * stepX;
+	auto correctStartY = start.y + TOLERANCE * stepY;
+	if (std::modf(correctStartY, &intPart) == 0.0) correctStartY += TOLERANCE * stepY;
+	auto correctEndX = end.x - TOLERANCE * stepX;
+	if (std::modf(correctEndX, &intPart) == 0.0) correctEndX -= TOLERANCE * stepX;
+	auto correctEndY = end.y - TOLERANCE * stepY;
+	if (std::modf(correctEndY, &intPart) == 0.0) correctEndY -= TOLERANCE * stepY;
 	
 	
 	int x = static_cast<int>(correctStartX);
