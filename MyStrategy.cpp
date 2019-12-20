@@ -406,6 +406,19 @@ void getAttackingData(
 	auto lastStartJumpY = startJumpY;
 	mePositions.emplace_back(lastMePosition);	
 	meJumpStates.emplace_back(lastMeJumpState);
+
+	auto isMyClosestUnit = true;
+	const auto defaultEnemyPos = enemyPositions[0][0];
+	for (const auto& unit:game.units)
+	{
+		if (unit.playerId != me.playerId) continue;
+		if (unit.id == me.id) continue;
+		if (MathHelper::getMHDist(unit.position, defaultEnemyPos) < MathHelper::getMHDist(me.position, defaultEnemyPos))
+		{
+			isMyClosestUnit = false;
+			break;
+		}
+	}
 	
 
 	int counter = 1;
@@ -438,6 +451,23 @@ void getAttackingData(
 			}
 
 			else {
+
+				if (!isMyClosestUnit) //тормозим дальним, если видим врага
+				{
+					const auto simpleProb = getSimpleProbability(
+						lastMePosition, me.size, curEnemyPositions, enemySize, game);
+					if (simpleProb > 1 - TOLERANCE)
+					{
+						if (counter == 1)
+						{
+							meAction.jump = false;
+							meAction.jumpDown = false;
+							meAction.velocity = 0;
+						}
+						return;
+					}
+				}
+			
 
 				if (abs(lastMePosition.x - curEnemyPosition.x) < me.size.x / 2 + enemySize.x / 2 + TOLERANCE &&
 					abs(lastMePosition.y - curEnemyPosition.y) < me.size.y + TOLERANCE)
