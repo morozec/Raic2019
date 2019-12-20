@@ -148,15 +148,15 @@ double Strategy::getShootEnemyProbability(
 	return shootingCount * 1.0 / (ANGLE_SPLIT_COUNT * 2 + 1);
 }
 
-std::map<Bullet, BulletSimulation> Strategy::getEnemyBulletsSimulation(const Game& game, int mePlayerId)
+std::map<Bullet, BulletSimulation> Strategy::getEnemyBulletsSimulation(const Game& game, int mePlayerId, int meId)
 {
 	std::map<Bullet, BulletSimulation> simulations;
 	for (const auto& bullet: game.bullets)
 	{
-		if (bullet.playerId == mePlayerId && bullet.explosionParams == nullptr) continue;
+		if (bullet.unitId == meId && bullet.explosionParams == nullptr) continue;
 		auto simulation = Simulator::getBulletSimulation(bullet.position, bullet.velocity, bullet.size / 2, game);
 
-		if (bullet.playerId == mePlayerId)//проверим пулю на столкновение с врагом
+		if (bullet.explosionParams != nullptr)//проверим взрывающуюся пулю на столкновение с врагом
 		{
 			for (const auto& unit: game.units)
 			{

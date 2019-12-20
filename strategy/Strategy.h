@@ -26,7 +26,7 @@ public:
 		const Game& game
 	);
 
-	static std::map<Bullet, BulletSimulation> getEnemyBulletsSimulation(const Game& game, int mePlayerId);
+	static std::map<Bullet, BulletSimulation> getEnemyBulletsSimulation(const Game& game, int mePlayerId, int meId);
 	std::map<Bullet, int>  getShootMeBullets(
 		const Vec2Double& mePosition, const Vec2Double& meSize, const JumpState& meJumpState, int mePlayerId, int meUnitId,
 		const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, int addTicks,

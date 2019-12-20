@@ -913,7 +913,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	action.shoot = needShoot;*/
 
-	const auto enemyBulletsSimulation = strategy_.getEnemyBulletsSimulation(game, unit.playerId);
+	const auto enemyBulletsSimulation = strategy_.getEnemyBulletsSimulation(game, unit.playerId, unit.id);
 	const auto enemyPositions = getSimplePositionsSimulations(*nearestEnemy, game);
 
 	drawBullets(debug, game, enemyBulletsSimulation, unit.playerId);
