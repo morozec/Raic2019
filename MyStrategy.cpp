@@ -1071,6 +1071,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			nextTickMeAttackingJumpState, nextTickMeAttackPosition, meSimpleProbabilities,
 			enemyPositions, nearestEnemy->size, startJumpY,
 			attackRunawayAction, meAttackingAction, action, strategy_, game);
+		cout << game.currentTick << ": (" << unit.id << ") " << action.aim.x << " " << action.aim.y << "\n";
 		return action;			
 	}				
 	
@@ -1120,6 +1121,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			nextTickMeAttackingJumpState, nextTickMeAttackPosition, meSimpleProbabilities,
 			enemyPositions, nearestEnemy->size, startJumpY,
 			attackRunawayAction, meAttackingAction, action, strategy_, game);
+		cout << game.currentTick << ": (" << unit.id << ") " << action.aim.x << " " << action.aim.y << "\n";
 		return action;
 	}
 
@@ -1178,7 +1180,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		action.velocity = runawayUnitAction.velocity;
 	}	
 	
-	//cout << game.currentTick << ": " << action.jump << " " << action.jumpDown << " " << action.velocity << "\n";
+	
 
 	JumpState jumpState = unit.jumpState;
 	auto mePositions = runawayDirection == GoNONE ?
@@ -1196,6 +1198,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	
 	setShootingAction(unit, mePositions, meSimpleProbabilities, nearestEnemy->size, enemyPositions, game, action);
+	cout << game.currentTick << ": (" <<unit.id << ") " << action.aim.x << " " << action.aim.y <<  "\n";
 	return action;
 }
 
