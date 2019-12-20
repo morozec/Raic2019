@@ -93,7 +93,8 @@ vector<Vec2Double> getActionPositions(
 }
 
 
-void setJumpAndJumpDown(const Vec2Double& unitPosition, const JumpState& unitJumpState, 
+void setJumpAndJumpDown(const Vec2Double& unitPosition, const Vec2Double& unitSize, const JumpState& unitJumpState, 
+	int playerId, int unitId,
 	const Vec2Double& targetPosition, const Vec2Double& targetSize, const Game& game,
 	bool considerYs,
 	UnitAction& action, size_t& startedJumpY)
@@ -104,8 +105,26 @@ void setJumpAndJumpDown(const Vec2Double& unitPosition, const JumpState& unitJum
 		game.level.tiles[size_t(unitPosition.x + 1)][size_t(unitPosition.y)] == WALL;
 	const auto isSameColumnHigher = 
 		targetPosition.y > unitPosition.y && targetPosition.x >= unitPosition.x - 1 && targetPosition.x <= unitPosition.x + 1;
+	auto needJumpThroughUnit = false;
+	if (targetPosition.x > unitPosition.x)
+	{
+		for (const auto& unit: game.units)
+		{
+			if (unit.playerId != playerId) continue;
+			if (unit.id == unitId) continue;
+			if (std::abs(unitPosition.x - unit.position.x) < unitSize.x/2 + unit.size.x/2 + TOLERANCE &&
+				std::abs(unitPosition.y - unit.position.y) < unit.size.y + TOLERANCE)
+			{
+				needJumpThroughUnit = true;
+				break;
+			}
+		}
+	}
+	
 	const auto needJump = considerYs && targetPosition.y > unitPosition.y || isLeftWall || isRightWall || 
-		considerYs && isSameColumnHigher;
+		considerYs && isSameColumnHigher || needJumpThroughUnit;
+
+
 
 	const auto bottomTile = game.level.tiles[size_t(unitPosition.x)][size_t(unitPosition.y - 1)];
 	if (startedJumpY != 0 &&
@@ -153,7 +172,7 @@ void setJumpAndJumpDown(const Vec2Double& unitPosition, const JumpState& unitJum
 			{
 				startedJumpY = size_t(unitPosition.y + TOLERANCE);
 			}
-		}
+		}		
 		
 		action.jump = true;
 		action.jumpDown = false;
@@ -170,7 +189,7 @@ void setMoveToWeaponAction(const Unit& unit, const LootBox& weapon, const Game& 
 {
 	auto startedJumpY = strategy.getStartedJumpY(unit.id);
 	setJumpAndJumpDown(
-		unit.position, unit.jumpState, weapon.position, weapon.size, game, true, action, startedJumpY);
+		unit.position, unit.size, unit.jumpState, unit.playerId, unit.id, weapon.position, weapon.size, game, true, action, startedJumpY);
 	strategy.setStartedJumpY(unit.id, startedJumpY);
 	
 	if (abs(weapon.position.x - unit.position.x) < TOLERANCE)
@@ -350,7 +369,9 @@ void getHealingData(
 		UnitAction action;
 		action.velocity = lootBox.position.x > lastMePosition.x ? INT_MAX : -INT_MAX;
 		setJumpAndJumpDown(
-			lastMePosition, lastMeJumpState, lootBox.position, lootBox.size, game, false, action, lastStartJumpY);
+			lastMePosition, me.size, lastMeJumpState,
+			me.playerId, me.id,
+			lootBox.position, lootBox.size, game, false, action, lastStartJumpY);
 
 		if (counter == 1) {
 			startJumpY = lastStartJumpY;
@@ -432,7 +453,10 @@ void getAttackingData(
 
 				action.velocity = curEnemyPosition.x > lastMePosition.x ? INT_MAX : -INT_MAX;
 				setJumpAndJumpDown(
-					lastMePosition, lastMeJumpState, curEnemyPosition, enemySize, game, false, action, lastStartJumpY);
+					lastMePosition,me.size, lastMeJumpState,
+					me.playerId,
+					me.id,
+					curEnemyPosition, enemySize, game, false, action, lastStartJumpY);
 			}			
 
 		}
