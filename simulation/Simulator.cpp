@@ -794,7 +794,13 @@ Vec2Double Simulator::getUnitInTimePosition(
 			x = xj;
 			y = yj;
 		}
-		throw std::runtime_error("wrong unit on unit simulation");
+		//throw std::runtime_error("wrong unit on unit simulation");
+		//здесь может немного не сойтись, если врежется на последнем микротике (который мы не считаем)
+		//
+		if (size_t(x + TOLERANCE) != size_t(x)) x += TOLERANCE;
+		if (size_t(y + TOLERANCE) != size_t(y)) y += TOLERANCE;
+		const Vec2Double newUnitPosition = { x, y };
+		return newUnitPosition;
 	}	
 
 	else if (isJumpPadCross)
