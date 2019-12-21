@@ -531,6 +531,9 @@ Vec2Double Simulator::getUnitInTimePosition(
 		
 		for (int j = 0; j < microTicksCount; ++j)
 		{
+			const auto prevX = x;
+			const auto prevY = y;
+			
 			nextX = x + velocityX * microTickTime;
 
 			leftBottomTile = game.level.tiles[size_t(nextX - unitSize.x / 2)][size_t(y)];
@@ -620,6 +623,12 @@ Vec2Double Simulator::getUnitInTimePosition(
 					y = crossUnit->position.y + crossUnit->size.y;
 				}
 			}
+
+			if (std::abs(x - prevX) < TOLERANCE && std::abs(y - prevY) < TOLERANCE)
+			{
+				break;
+			}
+			
 		}		
 	}
 
@@ -762,85 +771,6 @@ Vec2Double Simulator::getUnitInTimePosition(
 	{
 		throw std::runtime_error("unknown mt simulation case");
 	}
-
-	//else // canGoAction
-	//{
-	//	/*auto tickVelocityX = actionVelocityX;
-	//	auto tickVelocityY = actionVelocityY;*/
-
-	//	for (int j = 0; j < microTicksCount; ++j)
-	//	{
-	//		nextX = x + actionVelocityX * microTickTime;
-	//		nextY = y + actionVelocityY * microTickTime;
-
-	//		leftBottomTile = game.level.tiles[size_t(nextX - unitSize.x / 2)][size_t(nextY)];
-	//		leftTopTile = game.level.tiles[size_t(nextX - unitSize.x / 2)][size_t(nextY + unitSize.y)];
-	//		rightTopTile = game.level.tiles[size_t(nextX + unitSize.x / 2)][size_t(nextY + unitSize.y)];
-	//		rightBottomTile = game.level.tiles[size_t(nextX + unitSize.x / 2)][size_t(nextY)];
-
-	//		canGoThrough =
-	//			canGoThroughTile(leftBottomTile, action.jumpDown) && canGoThroughTile(leftTopTile, action.jumpDown) &&
-	//			canGoThroughTile(rightTopTile, action.jumpDown) && canGoThroughTile(rightBottomTile, action.jumpDown);
-
-	//		if (canGoThrough)
-	//		{
-	//			x = nextX;
-	//			y = nextY;
-	//			continue;
-	//		}
-
-	//		if (abs(actionVelocityX) > 0)//отключаем горизонтальное движение
-	//		{
-	//			nextX = x + velocityX * microTickTime;
-	//			nextY = y + actionVelocityY * microTickTime;
-
-	//			leftBottomTile = game.level.tiles[size_t(nextX - unitSize.x / 2)][size_t(nextY)];
-	//			leftTopTile = game.level.tiles[size_t(nextX - unitSize.x / 2)][size_t(nextY + unitSize.y)];
-	//			rightTopTile = game.level.tiles[size_t(nextX + unitSize.x / 2)][size_t(nextY + unitSize.y)];
-	//			rightBottomTile = game.level.tiles[size_t(nextX + unitSize.x / 2)][size_t(nextY)];
-
-	//			canGoThrough =
-	//				canGoThroughTile(leftBottomTile, action.jumpDown) && canGoThroughTile(leftTopTile, action.jumpDown) &&
-	//				canGoThroughTile(rightTopTile, action.jumpDown) && canGoThroughTile(rightBottomTile, action.jumpDown);
-
-	//			if (canGoThrough)
-	//			{
-	//				x = nextX;
-	//				y = nextY;
-	//				continue;
-	//			}
-	//		}
-
-	//		if (abs(actionVelocityY) > 0)//отключаем вертикальное движение
-	//		{
-	//			nextX = x + actionVelocityX * microTickTime;
-	//			nextY = y + velocityY * microTickTime;
-
-	//			leftBottomTile = game.level.tiles[size_t(nextX - unitSize.x / 2)][size_t(nextY)];
-	//			leftTopTile = game.level.tiles[size_t(nextX - unitSize.x / 2)][size_t(nextY + unitSize.y)];
-	//			rightTopTile = game.level.tiles[size_t(nextX + unitSize.x / 2)][size_t(nextY + unitSize.y)];
-	//			rightBottomTile = game.level.tiles[size_t(nextX + unitSize.x / 2)][size_t(nextY)];
-
-	//			canGoThrough =
-	//				canGoThroughTile(leftBottomTile, action.jumpDown) && canGoThroughTile(leftTopTile, action.jumpDown) &&
-	//				canGoThroughTile(rightTopTile, action.jumpDown) && canGoThroughTile(rightBottomTile, action.jumpDown);
-
-	//			if (canGoThrough)
-	//			{
-	//				x = nextX;
-	//				y = nextY;
-	//				continue;
-	//			}
-	//		}
-
-	//		//пока двигаемся со старыми скоростями
-	//		x += velocityX * microTickTime;
-	//		y += velocityY * microTickTime;
-	//	}
-	//}
-	if (size_t(x + TOLERANCE) != size_t(x)) x += TOLERANCE;
-	if (size_t(y + TOLERANCE) != size_t(y)) y += TOLERANCE;
-
 	
 	const Vec2Double newUnitPosition = { x, y };
 	if (jumpStopped)
