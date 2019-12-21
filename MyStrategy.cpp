@@ -445,7 +445,7 @@ void getAttackingData(
 			}
 
 			else if ((!hasWeaponEnemy || isMyClosestUnit) && //тормозим ближним, если подошли вплотную
-				Simulator::areRectsCross(lastMePosition, me.size, curEnemyPosition, enemySize))
+				Simulator::areRectsTouch(lastMePosition, me.size, curEnemyPosition, enemySize))
 			{
 				needStop = true;
 				action.jump = false;

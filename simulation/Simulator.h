@@ -41,6 +41,10 @@ public:
 		const Vec2Double& pos1, const Vec2Double& size1,
 		const Vec2Double& pos2, const Vec2Double& size2);
 
+	static bool areRectsTouch(
+		const Vec2Double& pos1, const Vec2Double& size1,
+		const Vec2Double& pos2, const Vec2Double& size2);
+
 private:
 	
 	static bool canGoThroughTile(const Tile& tile);
