@@ -384,6 +384,18 @@ Vec2Double Simulator::getUnitInTimePosition(
 	const auto wasJump = isOnAir && jumpState.canJump && jumpState.canCancel;
 	const auto canJump = !isOnAir || wasJump;//если стою на земле или уже прыгаю
 	const auto isJump = canJump && action.jump;
+	auto hasUpUnit = false;
+	for (const auto& unit : game.units)
+	{
+		if (unit.id == unitId) continue;
+		if (std::abs(unit.position.y - unitPosition.y) < unit.size.y + TOLERANCE &&
+			std::abs(unit.position.y - unitPosition.y) > unit.size.y - TOLERANCE &&
+			std::abs(unit.position.x - unitPosition.x) < unit.size.x / 2 + unitSize.x / 2)
+		{
+			hasUpUnit = true;
+			break;
+		} 
+	}
 	
 	auto x = unitPosition.x;
 	auto y = unitPosition.y;	
@@ -392,7 +404,7 @@ Vec2Double Simulator::getUnitInTimePosition(
 		std::min(action.velocity, game.properties.unitMaxHorizontalSpeed) :
 		std::max(action.velocity, -game.properties.unitMaxHorizontalSpeed);
 
-	auto velocityY = 0;
+	auto velocityY = 0.0;
 
 	if (isPadJump)
 	{
@@ -400,10 +412,14 @@ Vec2Double Simulator::getUnitInTimePosition(
 	}
 	else if (isJump)
 	{
-		velocityY = game.properties.unitJumpSpeed;
+		if (hasUpUnit)
+			velocityY  = isOnAir ? -game.properties.unitFallSpeed : 0;
+		else 		
+			velocityY = game.properties.unitJumpSpeed;
 	}
-	else if (isFall || wasJump && !isJump ||
-		action.jumpDown && (isOnLadder || isOnPlatform))
+	else if (isFall || 
+		(wasJump && !isJump) ||
+		(action.jumpDown && (isOnLadder || isOnPlatform)))
 	{
 		velocityY = -game.properties.unitFallSpeed;
 	}
@@ -536,7 +552,8 @@ Vec2Double Simulator::getUnitInTimePosition(
 		}
 	}
 
-	if (!isWallCross && !isPlatformCross && !isJumpPadCross && !becameOnAir && !isJumpFinished && bottomUnit == nullptr)
+	if (!isWallCross && !isPlatformCross && !isJumpPadCross && !becameOnAir && 
+		!isJumpFinished && bottomUnit == nullptr)
 	{
 		x = nextX;
 		y = nextY;
@@ -722,7 +739,7 @@ Vec2Double Simulator::getUnitInTimePosition(
 			const auto xj = x + velocityX * microTickTime;
 			const auto yj = y + velocityY * microTickTime;
 
-			if (game.level.tiles[size_t(xj - unitSize.x/2)][size_t(yj)] == PLATFORM ||
+			if (game.level.tiles[size_t(xj - unitSize.x / 2)][size_t(yj)] == PLATFORM ||
 				game.level.tiles[size_t(xj + unitSize.x / 2)][size_t(yj)] == PLATFORM)
 			{
 				if (size_t(y) > size_t(yj))//я до этого был тайлом выше
@@ -755,28 +772,30 @@ Vec2Double Simulator::getUnitInTimePosition(
 			if (yj < bottomUnit->position.y + bottomUnit->size.y)
 			{
 				if (y > bottomUnit->position.y + bottomUnit->size.y) //до этого я был сверху
-				{
-					jumpState.canJump = true;
-					jumpState.speed = game.properties.unitJumpSpeed;
-					jumpState.maxTime = game.properties.unitJumpTime;
-					jumpState.canCancel = true;
+					{
+						jumpState.canJump = true;
+						jumpState.speed = game.properties.unitJumpSpeed;
+						jumpState.maxTime = game.properties.unitJumpTime;
+						jumpState.canCancel = true;
 
-					return { nextX, bottomUnit->position.y + bottomUnit->size.y };
-				}				
+						return { nextX, bottomUnit->position.y + bottomUnit->size.y };
+					}				
 				
 				else //врезаемся в вертикальную сторону юнита
-				{
-					return { velocityX > 0 ? 
-						bottomUnit->position.x - bottomUnit->size.x/2 :
-						bottomUnit->position.x + bottomUnit->size.x / 2,
-						nextY };
-				}
+					{
+						return {
+							velocityX > 0 ? 
+							bottomUnit->position.x - bottomUnit->size.x / 2 :
+							bottomUnit->position.x + bottomUnit->size.x / 2,
+							nextY
+						};
+					}
 			}
 			x = xj;
 			y = yj;
 		}
 		throw std::runtime_error("wrong unit on unit simulation");
-	}
+	}	
 
 	else if (isJumpPadCross)
 	{
