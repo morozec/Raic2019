@@ -184,41 +184,6 @@ void setJumpAndJumpDown(const Vec2Double& unitPosition, const Vec2Double& unitSi
 	}	
 }
 
-void setMoveToWeaponAction(const Unit& unit, const LootBox& weapon, const Game& game,
-	UnitAction& action, Strategy& strategy)
-{
-	auto startedJumpY = strategy.getStartedJumpY(unit.id);
-	setJumpAndJumpDown(
-		unit.position, unit.size, unit.jumpState, unit.playerId, unit.id, weapon.position, weapon.size, game, true, action, startedJumpY);
-	strategy.setStartedJumpY(unit.id, startedJumpY);
-	
-	if (abs(weapon.position.x - unit.position.x) < TOLERANCE)
-		action.velocity = 0;
-	else
-		action.velocity = weapon.position.x > unit.position.x ? INT_MAX : -INT_MAX;
-
-	action.shoot = false;
-	action.reload = false;
-	action.swapWeapon = false;
-	action.plantMine = false;
-}
-
-//void setMoveToEnemyAction(
-//	const Unit& unit, const Vec2Double& enemyPosition, bool needGo, const Game& game, 
-//	UnitAction& action, Strategy& strategy)
-//{	
-//	if (needGo)
-//	{
-//		action.velocity = enemyPosition.x > unit.position.x ? INT_MAX : -INT_MAX;
-//		setJumpAndJumpDown(unit, enemyPosition, game, false, action, strategy);		
-//	}
-//	else
-//	{
-//		action.velocity = 0;
-//		action.jump = false;
-//		action.jumpDown = false;
-//	}
-//}
 
 vector<Vec2Double> getSimplePositions(
 	const Vec2Double& unitPosition, const Vec2Double& unitSize, int unitId, JumpState& unitJumpState, const Game& game)
@@ -523,6 +488,13 @@ void setShootingAction(
 	const Vec2Double& enemySize, const vector<vector<Vec2Double>>& enemyPositions,
 	const Game& game, UnitAction& action)
 {
+	if (me.weapon == nullptr)
+	{
+		action.shoot = false;
+		action.aim = { 0,0 };
+		return;
+	}
+	
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	const auto movingTime = me.weapon->fireTimer != nullptr ? *(me.weapon->fireTimer) - TOLERANCE : 0;
 
@@ -1019,29 +991,11 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	action.swapWeapon = false;
 	action.plantMine = false;
 	action.shoot = false;
-
-	if (unit.weapon == nullptr)
-	{
-		if (nearestWeapon != nullptr) {
-			setMoveToWeaponAction(unit, *nearestWeapon, game, action, strategy_);
-		}
-		return action;
-	}
+		
 
 	if (nearestEnemy == nullptr) return action;
 	
-	/*const auto tickTime = 1.0 / game.properties.ticksPerSecond;
-	auto needGo = false;
-	auto needShoot = false;
 
-	if (nearestEnemy != nullptr)
-	{		
-		needGo = game.currentTick >= 97 ? false : Strategy::getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->params.minSpread) <
-			WALKING_PROBABILITY;
-		needShoot = strategy_.getShootEnemyProbability(unit, *nearestEnemy, game, unit.weapon->spread, &debug) >=
-			SHOOTING_PROBABILITY;		
-	}
-	action.shoot = needShoot;*/
 
 	const auto enemyBulletsSimulation = strategy_.getEnemyBulletsSimulation(game, unit.playerId, unit.id);
 	const auto enemyPositions = getSimplePositionsSimulations(*nearestEnemy, game);
@@ -1155,7 +1109,13 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		}
 	}
 
-	if (nearestHPLootBox != nullptr)
+	if (unit.weapon == nullptr)
+	{
+		getHealingData(
+			unit, meAttackingPositions, meAttackingJumpStates,
+			*nearestWeapon, meAttackingAction, startJumpY, game);
+	}
+	else if (nearestHPLootBox != nullptr)
 		getHealingData(
 			unit, meAttackingPositions, meAttackingJumpStates,
 			*nearestHPLootBox, meAttackingAction, startJumpY, game	);
