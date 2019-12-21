@@ -332,7 +332,18 @@ void getHealingData(
 		}
 
 		UnitAction action;
-		action.velocity = lootBox.position.x > lastMePosition.x ? INT_MAX : -INT_MAX;
+		if (lootBox.position.x > lastMePosition.x &&
+			game.level.tiles[size_t(lootBox.position.x + 1)][size_t(lootBox.position.y + lootBox.size.y / 2)] == JUMP_PAD)
+		{
+			action.velocity = (lootBox.position.x - lastMePosition.x) / tickTime - TOLERANCE;
+		}
+		else if (lootBox.position.x < lastMePosition.x && 
+			game.level.tiles[size_t(lootBox.position.x - 1)][size_t(lootBox.position.y + lootBox.size.y / 2)] == JUMP_PAD)
+		{
+			action.velocity = (lootBox.position.x - lastMePosition.x) / tickTime + TOLERANCE;
+		}
+		else 
+			action.velocity = lootBox.position.x > lastMePosition.x ? INT_MAX : -INT_MAX;
 		setJumpAndJumpDown(
 			lastMePosition, me.size, lastMeJumpState,
 			me.playerId, me.id,
