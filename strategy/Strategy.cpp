@@ -466,7 +466,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 	action.jumpDown = false;
 	action.velocity = false;
 
-	std::map<int, int> beforeStartGoUpDamage;
+	/*std::map<int, int> beforeStartGoUpDamage;
 	std::map<int, int> beforeStartGoDownDamage;
 	std::map<int, int> beforeStartGoLeftDamage;
 	std::map<int, int> beforeStartGoRightDamage;
@@ -474,17 +474,12 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 	std::map<int, std::map<int, int>> beforeStopGoUpDamage;
 	std::map<int, std::map<int, int>> beforeStopGoDownDamage;
 	std::map<int, std::map<int, int>> beforeStopGoLeftDamage;
-	std::map<int, std::map<int, int>> beforeStopGoRightDamage;
+	std::map<int, std::map<int, int>> beforeStopGoRightDamage;*/
 		
 
 	for (int startGoTick = minShootMeTick - 1; startGoTick >= 0; startGoTick--)
 	{	
 		
-	/*	auto killGoUpTick = INT_MAX;
-		auto killGoLeftTick = INT_MAX;
-		auto killGoRightTick = INT_MAX;
-		auto killGoDownTick = INT_MAX;*/
-
 		for (int stopGoTick = startGoTick + 1; stopGoTick < maxShootWallTick; ++stopGoTick)
 		{			
 			auto canGoUp = checkUp;
@@ -596,7 +591,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 					goRightUnitPosition, unitSize, unitId, action, tickTime, thisTickGoRightJumpState, game);
 				action.velocity = 0;
 
-				if (tick <= startGoTick && 
+				/*if (tick <= startGoTick && 
 					beforeStartGoUpDamage.count(tick) > 0 && 
 					beforeStartGoDownDamage.count(tick) > 0 && 
 					beforeStartGoLeftDamage.count(tick) > 0 && 
@@ -619,8 +614,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 					thisTickRightDamage = beforeStopGoRightDamage[tick][startGoTick];
 				}
 				else
-				{
-					//const auto bulletTime = (tick + addTicks) / game.properties.ticksPerSecond;
+				{*/
 					for (const auto& item : enemyBulletsSimulations)
 					{
 						const auto& bullet = item.first;
@@ -832,21 +826,21 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 						}
 
 					}
-					if (tick <= startGoTick) {
-						beforeStartGoUpDamage[tick] = thisTickUpDamage;
-						beforeStartGoDownDamage[tick] = thisTickDownDamage;
-						beforeStartGoLeftDamage[tick] = thisTickLeftDamage;
-						beforeStartGoRightDamage[tick] = thisTickRightDamage;
-					}
-					else if (tick <= stopGoTick && tick > startGoTick)
-					{
-						beforeStopGoUpDamage[tick][startGoTick] = thisTickUpDamage;
-						beforeStopGoDownDamage[tick][startGoTick] = thisTickDownDamage;
-						beforeStopGoLeftDamage[tick][startGoTick] = thisTickLeftDamage;
-						beforeStopGoRightDamage[tick][startGoTick] = thisTickRightDamage;
-					}
+					//if (tick <= startGoTick) {
+					//	beforeStartGoUpDamage[tick] = thisTickUpDamage;
+					//	//beforeStartGoDownDamage[tick] = thisTickDownDamage;
+					//	beforeStartGoLeftDamage[tick] = thisTickLeftDamage;
+					//	beforeStartGoRightDamage[tick] = thisTickRightDamage;
+					//}
+					//else if (tick <= stopGoTick && tick > startGoTick)
+					//{
+					//	beforeStopGoUpDamage[tick][startGoTick] = thisTickUpDamage;
+					//	//beforeStopGoDownDamage[tick][startGoTick] = thisTickDownDamage;
+					//	beforeStopGoLeftDamage[tick][startGoTick] = thisTickLeftDamage;
+					//	beforeStopGoRightDamage[tick][startGoTick] = thisTickRightDamage;
+					//}
 					
-				}
+				//}
 				jumpUnitPosition = thisTickJumpUnitPosition;
 				fallUnitPosition = thisTickFallUnitPosition;
 				goLeftUnitPosition = thisTickGoLeftUnitPosition;
