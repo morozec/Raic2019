@@ -1189,8 +1189,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		}
 		else
 		{
-			minAttackDamage += ebs.first.damage;
-			if (ebs.first.explosionParams != nullptr) minAttackDamage += ebs.first.explosionParams->damage;
+			minAttackDamage += thisTickShootMeBullets.at(ebs.first);
 		}
 	}
 

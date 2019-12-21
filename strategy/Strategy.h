@@ -27,10 +27,10 @@ public:
 	);
 
 	static std::map<Bullet, BulletSimulation> getEnemyBulletsSimulation(const Game& game, int mePlayerId, int meId);
-	std::map<Bullet, int>  getShootMeBullets(
+	std::vector<std::pair<int, int>>  getShootMeBullets(
 		const Vec2Double& mePosition, const Vec2Double& meSize, const JumpState& meJumpState, int mePlayerId, int meUnitId,
 		const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, int addTicks,
-		const Game& game) const;
+		const Game& game) const; //результат: тик - дамаг
 	
 	static bool isBulletMoveCrossUnitMove(
 		const Vec2Double& unitPos, const Vec2Double& newUnitPos, const Vec2Double& unitSize,
@@ -39,12 +39,12 @@ public:
 	std::tuple<RunawayDirection, int, int, int> getRunawayAction(
 		const Vec2Double& unitPosition, const Vec2Double& unitSize, int unitPlayerId, int unitId,
 		const JumpState& jumpState,
-		const std::map<Bullet, int>& shootingMeBullets,
+		const std::vector<std::pair<int, int>>& shootingMeBullets,
 		const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, int addTicks,
 		bool checkUp, bool checkDown, bool checkLeft, bool checkRight,
 		const Game& game) const;
 
-	static std::set<Bullet> isSafeMove(const Unit& unit, const UnitAction& action, const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, const Game& game);
+	static std::map<Bullet, int> isSafeMove(const Unit& unit, const UnitAction& action, const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, const Game& game);
 
 	static bool isBulletExplosionShootUnit(
 		const std::shared_ptr<ExplosionParams>& explosionParams, const Vec2Double& bulletCrossWallCenter,
