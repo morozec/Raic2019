@@ -388,11 +388,13 @@ void getAttackingData(
 
 	int counter = 1;
 	bool needStop = false;
+	const auto hasWeaponEnemy = std::abs(enemyFireTimer - INT_MAX) > TOLERANCE;
+	
 	while (counter < MAX_SIMULATIONS)
 	{
 		UnitAction action;
 		
-		if (isMonkeyMode && lastMeJumpState.canJump && lastMeJumpState.canCancel)
+		if (hasWeaponEnemy && isMonkeyMode && lastMeJumpState.canJump && lastMeJumpState.canCancel)
 		{
 			action.velocity = 0;
 			action.jump = true;
@@ -400,12 +402,11 @@ void getAttackingData(
 		}
 		else
 		{
-
 			const auto curEnemyPositions = enemyPositions[counter];
 			const auto curEnemyPosition = curEnemyPositions[0];
 
 			const auto enemyFireTick = static_cast<int>(enemyFireTimer / tickTime);
-			if (!isMonkeyMode && counter == 1 &&
+			if (hasWeaponEnemy && !isMonkeyMode && counter == 1 &&
 				!Simulator::isUnitOnAir(lastMePosition, me.size, me.id, game) &&
 				enemyFireTick < MONKEY_FIRE_TICK &&
 				MathHelper::getMHDist(curEnemyPosition, lastMePosition) < MONKEY_DIST)
@@ -416,7 +417,7 @@ void getAttackingData(
 				action.velocity = 0;
 			}
 
-			else if (!isMyClosestUnit && //тормозим дальним, если видим врага
+			else if (hasWeaponEnemy && !isMyClosestUnit && //тормозим дальним, если видим врага
 				getSimpleProbability(
 					lastMePosition, me.size, curEnemyPositions, enemySize, game) > 1 - TOLERANCE)
 				
@@ -427,7 +428,7 @@ void getAttackingData(
 				action.velocity = 0;
 			}
 
-			else if (isMyClosestUnit && //тормозим ближним, если подошли вплотную
+			else if ((!hasWeaponEnemy || isMyClosestUnit) && //тормозим ближним, если подошли вплотную
 				abs(lastMePosition.x - curEnemyPosition.x) < me.size.x / 2 + enemySize.x / 2 + TOLERANCE &&
 				abs(lastMePosition.y - curEnemyPosition.y) < me.size.y + TOLERANCE)
 			{
@@ -442,7 +443,9 @@ void getAttackingData(
 					lastMePosition, me.size, lastMeJumpState,
 					me.playerId,
 					me.id,
-					curEnemyPosition, enemySize, game, false, action, lastStartJumpY);
+					curEnemyPosition, enemySize, game,
+					hasWeaponEnemy ? false : true,
+					action, lastStartJumpY);
 			}
 		}
 		
