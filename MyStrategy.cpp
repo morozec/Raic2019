@@ -274,16 +274,6 @@ double getSimpleProbability(
 	return count * 1.0/enemyPositions.size();
 }
 
-bool areRectCross(double left1, double right1, double bottom1, double top1,
-	double left2, double right2, double bottom2, double top2)
-{
-	const auto isHorCross = left2 >= left1 && left2 <= right1 || right2 >= left1 && right2 <= right1;
-	const auto isVertCross = bottom2 >= bottom1 && bottom2 <= top1 ||  top2 >= bottom1 && top2 <= top1;
-	
-	const auto isCross = isHorCross && isVertCross;
-	return isCross;
-}
-
 void getHealingData(
 	const Unit& me,
 	vector<Vec2Double>& mePositions,
@@ -303,22 +293,11 @@ void getHealingData(
 	mePositions.emplace_back(lastMePosition);
 	meJumpStates.emplace_back(lastMeJumpState);
 
-	const auto lootBoxLeft = lootBox.position.x - lootBox.size.x / 2;
-	const auto lootBoxRight = lootBox.position.x + lootBox.size.x / 2;
-	const auto lootBoxBottom = lootBox.position.y;
-	const auto lootBoxTop = lootBox.position.y + lootBox.size.y;
-
 	int counter = 1;
 	while (counter < MAX_SIMULATIONS)
 	{
-		const auto meLeft = lastMePosition.x - me.size.x / 2;
-		const auto meRight = lastMePosition.x + me.size.x / 2;
-		const auto meBottom = lastMePosition.y;
-		const auto meTop = lastMePosition.y + me.size.y;
-
-		const auto isCross = areRectCross(
-			meLeft, meRight, meBottom, meTop, 
-			lootBoxLeft, lootBoxRight, lootBoxBottom, lootBoxTop);
+		const auto isCross = Simulator::areRectsCross(
+			lastMePosition, me.size, lootBox.position, lootBox.size);
 			
 		if (isCross)
 		{
@@ -448,8 +427,7 @@ void getAttackingData(
 			}
 
 			else if ((!hasWeaponEnemy || isMyClosestUnit) && //тормозим ближним, если подошли вплотную
-				abs(lastMePosition.x - curEnemyPosition.x) < me.size.x / 2 + enemySize.x / 2 + TOLERANCE &&
-				abs(lastMePosition.y - curEnemyPosition.y) < me.size.y + TOLERANCE)
+				Simulator::areRectsCross(lastMePosition, me.size, curEnemyPosition, enemySize))
 			{
 				needStop = true;
 				action.jump = false;

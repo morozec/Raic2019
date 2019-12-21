@@ -37,6 +37,10 @@ public:
 	static bool isUnitOnJumpPad(const Vec2Double& unitPosition, const Vec2Double& unitSize, const Game& game);
 	static bool isUnitOnUnit(const Vec2Double& unitPosition, const Vec2Double& unitSize, int unitId, const Game& game);
 
+	static bool areRectsCross(
+		const Vec2Double& pos1, const Vec2Double& size1,
+		const Vec2Double& pos2, const Vec2Double& size2);
+
 private:
 	
 	static bool canGoThroughTile(const Tile& tile);

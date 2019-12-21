@@ -1095,6 +1095,22 @@ bool Simulator::isUnitOnUnit(const Vec2Double& unitPosition, const Vec2Double& u
 	return false;
 }
 
+bool Simulator::areRectsCross(const Vec2Double& pos1, const Vec2Double& size1, const Vec2Double& pos2,
+	const Vec2Double& size2)
+{
+	const auto isXCross = std::abs(pos1.x - pos2.x) < size1.x / 2 + size2.x / 2 + TOLERANCE;
+	bool isYCross = false;
+	if (pos1.y > pos2.y)
+	{
+		isYCross = std::abs(pos1.y - pos2.y) < size2.y + TOLERANCE;
+	}
+	else
+	{
+		isYCross = std::abs(pos1.y - pos2.y) < size1.y + TOLERANCE;
+	}
+	return isXCross && isYCross;
+}
+
 
 bool Simulator::getBulletRectangleFirstCrossPoint(const Vec2Double& bulletPos, const Vec2Double& bulletVelocity, double halfBulletSize,
 	double xLeft, double yDown, double xRight, double yUp,
