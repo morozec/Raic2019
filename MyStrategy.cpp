@@ -362,6 +362,14 @@ void getHealingData(
 	}
 }
 
+bool needMonkeyMode(const Vec2Double& mePosition, const Vec2Double& enemyPosition, bool hasWeaponEnemy, int enemyFireTick)
+{
+	return
+		hasWeaponEnemy &&
+		enemyFireTick < MONKEY_FIRE_TICK &&
+		MathHelper::getMHDist(mePosition, enemyPosition) < MONKEY_DIST;
+}
+
 
 void getAttackingData(
 	const Unit& me,	
@@ -417,10 +425,10 @@ void getAttackingData(
 			const auto curEnemyPosition = curEnemyPositions[0];
 
 			const auto enemyFireTick = static_cast<int>(enemyFireTimer / tickTime);
-			if (hasWeaponEnemy && !isMonkeyMode && counter == 1 &&
-				!Simulator::isUnitOnAir(lastMePosition, me.size, me.id, game) &&
-				enemyFireTick < MONKEY_FIRE_TICK &&
-				MathHelper::getMHDist(curEnemyPosition, lastMePosition) < MONKEY_DIST)
+
+			if (!isMonkeyMode && counter == 1 && 
+				needMonkeyMode(lastMePosition, curEnemyPosition, hasWeaponEnemy, enemyFireTick) &&
+				!Simulator::isUnitOnAir(lastMePosition, me.size, me.id, game))	
 			{
 				isMonkeyMode = true;
 				action.jump = true;
@@ -947,14 +955,6 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	
 
-	auto isMonkeyMode = strategy_.getIsMonkeyMode(unit.id);
-	if (isMonkeyMode &&
-		(!unit.jumpState.canJump && !unit.jumpState.canCancel ||
-			!Simulator::isUnitOnAir(unit.position, unit.size, unit.id, game)))
-	{
-		strategy_.setIsMonkeyMode(unit.id, false);
-		isMonkeyMode = false;
-	}
 	
 	
 	/*
@@ -1010,6 +1010,30 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	if (nearestEnemy == nullptr) return action;
 	
 
+	double enemyFireTimer = INT_MAX;
+	if (nearestEnemy->weapon != nullptr)
+	{
+		const auto ft = (*nearestEnemy->weapon).fireTimer;
+		enemyFireTimer = ft == nullptr ? 0 : *ft;
+	}
+	const auto tickTime = 1 / game.properties.ticksPerSecond;
+	const auto enemyFireTick = static_cast<int>(enemyFireTimer / tickTime);
+	
+	auto isMonkeyMode = strategy_.getIsMonkeyMode(unit.id);
+	if (isMonkeyMode && (
+		!needMonkeyMode(
+			unit.position,
+			nearestEnemy->position,
+			nearestEnemy->weapon != nullptr, 
+			enemyFireTick) || //monkeyMode не нужен
+		(!unit.jumpState.canJump && !unit.jumpState.canCancel) || //прыжок окончен
+		!Simulator::isUnitOnAir(unit.position, unit.size, unit.id, game))) //я оказался на земле
+	{
+		strategy_.setIsMonkeyMode(unit.id, false);
+		isMonkeyMode = false;
+	}
+
+	
 
 	const auto enemyBulletsSimulation = strategy_.getEnemyBulletsSimulation(game, unit.playerId, unit.id);
 	const auto enemyPositions = getSimplePositionsSimulations(*nearestEnemy, game);
@@ -1134,13 +1158,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			unit, meAttackingPositions, meAttackingJumpStates,
 			*nearestHPLootBox, meAttackingAction, startJumpY, game	);
 	else
-	{
-		double enemyFireTimer = INT_MAX;
-		if (nearestEnemy->weapon != nullptr)
-		{
-			const auto ft = (*nearestEnemy->weapon).fireTimer;
-			enemyFireTimer = ft == nullptr ? 0 : *ft;
-		}
+	{	
 		
 		getAttackingData(
 			unit,
