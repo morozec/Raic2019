@@ -1,3 +1,5 @@
+#define _USE_MATH_DEFINES
+
 #include "Strategy.h"
 #include "../common/Helper.h"
 #include "../simulation/Simulator.h"
@@ -15,6 +17,47 @@
 inline bool operator<(const Bullet& lhs, const Bullet& rhs)
 {
 	return lhs.position.x < rhs.position.x;
+}
+
+bool Strategy::isDangerousRocketShooting(const Vec2Double& shootingPos, const Vec2Double& unitSize,
+	double shootingAngle,
+	double spread, double halfBulletSize,
+	const Game& game)
+{
+	const auto bulletCenterPos = Vec2Double(shootingPos.x, shootingPos.y + unitSize.y / 2);
+	const auto deltaAngle = spread / ANGLE_SPLIT_COUNT;
+
+	int dangerousShootingCount = 0;
+
+	for (auto i = -ANGLE_SPLIT_COUNT; i <= ANGLE_SPLIT_COUNT; ++i)
+	{
+		const auto angle = shootingAngle + deltaAngle * i;
+		auto bulletVelocity = Vec2Double(cos(angle), sin(angle));
+
+		const auto bulletSimulation = Simulator::getBulletSimulation(
+			bulletCenterPos, bulletVelocity, halfBulletSize, game);
+
+		if (std::abs(shootingPos.y - bulletSimulation.targetCrossPoint.y) < SAFE_ROCKET_DISTANCE1 ||
+			std::abs(shootingPos.y + unitSize.y - bulletSimulation.targetCrossPoint.y) < SAFE_ROCKET_DISTANCE1)
+		{
+			if (std::abs(shootingPos.x + unitSize.x/2 - bulletSimulation.targetCrossPoint.x) < SAFE_ROCKET_DISTANCE2 ||
+				std::abs(shootingPos.x - unitSize.x / 2 - bulletSimulation.targetCrossPoint.x) < SAFE_ROCKET_DISTANCE2)
+			{
+				dangerousShootingCount++;
+			}
+		}
+		else if (std::abs(shootingPos.x + unitSize.x/2 - bulletSimulation.targetCrossPoint.x) < SAFE_ROCKET_DISTANCE1 ||
+			std::abs(shootingPos.x - unitSize.x / 2 - bulletSimulation.targetCrossPoint.x) < SAFE_ROCKET_DISTANCE1)
+		{
+			if (std::abs(shootingPos.y - bulletSimulation.targetCrossPoint.y) < SAFE_ROCKET_DISTANCE2 ||
+				std::abs(shootingPos.y + unitSize.y - bulletSimulation.targetCrossPoint.y) < SAFE_ROCKET_DISTANCE2)
+			{
+				dangerousShootingCount++;
+			}
+		}
+	}
+
+	return dangerousShootingCount * 1.0 / (2 * ANGLE_SPLIT_COUNT + 1.0) > SAFE_ROCKET_PROBABILITY;
 }
 
 double Strategy::getShootEnemyProbability(const Unit& me, const Unit& enemy, const Game& game, double spread)

@@ -12,6 +12,11 @@
 class Strategy
 {
 public:
+	static bool isDangerousRocketShooting(const Vec2Double& shootingPos, const Vec2Double& unitSize,
+		double shootingAngle,
+		double spread, double halfBulletSize,
+		const Game& game);
+	
 	static double getShootEnemyProbability(const Unit& me, const Unit& enemy, const Game& game, double spread);
 	static double getShootEnemyProbability(
 		const Vec2Double& mePosition, const Vec2Double& meSize,

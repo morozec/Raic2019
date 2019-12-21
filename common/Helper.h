@@ -16,6 +16,9 @@ constexpr auto MONKEY_DIST = 5.0;
 const double OK_SHOOTING_PROBABILITY = 0.85;
 const double NOT_BAD_SHOOTING_PROBABILITY = 0.5;
 const int MAX_SIMULATIONS = 100;
+const double SAFE_ROCKET_PROBABILITY = 0.1;
+const double SAFE_ROCKET_DISTANCE1 = 1.0;
+const double SAFE_ROCKET_DISTANCE2 = 1.0;
 
 Vec2Float vec2DoubleToVec2Float(const Vec2Double& vec2Double);
 //inline bool operator<(const Bullet& lhs, const Bullet& rhs);

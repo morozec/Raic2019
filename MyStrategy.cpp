@@ -423,6 +423,16 @@ void getAttackingData(
 
 			const auto enemyFireTick = static_cast<int>(enemyFireTimer / tickTime);
 
+			const auto shootingVector = curEnemyPosition - lastMePosition;
+			double shootingAngle;
+			if (abs(shootingVector.x) > TOLERANCE) {
+				shootingAngle = atan2(shootingVector.y, shootingVector.x);
+			}
+			else
+			{
+				shootingAngle = shootingVector.y > 0 ? M_PI / 2 : -M_PI / 2;
+			}
+
 			if (!isMonkeyMode && counter == 1 && 
 				needMonkeyMode(lastMePosition, curEnemyPosition, hasWeaponEnemy, enemyFireTick) &&
 				!Simulator::isUnitOnAir(lastMePosition, me.size, me.id, game))	
@@ -433,10 +443,13 @@ void getAttackingData(
 				action.velocity = 0;
 			}
 
-			else if (hasWeaponEnemy && !isMyClosestUnit && //тормозим дальним, если видим врага
+			else if (hasWeaponEnemy && !isMyClosestUnit && //тормозим дальним, если видим врага и стрелять не опасно
 				getSimpleProbability(
-					lastMePosition, me.size, curEnemyPositions, enemySize, game) > 1 - TOLERANCE)
-				
+					lastMePosition, me.size, curEnemyPositions, enemySize, game) > 1 - TOLERANCE &&
+					(me.weapon->params.explosion == nullptr ||
+						!Strategy::isDangerousRocketShooting(
+							lastMePosition, me.size, shootingAngle, me.weapon->spread, me.weapon->params.bullet.size / 2, game)))
+
 			{
 				needStop = true;
 				action.jump = false;
@@ -523,6 +536,7 @@ void setShootingAction(
 	{
 		double maxProbability = 0.0;
 		double okShootingAngle = 0.0;
+		double okShootingSpread = 0.0;
 		
 		Vec2Double meShootingPosition;//позиция, откуда произойдет выстрел
 		if (mePositions.size() == 1)
@@ -600,14 +614,26 @@ void setShootingAction(
 			if (probability > maxProbability)
 			{
 				maxProbability = probability;
-				okShootingAngle = shootingAngle;	
+				okShootingAngle = shootingAngle;
+				okShootingSpread = spread;
 			}
 		}
 
 		if (maxProbability > OK_SHOOTING_PROBABILITY)
 		{
+
+			bool isDangerousShoot = false;
+			if (me.weapon->params.explosion != nullptr && 
+				!Simulator::areRectsTouch(me.position, me.size, enemyShootingPositions[0], enemySize))
+			{
+				isDangerousShoot = Strategy::isDangerousRocketShooting(
+					me.position, me.size, 
+					okShootingAngle, okShootingSpread,
+					me.weapon->params.bullet.size / 2, game);
+			}
+			
 			const auto isSafe = isSafeShoot(me, game);
-			if (isSafe)
+			if (!isDangerousShoot && isSafe)
 			{
 				action.shoot = true;
 			}
@@ -616,22 +642,18 @@ void setShootingAction(
 				action.shoot = false;
 			}
 			
-			action.aim = Vec2Double(cos(okShootingAngle), sin(okShootingAngle));
+			action.aim = { cos(okShootingAngle), sin(okShootingAngle) };
 			return;
 		}
 	}
-
-	//const auto canSimulateMore = abs(action.velocity) > TOLERANCE || Simulator::isUnitOnAir(meShootingPosition, me.size, game);
 		
 	
 	auto maxShootingProbability = 0.0;
 	double okShootingAngle = 0;
+	double okShootingSpread = 0;
+	
 	int okAddShootingSimulations = -1;
 	
-	/*const auto maxSpread = me.weapon->params.maxSpread;
-	const auto minSpread = me.weapon->params.minSpread;
-	const auto aimSpeed = me.weapon->params.aimSpeed;
-	const auto spreadDecrease = aimSpeed * tickTime;*/
 
 	map<int, double> allProbabilities;
 	map<int, double> allShootingAngles;
@@ -738,6 +760,7 @@ void setShootingAction(
 		{
 			maxShootingProbability = curMaxShootingProbability;
 			okShootingAngle = curOkShootingAngle;
+			okShootingSpread = curSpread;
 			okAddShootingSimulations = addShootingSimulations;
 			if (maxShootingProbability >= OK_SHOOTING_PROBABILITY) break;
 		}
@@ -753,6 +776,7 @@ void setShootingAction(
 			auto maxProb2 = NOT_BAD_SHOOTING_PROBABILITY;
 			auto addShootingSimulations2 = 0;
 			auto okShootingAngle2 = 0.0;
+			auto okShootingSpread2 = 0.0;
 
 			const auto shootDelay = static_cast<int>(ceil((me.weapon->params.fireRate - TOLERANCE) / tickTime));
 			while (canShootingTick + addShootingSimulations2 < canShootingTick + okAddShootingSimulations - shootDelay)
@@ -798,6 +822,7 @@ void setShootingAction(
 					okAddShootingSimulations2 = addShootingSimulations2;
 					maxProb2 = prob2;
 					okShootingAngle2 = angle2;
+					okShootingSpread2 = spread;
 				}
 
 				addShootingSimulations2++;
@@ -808,6 +833,7 @@ void setShootingAction(
 				okAddShootingSimulations = okAddShootingSimulations2;
 				maxShootingProbability = maxProb2;
 				okShootingAngle = okShootingAngle2;
+				okShootingSpread = okShootingSpread2;
 				
 				/*action.shoot = canShootingTick == 0 && okAddShootingSimulations2 == 0;
 				action.aim = Vec2Double(cos(okShootingAngle2), sin(okShootingAngle2));*/
@@ -816,8 +842,18 @@ void setShootingAction(
 			{
 				if (canShootingTick == 0 && okAddShootingSimulations == 0)
 				{
+					bool isDangerousShoot = false;
+					if (me.weapon->params.explosion != nullptr &&
+						!Simulator::areRectsTouch(me.position, me.size, enemyPositions[0][0], enemySize))
+					{
+						isDangerousShoot = Strategy::isDangerousRocketShooting(
+							me.position, me.size,
+							okShootingAngle, okShootingSpread,
+							me.weapon->params.bullet.size / 2, game);
+					}
+					
 					const auto isSafe = isSafeShoot(me, game);
-					if (isSafe)
+					if (!isDangerousShoot && isSafe)
 					{
 						action.shoot = true;
 					}
@@ -850,7 +886,6 @@ void setShootingAction(
 	}				
 
 	//TODO: ракетницей стрелять под ноги врагу
-	//TODO: не стрелять ракетницей с риском задеть себя	
 }
 
 void initAttackAction(
