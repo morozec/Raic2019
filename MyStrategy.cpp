@@ -422,6 +422,7 @@ void getAttackingData(
 	
 
 	int counter = 1;
+	bool needStop = false;
 	while (counter < MAX_SIMULATIONS)
 	{
 		UnitAction action;
@@ -438,9 +439,9 @@ void getAttackingData(
 			const auto curEnemyPositions = enemyPositions[counter];
 			const auto curEnemyPosition = curEnemyPositions[0];
 
-			const auto enemyFireTick = static_cast<int>(enemyFireTimer / tickTime) ;
+			const auto enemyFireTick = static_cast<int>(enemyFireTimer / tickTime);
 			if (!isMonkeyMode && counter == 1 &&
-				!Simulator::isUnitOnAir(lastMePosition, me.size, me.id, game) && 
+				!Simulator::isUnitOnAir(lastMePosition, me.size, me.id, game) &&
 				enemyFireTick < MONKEY_FIRE_TICK &&
 				MathHelper::getMHDist(curEnemyPosition, lastMePosition) < MONKEY_DIST)
 			{
@@ -450,46 +451,36 @@ void getAttackingData(
 				action.velocity = 0;
 			}
 
+			else if (!isMyClosestUnit && //тормозим дальним, если видим врага
+				getSimpleProbability(
+					lastMePosition, me.size, curEnemyPositions, enemySize, game) > 1 - TOLERANCE)
+				
+			{
+				needStop = true;
+				action.jump = false;
+				action.jumpDown = false;
+				action.velocity = 0;
+			}
+
+			else if (isMyClosestUnit && //тормозим ближним, если подошли вплотную
+				abs(lastMePosition.x - curEnemyPosition.x) < me.size.x / 2 + enemySize.x / 2 + TOLERANCE &&
+				abs(lastMePosition.y - curEnemyPosition.y) < me.size.y + TOLERANCE)
+			{
+				needStop = true;
+				action.jump = false;
+				action.jumpDown = false;
+				action.velocity = 0;
+			}
 			else {
-
-				if (!isMyClosestUnit) //тормозим дальним, если видим врага
-				{
-					const auto simpleProb = getSimpleProbability(
-						lastMePosition, me.size, curEnemyPositions, enemySize, game);
-					if (simpleProb > 1 - TOLERANCE)
-					{
-						if (counter == 1)
-						{
-							meAction.jump = false;
-							meAction.jumpDown = false;
-							meAction.velocity = 0;
-						}
-						return;
-					}
-				}
-			
-
-				if (abs(lastMePosition.x - curEnemyPosition.x) < me.size.x / 2 + enemySize.x / 2 + TOLERANCE &&
-					abs(lastMePosition.y - curEnemyPosition.y) < me.size.y + TOLERANCE)
-				{
-					if (counter == 1)
-					{
-						meAction.jump = false;
-						meAction.jumpDown = false;
-						meAction.velocity = 0;
-					}
-					return;
-				}
-
 				action.velocity = curEnemyPosition.x > lastMePosition.x ? INT_MAX : -INT_MAX;
 				setJumpAndJumpDown(
-					lastMePosition,me.size, lastMeJumpState,
+					lastMePosition, me.size, lastMeJumpState,
 					me.playerId,
 					me.id,
 					curEnemyPosition, enemySize, game, false, action, lastStartJumpY);
-			}			
-
+			}
 		}
+		
 			
 		if (counter == 1) {
 			startJumpY = lastStartJumpY;
@@ -499,6 +490,8 @@ void getAttackingData(
 		lastMePosition = Simulator::getUnitInTimePosition(lastMePosition, me.size, me.id, action, tickTime, lastMeJumpState, game);	
 		mePositions.emplace_back(lastMePosition);		
 		meJumpStates.emplace_back(lastMeJumpState);
+
+		if (needStop) return;
 		
 		counter++;
 	}
