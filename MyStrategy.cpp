@@ -97,7 +97,7 @@ void setJumpAndJumpDown(const Vec2Double& unitPosition, const Vec2Double& unitSi
 	int playerId, int unitId,
 	const Vec2Double& targetPosition, const Vec2Double& targetSize, const Game& game,
 	bool considerYs,
-	UnitAction& action, size_t& startedJumpY)
+	UnitAction& action, size_t& startedJumpY, int& jumpingUnitId)
 {
 	const auto isLeftWall = targetPosition.x < unitPosition.x && targetPosition.x - targetSize.x/2 < size_t(unitPosition.x) &&
 		game.level.tiles[size_t(unitPosition.x - 1)][size_t(unitPosition.y)] == WALL;
@@ -106,16 +106,29 @@ void setJumpAndJumpDown(const Vec2Double& unitPosition, const Vec2Double& unitSi
 	const auto isSameColumnHigher = 
 		targetPosition.y > unitPosition.y && targetPosition.x >= unitPosition.x - 1 && targetPosition.x <= unitPosition.x + 1;
 	auto needJumpThroughUnit = false;
-	if (targetPosition.x > unitPosition.x)
+	
+	if (jumpingUnitId == -1 &&
+		(!Simulator::isUnitOnAir(unitPosition, unitSize, unitId, game) ||
+			unitJumpState.canJump))
 	{
-		for (const auto& unit: game.units)
+		for (const auto& unit : game.units)
 		{
 			if (unit.playerId != playerId) continue;
 			if (unit.id == unitId) continue;
-			if (std::abs(unitPosition.x - unit.position.x) < unitSize.x/2 + unit.size.x/2 + TOLERANCE &&
-				std::abs(unitPosition.y - unit.position.y) < unit.size.y + TOLERANCE)
+
+			if ((targetPosition.x - unitPosition.x)* (unit.position.x - unitPosition.x) < 0) continue;//он мне не мешает
+
+			//он в воздухе и прыгает
+			if (Simulator::isUnitOnAir(unit.position, unit.size, unit.id, game) && unit.jumpState.canJump) continue;
+
+			const auto xDist = std::abs(unitPosition.x - unit.position.x);
+			if (xDist < unitSize.x / 2 + unit.size.x / 2 + TOLERANCE &&
+				xDist > unitSize.x / 2 + unit.size.x / 2 - TOLERANCE &&
+				unitPosition.y < unit.position.y + unit.size.y + TOLERANCE &&
+				unitPosition.y + unitSize.y > unitPosition.y - TOLERANCE)
 			{
 				needJumpThroughUnit = true;
+				jumpingUnitId = unitId;
 				break;
 			}
 		}
@@ -281,6 +294,7 @@ void getHealingData(
 	const LootBox& lootBox,
 	UnitAction& meAction,
 	size_t& startJumpY,
+	int& jumpingUnitId,
 	const Game& game
 )
 {
@@ -289,6 +303,7 @@ void getHealingData(
 	auto lastMePosition = me.position;
 	auto lastMeJumpState = me.jumpState;
 	auto lastStartJumpY = startJumpY;
+	auto lastJumpingUnitId = jumpingUnitId;
 
 	mePositions.emplace_back(lastMePosition);
 	meJumpStates.emplace_back(lastMeJumpState);
@@ -326,10 +341,11 @@ void getHealingData(
 		setJumpAndJumpDown(
 			lastMePosition, me.size, lastMeJumpState,
 			me.playerId, me.id,
-			lootBox.position, lootBox.size, game, true, action, lastStartJumpY);
+			lootBox.position, lootBox.size, game, true, action, lastStartJumpY, lastJumpingUnitId);
 
 		if (counter == 1) {
 			startJumpY = lastStartJumpY;
+			jumpingUnitId = lastJumpingUnitId;
 			meAction = action;
 		}
 
@@ -359,6 +375,7 @@ void getAttackingData(
 	double enemyFireTimer,
 	UnitAction& meAction,
 	size_t& startJumpY,
+	int& jumpingUnitId,
 	bool& isMonkeyMode,
 	const Game& game)
 {
@@ -367,6 +384,7 @@ void getAttackingData(
 	auto lastMePosition = me.position;
 	auto lastMeJumpState = me.jumpState;
 	auto lastStartJumpY = startJumpY;
+	auto lastJumpingUnitId = jumpingUnitId;
 	mePositions.emplace_back(lastMePosition);	
 	meJumpStates.emplace_back(lastMeJumpState);
 
@@ -442,13 +460,14 @@ void getAttackingData(
 					me.id,
 					curEnemyPosition, enemySize, game,
 					hasWeaponEnemy ? false : true,
-					action, lastStartJumpY);
+					action, lastStartJumpY, lastJumpingUnitId);
 			}
 		}
 		
 			
 		if (counter == 1) {
 			startJumpY = lastStartJumpY;
+			jumpingUnitId = lastJumpingUnitId;
 			meAction = action;
 		}
 		
@@ -840,7 +859,7 @@ void initAttackAction(
 	const JumpState& nextTickMeAttackingJumpState, const Vec2Double& nextTickMeAttackPosition,
 	vector<double>& meSimpleProbabilities,
 	const vector<vector<Vec2Double>>& enemyPositions, const Vec2Double& enemySize,
-	int startJumpY, bool isMonkeyMode,
+	int startJumpY, int jumpingUnitId, bool isMonkeyMode,
 	tuple<RunawayDirection, int, int, int> runawayAction,
 	const UnitAction& meAttackingAction, UnitAction& action, Strategy& strategy, const Game& game)
 {
@@ -914,6 +933,7 @@ void initAttackAction(
 
 	setShootingAction(unit, meAttackingPositions, meSimpleProbabilities, enemySize, enemyPositions, game, action);
 	strategy.setStartedJumpY(unit.id, startJumpY);
+	strategy.setJumpingUnitId(jumpingUnitId);
 	strategy.setIsMonkeyMode(unit.id, isMonkeyMode);
 }
 
@@ -930,10 +950,11 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			strategy_.setIsMonkeyMode(u.id, false);
 		}
 		strategy_.isInit = true;
+		strategy_.setJumpingUnitId(-1);
 	}
 	
 
-	
+	if (strategy_.getJumpingUnitId() == unit.id) strategy_.setJumpingUnitId(-1);
 	
 	/*
 	Vec2Double crossPointCur;
@@ -1078,6 +1099,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	vector<JumpState> meAttackingJumpStates;
 	UnitAction meAttackingAction;
 	auto startJumpY = strategy_.getStartedJumpY(unit.id);
+	auto jumpingUnitId = strategy_.getJumpingUnitId();
 	
 
 	bool needHeal = unit.health < game.properties.unitMaxHealth / 2;
@@ -1129,12 +1151,12 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	{
 		getHealingData(
 			unit, meAttackingPositions, meAttackingJumpStates,
-			*nearestWeapon, meAttackingAction, startJumpY, game);
+			*nearestWeapon, meAttackingAction, startJumpY,jumpingUnitId, game);
 	}
 	else if (nearestHPLootBox != nullptr)
 		getHealingData(
 			unit, meAttackingPositions, meAttackingJumpStates,
-			*nearestHPLootBox, meAttackingAction, startJumpY, game	);
+			*nearestHPLootBox, meAttackingAction, startJumpY, jumpingUnitId, game	);
 	else
 	{	
 		
@@ -1143,7 +1165,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			meAttackingPositions, meAttackingJumpStates,
 			nearestEnemy->size, enemyPositions,
 			enemyFireTimer,
-			meAttackingAction, startJumpY, isMonkeyMode, game);
+			meAttackingAction, startJumpY, jumpingUnitId, isMonkeyMode, game);
 	}
 
 	tuple<RunawayDirection, int, int, int> attackRunawayAction;
@@ -1195,7 +1217,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 		initAttackAction(unit, meAttackingPositions, meAttackingJumpStates,
 			nextTickMeAttackingJumpState, nextTickMeAttackPosition, meSimpleProbabilities,
-			enemyPositions, nearestEnemy->size, startJumpY, isMonkeyMode,
+			enemyPositions, nearestEnemy->size, startJumpY, jumpingUnitId, isMonkeyMode,
 			attackRunawayAction, meAttackingAction, action, strategy_, game);
 		//cerr << game.currentTick << ": (" << unit.id << "-0) " << action.jump << " " << action.jumpDown << " " << action.velocity << "\n";
 		return action;			
@@ -1245,7 +1267,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		
 		initAttackAction(unit, meAttackingPositions, meAttackingJumpStates,
 			nextTickMeAttackingJumpState, nextTickMeAttackPosition, meSimpleProbabilities,
-			enemyPositions, nearestEnemy->size, startJumpY, isMonkeyMode,
+			enemyPositions, nearestEnemy->size, startJumpY, jumpingUnitId, isMonkeyMode,
 			attackRunawayAction, meAttackingAction, action, strategy_, game);
 		//cerr << game.currentTick << ": (" << unit.id << "-1) " << action.jump << " " << action.jumpDown << " " << action.velocity << "\n";
 		return action;

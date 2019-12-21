@@ -63,9 +63,13 @@ public:
 
 	bool isInit = false;
 
+	int getJumpingUnitId() const;
+	void setJumpingUnitId(int id);
+
 private:
 	std::map<int, int> stop_runaway_ticks_;
 	std::map<int, RunawayDirection> runaway_directions_;
 	std::map<int, size_t> startedJumpYs_;
 	std::map<int, bool> isMonkeyMode_;
+	int jumpingUnitId_;
 };

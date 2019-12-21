@@ -1014,4 +1014,14 @@ void Strategy::setIsMonkeyMode(int id, bool isMonkeyMode)
 	isMonkeyMode_[id] = isMonkeyMode;
 }
 
+int Strategy::getJumpingUnitId() const
+{
+	return jumpingUnitId_;
+}
+
+void Strategy::setJumpingUnitId(int id)
+{
+	jumpingUnitId_ = id;
+}
+
 
