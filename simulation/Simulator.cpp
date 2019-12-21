@@ -498,7 +498,7 @@ Vec2Double Simulator::getUnitInTimePosition(
 	for (const auto& unit: game.units)
 	{
 		if (unit.id == unitId) continue;
-		if (areRectsCross(unitPosition, unitSize, unit.position, unit.size))
+		if (areRectsCross({ nextX, nextY }, unitSize, unit.position, unit.size))
 		{
 			areUnitsCross = true;
 			break;
@@ -542,18 +542,18 @@ Vec2Double Simulator::getUnitInTimePosition(
 				!(canGoThroughTile(leftBottomTile) && canGoThroughTile(leftTopTile) &&
 					canGoThroughTile(rightTopTile) && canGoThroughTile(rightBottomTile));
 
-			areUnitsCross = false;
+			const Unit* crossUnit = nullptr;
 			for (const auto& unit : game.units)
 			{
 				if (unit.id == unitId) continue;
 				if (areRectsCross({nextX, y}, unitSize, unit.position, unit.size))
 				{
-					areUnitsCross = true;
+					crossUnit = &unit;
 					break;
 				}
 			}
 
-			if (!isWallCross && !areUnitsCross) x = nextX;
+			if (!isWallCross && crossUnit == nullptr) x = nextX;
 
 			nextY = y + velocityY * microTickTime;
 
@@ -566,19 +566,19 @@ Vec2Double Simulator::getUnitInTimePosition(
 				!(canGoThroughTile(leftBottomTile) && canGoThroughTile(leftTopTile) &&
 					canGoThroughTile(rightTopTile) && canGoThroughTile(rightBottomTile));
 
-			areUnitsCross = false;
+			crossUnit = nullptr;
 			for (const auto& unit : game.units)
 			{
 				if (unit.id == unitId) continue;
 				if (areRectsCross({ x, nextY }, unitSize, unit.position, unit.size))
 				{
-					areUnitsCross = true;
+					crossUnit = &unit;
 					break;
 				}
 			}
 			
 			
-			if (!isWallCross && !areUnitsCross)
+			if (!isWallCross && crossUnit == nullptr)
 			{	
 				if (isPlatformCross)//проверим пересечение с платформой
 				{
@@ -604,13 +604,20 @@ Vec2Double Simulator::getUnitInTimePosition(
 			{
 				if (startTickVelocityY > TOLERANCE)//был прыжок
 				{
-					velocityY = -game.properties.unitFallSpeed;
-					y = y + velocityY * microTickTime;
-					jumpStopped = true;
+					if (isUnitOnAir({ x, y }, unitSize, unitId, game))
+					{
+						velocityY = -game.properties.unitFallSpeed;
+						y = y + velocityY * microTickTime;
+						jumpStopped = true;
+					}					
 				}
 				else if (isWallCross) //было падение
 				{
 					y = trunc(y);
+				}
+				else if (crossUnit != nullptr && startTickVelocityY < -TOLERANCE)
+				{
+					y = crossUnit->position.y + crossUnit->size.y;
 				}
 			}
 		}		
