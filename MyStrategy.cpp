@@ -461,18 +461,42 @@ void getAttackingData(
 				action.velocity = 0;
 			}
 
-			else if (hasWeaponEnemy && !isMyClosestUnit && //тормозим дальним, если видим врага и стрелять не опасно
-				getSimpleProbability(
-					lastMePosition, me.size, curEnemyPositions, enemySize, game) > 1 - TOLERANCE &&
+			else if (
+				hasWeaponEnemy &&
+				!isMyClosestUnit && //тормозим дальним,  				
+				//и стрелять не опасно
 					(me.weapon->params.explosion == nullptr ||
 						!Strategy::isDangerousRocketShooting(
-							lastMePosition, me.size, shootingAngle, me.weapon->spread, me.weapon->params.bullet.size / 2, game)))
+							lastMePosition, me.size, shootingAngle, me.weapon->spread, me.weapon->params.bullet.size / 2, game)) 				
+				)
 
 			{
-				needStop = true;
-				action.jump = false;
-				action.jumpDown = false;
-				action.velocity = 0;
+				vector<Vec2Double> tmpPositions;
+				tmpPositions.emplace_back(lastMePosition);
+				prolongatePositions(tmpPositions, me.size, me.id, lastMeJumpState, game);
+
+				//если видим врага
+				const auto isEnemyVisible = getSimpleProbability(
+					tmpPositions.back(), me.size, curEnemyPositions, enemySize, game) > 1 - TOLERANCE;
+
+				if (isEnemyVisible)
+				{
+					needStop = true;
+					action.jump = false;
+					action.jumpDown = false;
+					action.velocity = 0;
+				}
+				else
+				{
+					action.velocity = curEnemyPosition.x > lastMePosition.x ? INT_MAX : -INT_MAX;
+					setJumpAndJumpDown(
+						lastMePosition, me.size, lastMeJumpState,
+						me.playerId,
+						me.id,
+						curEnemyPosition, enemySize, game,
+						hasWeaponEnemy ? false : true,
+						action, lastStartJumpY, lastJumpingUnitId);
+				}
 			}
 
 			else if ((!hasWeaponEnemy || isMyClosestUnit) && //тормозим ближним, если подошли вплотную
