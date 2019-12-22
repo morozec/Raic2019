@@ -405,6 +405,12 @@ void getAttackingData(
 	int counter = 1;
 	bool needStop = false;
 	const auto hasWeaponEnemy = std::abs(enemyFireTimer - INT_MAX) > TOLERANCE;
+
+	double meFireTimer = INT_MAX;
+	if (me.weapon != nullptr)
+	{
+		meFireTimer = me.weapon->fireTimer != nullptr ? *(me.weapon->fireTimer) : 0;
+	}
 	
 	while (counter < MAX_SIMULATIONS)
 	{
@@ -433,6 +439,18 @@ void getAttackingData(
 				shootingAngle = shootingVector.y > 0 ? M_PI / 2 : -M_PI / 2;
 			}
 
+			const auto isDangerousZone = MathHelper::getMHDist(lastMePosition, curEnemyPosition) < SAFE_SHOOTING_DIST;
+			auto isEnemyShootEarlier = false;
+			if (std::abs(enemyFireTimer - INT_MAX) < TOLERANCE) isEnemyShootEarlier = false;
+			else if (std::abs(meFireTimer - INT_MAX) < TOLERANCE) isEnemyShootEarlier = true;
+			else
+			{
+				const auto curEnemyFireTime = std::max(0.0, enemyFireTimer - tickTime * (counter-1));
+				const auto curMeFireTimer = std::max(0.0, meFireTimer - tickTime * (counter-1));
+				isEnemyShootEarlier = curEnemyFireTime < curMeFireTimer - TOLERANCE;
+			}
+
+
 			if (!isMonkeyMode && counter == 1 && 
 				needMonkeyMode(lastMePosition, curEnemyPosition, hasWeaponEnemy, enemyFireTick) &&
 				!Simulator::isUnitOnAir(lastMePosition, me.size, me.id, game))	
@@ -458,7 +476,8 @@ void getAttackingData(
 			}
 
 			else if ((!hasWeaponEnemy || isMyClosestUnit) && //тормозим ближним, если подошли вплотную
-				Simulator::areRectsTouch(lastMePosition, me.size, curEnemyPosition, enemySize))
+				Simulator::areRectsTouch(lastMePosition, me.size, curEnemyPosition, enemySize) ||
+				isMyClosestUnit && isDangerousZone && isEnemyShootEarlier) //или если я близко, а он стреляет раньше
 			{
 				needStop = true;
 				action.jump = false;
