@@ -373,6 +373,7 @@ void getAttackingData(
 	const Vec2Double& enemySize,
 	const vector<vector<Vec2Double>>& enemyPositions,
 	double enemyFireTimer,
+	double enemyHp,
 	UnitAction& meAction,
 	size_t& startJumpY,
 	int& jumpingUnitId,
@@ -488,13 +489,14 @@ void getAttackingData(
 				}
 				else
 				{
+					const auto isWinningContext = me.health >= enemyHp && !isEnemyShootEarlier;
 					action.velocity = curEnemyPosition.x > lastMePosition.x ? INT_MAX : -INT_MAX;
 					setJumpAndJumpDown(
 						lastMePosition, me.size, lastMeJumpState,
 						me.playerId,
 						me.id,
 						curEnemyPosition, enemySize, game,
-						hasWeaponEnemy ? false : true,
+						hasWeaponEnemy && !isWinningContext ? false : true,
 						action, lastStartJumpY, lastJumpingUnitId);
 				}
 			}
@@ -509,13 +511,14 @@ void getAttackingData(
 				action.velocity = 0;
 			}
 			else {
+				const auto isWinningContext = me.health >= enemyHp && !isEnemyShootEarlier;
 				action.velocity = curEnemyPosition.x > lastMePosition.x ? INT_MAX : -INT_MAX;
 				setJumpAndJumpDown(
 					lastMePosition, me.size, lastMeJumpState,
 					me.playerId,
 					me.id,
 					curEnemyPosition, enemySize, game,
-					hasWeaponEnemy ? false : true,
+					hasWeaponEnemy && !isWinningContext ? false : true,
 					action, lastStartJumpY, lastJumpingUnitId);
 			}
 		}
@@ -1281,6 +1284,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 				meAttackingPositions, meAttackingJumpStates,
 				nearestEnemy->size, enemyPositions,
 				enemyFireTimer,
+				nearestEnemy->health,
 				meAttackingAction, startJumpY, jumpingUnitId, isMonkeyMode, game);
 		}
 	}
