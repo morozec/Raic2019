@@ -990,6 +990,14 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	
 
 	if (strategy_.getJumpingUnitId() == unit.id) strategy_.setJumpingUnitId(-1);
+	for (auto it = strategy_.heal_boxes_.begin(); it != strategy_.heal_boxes_.end();)
+	{
+		if (it->first == unit.id) {
+			strategy_.heal_boxes_.erase(it++);
+		}
+		else ++it;
+	}
+	
 	
 	/*
 	Vec2Double crossPointCur;
@@ -1135,73 +1143,105 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	UnitAction meAttackingAction;
 	auto startJumpY = strategy_.getStartedJumpY(unit.id);
 	auto jumpingUnitId = strategy_.getJumpingUnitId();
-	
-
-	bool needHeal = unit.health < game.properties.unitMaxHealth / 2;
-	if (!needHeal)
-	{
-		for (const auto& enemy : game.units)
-		{
-			if (enemy.playerId == unit.playerId) continue;
-			if (enemy.health > unit.health)
-			{
-				needHeal = true;
-				break;
-			}
-		}
-	}
-
-	const LootBox* nearestHPLootBox = nullptr;
-	double minMHDist = INT_MAX;
-	
-	if (needHeal)
-	{
-		for (const auto& lb:game.lootBoxes)
-		{
-			if (std::dynamic_pointer_cast<Item::HealthPack>(lb.item))
-			{
-				const auto mhDist = MathHelper::getMHDist(unit.position, lb.position);
-				bool hasCloserEnemies = false;
-				for (const auto& enemy: game.units )
-				{
-					if (enemy.playerId == unit.playerId) continue;
-					if (MathHelper::getMHDist(enemy.position, lb.position) < mhDist)
-					{
-						hasCloserEnemies = true;
-						break;
-					}
-				}
-				if (hasCloserEnemies) continue;
-
-				if (mhDist < minMHDist)
-				{
-					nearestHPLootBox = &lb;
-					minMHDist = mhDist;
-				}
-			}			
-		}
-	}
 
 	if (unit.weapon == nullptr)
 	{
 		getHealingData(
 			unit, meAttackingPositions, meAttackingJumpStates,
-			*nearestWeapon, meAttackingAction, startJumpY,jumpingUnitId, game);
+			*nearestWeapon, meAttackingAction, startJumpY, jumpingUnitId, game);
 	}
-	else if (nearestHPLootBox != nullptr)
-		getHealingData(
-			unit, meAttackingPositions, meAttackingJumpStates,
-			*nearestHPLootBox, meAttackingAction, startJumpY, jumpingUnitId, game	);
 	else
-	{	
-		
-		getAttackingData(
-			unit,
-			meAttackingPositions, meAttackingJumpStates,
-			nearestEnemy->size, enemyPositions,
-			enemyFireTimer,
-			meAttackingAction, startJumpY, jumpingUnitId, isMonkeyMode, game);
+	{
+		bool needHeal = unit.health < game.properties.unitMaxHealth / 2;
+		if (!needHeal)
+		{
+			for (const auto& enemy : game.units)
+			{
+				if (enemy.playerId == unit.playerId) continue;
+				if (enemy.health > unit.health)
+				{
+					needHeal = true;
+					break;
+				}
+			}
+		}
+
+		const LootBox* nearestHPLootBox = nullptr;
+		double minMHDist = INT_MAX;
+
+		if (needHeal)
+		{
+			for (const auto& lb : game.lootBoxes)
+			{
+				if (std::dynamic_pointer_cast<Item::HealthPack>(lb.item))
+				{
+					bool isGot = false;
+					for (const auto& item: strategy_.heal_boxes_)
+					{
+						if (std::abs(item.second.x - lb.position.x) < TOLERANCE &&
+							std::abs(item.second.y - lb.position.y) < TOLERANCE)
+						{
+							isGot = true;
+							break;
+						}
+					}
+					if (isGot) continue;
+					
+					const auto dist = MathHelper::getMHDist(unit.position, lb.position);
+					if (dist > minMHDist) continue;
+
+					vector<Vec2Double> curMeAttackingPositions;
+					vector<JumpState> curMeAttackingJumpStates;
+					UnitAction curMeAttackingAction;
+					size_t curStartJumpY = startJumpY;
+					int curJumpingUnitId = jumpingUnitId;
+					getHealingData(
+						unit, curMeAttackingPositions, curMeAttackingJumpStates,
+						lb, curMeAttackingAction, curStartJumpY, curJumpingUnitId, game);
+
+					auto goodWay = true;
+					for (const auto& pos : curMeAttackingPositions)
+					{
+						for (const auto& enemyUnit : game.units)
+						{
+							if (enemyUnit.playerId == unit.playerId) continue;
+							if (Simulator::areRectsTouch(pos, unit.size, enemyUnit.position, enemyUnit.size))
+							{
+								goodWay = false;
+								break;
+							}
+						}
+						if (!goodWay) break;
+					}
+
+					if (goodWay)
+					{
+						minMHDist = dist;
+						nearestHPLootBox = &lb;
+						meAttackingPositions = curMeAttackingPositions;
+						meAttackingJumpStates = curMeAttackingJumpStates;
+						meAttackingAction = curMeAttackingAction;
+						startJumpY = curStartJumpY;
+						jumpingUnitId = curJumpingUnitId;
+
+						strategy_.heal_boxes_[unit.id] = lb.position;
+					}
+				}
+			}
+		}
+
+		if (nearestHPLootBox == nullptr)
+		{
+			getAttackingData(
+				unit,
+				meAttackingPositions, meAttackingJumpStates,
+				nearestEnemy->size, enemyPositions,
+				enemyFireTimer,
+				meAttackingAction, startJumpY, jumpingUnitId, isMonkeyMode, game);
+		}
 	}
+	
+	
 
 	tuple<RunawayDirection, int, int, int> attackRunawayAction;
 	const auto thisTickShootMeBullets = strategy_.isSafeMove(unit, meAttackingAction, enemyBulletsSimulation, game);
