@@ -203,7 +203,8 @@ std::map<Bullet, BulletSimulation> Strategy::getEnemyBulletsSimulation(const Gam
 		{
 			for (const auto& unit: game.units)
 			{
-				if (unit.playerId == mePlayerId) continue;
+				if (bullet.unitId == unit.id) continue;//пуля не попадет в стреляющего
+				if (unit.id == meId) continue;//попадание в себя не интересно
 
 				Vec2Double crossPoint;
 				Vec2Double bulletCorner;
