@@ -1152,7 +1152,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	else
 	{
-		bool needHeal = unit.health < game.properties.unitMaxHealth / 2;
+		bool needHeal = unit.health <= game.properties.unitMaxHealth / 2;
 		if (!needHeal)
 		{
 			for (const auto& enemy : game.units)
