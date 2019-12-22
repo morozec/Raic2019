@@ -369,7 +369,7 @@ Vec2Double Simulator::getUnitInTimePosition(
 	const Game& game)
 {
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
-	if (time > tickTime + TOLERANCE) throw std::runtime_error("impossible to simulate unit for more then 1 tick");
+	//if (time > tickTime + TOLERANCE) throw std::runtime_error("impossible to simulate unit for more then 1 tick");
 	const auto isOnAir = isUnitOnAir(unitPosition, unitSize, unitId, game);
 	
 	if (!action.jump && !action.jumpDown && std::abs(action.velocity) < TOLERANCE &&
@@ -659,7 +659,7 @@ Vec2Double Simulator::getUnitInTimePosition(
 			x = xj;
 			y = yj;
 		}
-		throw std::runtime_error("wrong platform simulation");
+		//throw std::runtime_error("wrong platform simulation");
 	}
 
 	else if (isJumpPadCross)
@@ -767,10 +767,10 @@ Vec2Double Simulator::getUnitInTimePosition(
 		return newUnitPosition;
 	}
 
-	else
+	/*else
 	{
 		throw std::runtime_error("unknown mt simulation case");
-	}
+	}*/
 	
 	const Vec2Double newUnitPosition = { x, y };
 	if (jumpStopped)

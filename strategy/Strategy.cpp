@@ -236,7 +236,7 @@ std::vector<std::pair<int, int>> Strategy::getShootMeBullets(
 	const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, int addTicks,
 	const Game& game) const
 {
-	if (addTicks != 0 && addTicks != 1) throw std::runtime_error("addTicks is not 0 or 1");
+	//if (addTicks != 0 && addTicks != 1) throw std::runtime_error("addTicks is not 0 or 1");
 	
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	std::vector<std::pair<int, int>> shootMeBullets;
@@ -418,7 +418,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 	bool checkUp, bool checkDown, bool checkLeft, bool checkRight,
 	const Game& game) const
 {
-	if (addTicks != 0 && addTicks != 1) throw std::runtime_error("addTicks is not 0 or 1");
+	//if (addTicks != 0 && addTicks != 1) throw std::runtime_error("addTicks is not 0 or 1");
 	
 	if (shootingMeBullets.empty())
 	{

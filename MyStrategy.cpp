@@ -64,7 +64,7 @@ vector<Vec2Double> getActionPositions(
 	const Vec2Double& unitPosition, const Vec2Double& unitSize, int unitId,
 	const UnitAction& action, int startTick, int stopTick, JumpState& jumpState, const Game& game)
 {
-	if (startTick < 0 || stopTick < 0) throw runtime_error("getActionPositions tick is negative");
+	//if (startTick < 0 || stopTick < 0) throw runtime_error("getActionPositions tick is negative");
 	
 	const auto tickTime = 1 / game.properties.ticksPerSecond;
 	vector<Vec2Double> positions;
@@ -222,7 +222,7 @@ vector<Vec2Double> getSimplePositions(
 		action.jumpDown = false;
 		action.velocity = 0;
 	}	
-	else throw runtime_error("unknown enemy position");
+	//else throw runtime_error("unknown enemy position");
 
 	auto jumpState = unitJumpState;
 
@@ -958,10 +958,10 @@ void initAttackAction(
 			runawayAttackAction.jumpDown = false;
 			runawayAttackAction.velocity = INT_MAX;
 		}
-		else
+		/*else
 		{
 			throw runtime_error("unknown runawayDirection 2");
-		}
+		}*/
 
 		lastMeAttackingJumpState = nextTickMeAttackingJumpState;
 		auto nextPositions = getActionPositions(
@@ -1134,10 +1134,11 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			action.jump = false;
 			action.jumpDown = false;
 			action.velocity = INT_MAX;
-		}else
+		}
+		/*else
 		{
 			throw runtime_error("unknown runawayDirection");
-		}
+		}*/
 		auto jumpState = unit.jumpState;
 		auto mePositions = getActionPositions(unit.position, unit.size, unit.id, action, 0, curStopRunawayTick, jumpState, game);		
 		prolongatePositions(mePositions, unit.size, unit.id, jumpState, game);
@@ -1409,10 +1410,10 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		runawayUnitAction.jumpDown = false;
 		runawayUnitAction.velocity = 0;
 	}
-	else
+	/*else
 	{
 		throw runtime_error("unknown runawayDirection 2");
-	}
+	}*/
 	
 	if (startRunawayTick == 0)
 	{		
