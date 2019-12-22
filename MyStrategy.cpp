@@ -360,7 +360,7 @@ void getHealingData(
 bool needMonkeyMode(const Vec2Double& mePosition, const Vec2Double& enemyPosition, bool hasWeaponEnemy, int enemyFireTick)
 {
 	return
-		hasWeaponEnemy &&
+		hasWeaponEnemy && mePosition.y >= enemyPosition.y - TOLERANCE &&
 		enemyFireTick < MONKEY_FIRE_TICK &&
 		MathHelper::getMHDist(mePosition, enemyPosition) < MONKEY_DIST;
 }
