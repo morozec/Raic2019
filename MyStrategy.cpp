@@ -1350,10 +1350,10 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	bool checkLeft = true;
 	bool checkRight = true;
 
-	if (meAttackingAction.jump) checkUp = false;
-	else if (meAttackingAction.jumpDown) checkDown = false;
-	else if (meAttackingAction.velocity < -TOLERANCE) checkLeft = false;
-	else if (meAttackingAction.velocity > TOLERANCE) checkRight = false;
+	if (meAttackingAction.jump && std::abs(meAttackingAction.velocity) < TOLERANCE) checkUp = false;
+	else if (meAttackingAction.jumpDown && std::abs(meAttackingAction.velocity) < TOLERANCE) checkDown = false;
+	else if (!meAttackingAction.jump && !meAttackingAction.jumpDown && meAttackingAction.velocity < -TOLERANCE) checkLeft = false;
+	else if (!meAttackingAction.jump && !meAttackingAction.jumpDown && meAttackingAction.velocity > TOLERANCE) checkRight = false;
 
 	// выжидаем тик начала движения, не делая ничего
 	action.jump = false;
