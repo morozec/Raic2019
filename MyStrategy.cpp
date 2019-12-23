@@ -319,13 +319,15 @@ void initAStarAction(const Unit& me, const Vec2Double& targetPos, UnitAction& ac
 	const auto endPos =
 		make_pair(size_t(targetPos.x), size_t(targetPos.y));
 
-	const auto isOnAir = Simulator::isUnitOnAir(me.position, me.size, me.id, game);
+	const auto bottomTile = game.level.tiles[size_t(me.position.x)][size_t(me.position.y - 1)];
 	int start_z = 0;
-	if (isOnAir)
+	if (bottomTile == EMPTY || bottomTile == JUMP_PAD)
 	{
 		if (!me.jumpState.canJump && !me.jumpState.canCancel) start_z = 1;
 		else if (me.jumpState.canJump && me.jumpState.canCancel) start_z = 2;
-	}
+		//TODO: прыжок на батуте
+	}	
+	
 	const auto startPos =
 		make_tuple(size_t(me.position.x), size_t(me.position.y), start_z);
 
@@ -1133,7 +1135,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	const LootBox* nearestWeapon = nullptr;
 	for (const LootBox& lootBox : game.lootBoxes)
 	{
-		if (std::dynamic_pointer_cast<Item::Weapon>(lootBox.item))
+		if (std::dynamic_pointer_cast<Item::Weapon>(lootBox.item) &&
+			std::dynamic_pointer_cast<Item::Weapon>(lootBox.item)->weaponType == ROCKET_LAUNCHER)
 		{
 			if (nearestWeapon == nullptr ||
 				MathHelper::getVectorLength2(unit.position, lootBox.position) <
