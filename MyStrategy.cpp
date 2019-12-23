@@ -315,6 +315,7 @@ vector<vector<int>> getGrid(const Game& game)
 
 void initAStarAction(const Unit& me, const Vec2Double& targetPos, UnitAction& action, const Game& game)
 {
+	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	const auto grid = getGrid(game);
 	const auto endPos =
 		make_pair(size_t(targetPos.x), size_t(targetPos.y));
@@ -338,7 +339,18 @@ void initAStarAction(const Unit& me, const Vec2Double& targetPos, UnitAction& ac
 
 	if (nextTile.first > myTile.first) action.velocity = INT_MAX;
 	else if (nextTile.first < myTile.first) action.velocity = -INT_MAX;
-	else action.velocity = 0;
+	else 
+	{
+		const auto distToCenter = (myTile.first + 0.5) - me.position.x;
+		if (std::abs(distToCenter) < TOLERANCE)
+		{
+			action.velocity = 0;
+		}
+		else
+		{
+			action.velocity = distToCenter / tickTime;
+		}
+	}
 
 	if (nextTile.second > myTile.second) action.jump = true;
 	else action.jump = false;
@@ -1154,15 +1166,10 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	action.plantMine = false;
 	action.shoot = false;
 
-	if (unit.weapon == nullptr)
-	{
-		initAStarAction(unit, nearestWeapon->position, action, game);
-		return action;
-	}
-		
+	initAStarAction(unit, nearestWeapon->position, action, game);
+	return action;		
 
-	if (nearestEnemy == nullptr) return action;
-	
+	if (nearestEnemy == nullptr) return action;	
 
 	double enemyFireTimer = INT_MAX;
 	if (nearestEnemy->weapon != nullptr)
