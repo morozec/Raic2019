@@ -71,19 +71,18 @@ double calculateHValue(int row, int col, Pair dest)
 
 // A Utility Function to trace the path from the source 
 // to destination 
-stack<Triple> tracePath(vector<vector<vector<cell>>> cellDetails, Pair dest, int foundDestK)
+stack<Pair> tracePath(vector<vector<vector<cell>>> cellDetails, Pair dest, int foundDestK)
 {
-	printf("\nThe Path is ");
 	int col = dest.first;
 	int row = dest.second;
 	int k = foundDestK;
 
-	stack<Triple> Path;
+	stack<Pair> Path;
 
 	while (!(cellDetails[col][row][k].parent_i == col
 		&& cellDetails[col][row][k].parent_j == row))
 	{
-		Path.push(make_tuple(col, row, k));
+		Path.push(make_pair(col, row));
 		int temp_col = cellDetails[col][row][k].parent_i;
 		int temp_row = cellDetails[col][row][k].parent_j;
 		int temp_k = cellDetails[col][row][k].parent_k;
@@ -92,7 +91,7 @@ stack<Triple> tracePath(vector<vector<vector<cell>>> cellDetails, Pair dest, int
 		k = temp_k;
 	}
 
-	Path.push(make_tuple(col, row, k));	
+	Path.push(make_pair(col, row));	
 
 	return Path;
 }
@@ -100,7 +99,7 @@ stack<Triple> tracePath(vector<vector<vector<cell>>> cellDetails, Pair dest, int
 // A Function to find the shortest path between 
 // a given source cell to a destination cell according 
 // to A* Search Algorithm 
-stack<Triple> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
+stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 	const Game& game)
 {
 	// z-index:

@@ -8,5 +8,5 @@ class Game;
 typedef std::pair<int, int> Pair;
 typedef std::tuple<int, int, int> Triple;
 
-std::stack<Triple> aStarSearch(std::vector<std::vector<int>> grid, Triple src, Pair dest,
+std::stack<Pair> aStarSearch(std::vector<std::vector<int>> grid, Triple src, Pair dest,
 	const Game& game);

@@ -313,6 +313,38 @@ vector<vector<int>> getGrid(const Game& game)
 	return grid;
 }
 
+void initAStarAction(const Unit& me, const Vec2Double& targetPos, UnitAction& action, const Game& game)
+{
+	const auto grid = getGrid(game);
+	const auto endPos =
+		make_pair(size_t(targetPos.x), size_t(targetPos.y));
+
+	const auto isOnAir = Simulator::isUnitOnAir(me.position, me.size, me.id, game);
+	int start_z = 0;
+	if (isOnAir)
+	{
+		if (!me.jumpState.canJump && !me.jumpState.canCancel) start_z = 1;
+		else if (me.jumpState.canJump && me.jumpState.canCancel) start_z = 2;
+	}
+	const auto startPos =
+		make_tuple(size_t(me.position.x), size_t(me.position.y), start_z);
+
+	auto path = aStarSearch(grid, startPos, endPos, game);
+	const auto myTile = path.top();
+	path.pop(); //убрали свою точку
+	const auto nextTile = path.top();
+
+	if (nextTile.first > myTile.first) action.velocity = INT_MAX;
+	else if (nextTile.first < myTile.first) action.velocity = -INT_MAX;
+	else action.velocity = 0;
+
+	if (nextTile.second > myTile.second) action.jump = true;
+	else action.jump = false;
+
+	if (nextTile.second < myTile.second) action.jumpDown = true;
+	else action.jumpDown = false;
+
+}
 
 void getHealingData(
 	const Unit& me,
@@ -325,21 +357,6 @@ void getHealingData(
 	const Game& game
 )
 {
-	const auto grid = getGrid(game);
-	const auto endPos =
-		make_pair(size_t(lootBox.position.x), size_t(lootBox.position.y));
-
-	const auto isOnAir = Simulator::isUnitOnAir(me.position, me.size, me.id, game);
-	int start_z = 0;
-	if (isOnAir)
-	{
-		if (!me.jumpState.canJump && !me.jumpState.canCancel) start_z = 1;
-		else if (me.jumpState.canJump && me.jumpState.canCancel) start_z = 2;
-	}
-	const auto startPos =
-		make_tuple(size_t(me.position.x), size_t(me.position.y), start_z);
-	
-	auto path = aStarSearch(grid, startPos, endPos, game);
 	
 	const auto tickTime = 1 / game.properties.ticksPerSecond;
 
@@ -1133,6 +1150,12 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	action.swapWeapon = false;
 	action.plantMine = false;
 	action.shoot = false;
+
+	if (unit.weapon == nullptr)
+	{
+		initAStarAction(unit, nearestWeapon->position, action, game);
+		return action;
+	}
 		
 
 	if (nearestEnemy == nullptr) return action;
