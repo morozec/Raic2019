@@ -14,6 +14,7 @@
 #include "simulation/Simulator.h"
 #include <iostream>
 #include <algorithm>
+#include "common/AStar.h"
 
 using namespace std;
 
@@ -287,6 +288,32 @@ double getSimpleProbability(
 	return count * 1.0/enemyPositions.size();
 }
 
+vector<vector<int>> getGrid(const Game& game)
+{
+	vector<vector<int>> grid;
+
+	for (size_t i = 0; i < game.level.tiles.size(); ++i)
+	{
+		grid.emplace_back(vector<int>());
+		for (size_t j = 0; j < game.level.tiles[i].size(); ++j)
+		{
+			int value = 1;
+			const auto tile = game.level.tiles[i][j];
+			if (
+				tile == WALL ||
+				(j < game.level.tiles[i].size() - 1 && 
+				game.level.tiles[i][j + 1] == WALL))
+			{
+				value = 0;
+			}
+			grid[i].emplace_back(value);
+		}
+	}
+	
+	return grid;
+}
+
+
 void getHealingData(
 	const Unit& me,
 	vector<Vec2Double>& mePositions,
@@ -298,6 +325,22 @@ void getHealingData(
 	const Game& game
 )
 {
+	const auto grid = getGrid(game);
+	const auto endPos =
+		make_pair(size_t(lootBox.position.x), size_t(lootBox.position.y));
+
+	const auto isOnAir = Simulator::isUnitOnAir(me.position, me.size, me.id, game);
+	int start_z = 0;
+	if (isOnAir)
+	{
+		if (!me.jumpState.canJump && !me.jumpState.canCancel) start_z = 1;
+		else if (me.jumpState.canJump && me.jumpState.canCancel) start_z = 2;
+	}
+	const auto startPos =
+		make_tuple(size_t(me.position.x), size_t(me.position.y), start_z);
+	
+	auto path = aStarSearch(grid, startPos, endPos, game);
+	
 	const auto tickTime = 1 / game.properties.ticksPerSecond;
 
 	auto lastMePosition = me.position;

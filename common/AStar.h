@@ -3,6 +3,10 @@
 // Creating a shortcut for int, int pair type 
 #include <utility>
 #include <vector>
+#include <stack>
+class Game;
 typedef std::pair<int, int> Pair;
+typedef std::tuple<int, int, int> Triple;
 
-void aStarSearch(std::vector<std::vector<int>> grid, Pair src, Pair dest);
+std::stack<Triple> aStarSearch(std::vector<std::vector<int>> grid, Triple src, Pair dest,
+	const Game& game);

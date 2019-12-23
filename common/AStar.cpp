@@ -7,6 +7,9 @@
 #include <stack>
 #include <set>
 #include <vector>
+#include <stdexcept>
+#include <tuple>
+#include "../model/Game.hpp"
 using namespace std;
 
 //#define ROW 9 
@@ -15,21 +18,21 @@ using namespace std;
 
 
 // Creating a shortcut for pair<int, pair<int, int>> type 
-typedef pair<double, pair<int, int>> pPair;
+typedef pair<double, Triple> pPair;
 
 // A structure to hold the neccesary parameters 
 struct cell
 {
 	// Row and Column index of its parent 
 	// Note that 0 <= i <= ROW-1 & 0 <= j <= COL-1 
-	int parent_i, parent_j;
+	int parent_i, parent_j, parent_k;
 	// f = g + h 
 	double f, g, h;
 };
 
 // A Utility Function to check whether given cell (row, col) 
 // is a valid cell or not. 
-bool isValid(int row, int col, int ROW, int COL)
+bool isValid(int col, int row, int COL, int ROW)
 {
 	// Returns true if row number and column number 
 	// is in range 
@@ -39,10 +42,10 @@ bool isValid(int row, int col, int ROW, int COL)
 
 // A Utility Function to check whether the given cell is 
 // blocked or not 
-bool isUnBlocked(vector<vector<int>> grid, int row, int col)
+bool isUnBlocked(vector<vector<int>> grid, int col, int row)
 {
 	// Returns true if the cell is not blocked else false 
-	if (grid[row][col] == 1)
+	if (grid[col][row] == 1)
 		return (true);
 	else
 		return (false);
@@ -68,102 +71,115 @@ double calculateHValue(int row, int col, Pair dest)
 
 // A Utility Function to trace the path from the source 
 // to destination 
-void tracePath(vector<vector<cell>> cellDetails, Pair dest)
+stack<Triple> tracePath(vector<vector<vector<cell>>> cellDetails, Pair dest, int foundDestK)
 {
 	printf("\nThe Path is ");
-	int row = dest.first;
-	int col = dest.second;
+	int col = dest.first;
+	int row = dest.second;
+	int k = foundDestK;
 
-	stack<Pair> Path;
+	stack<Triple> Path;
 
-	while (!(cellDetails[row][col].parent_i == row
-		&& cellDetails[row][col].parent_j == col))
+	while (!(cellDetails[col][row][k].parent_i == col
+		&& cellDetails[col][row][k].parent_j == row))
 	{
-		Path.push(make_pair(row, col));
-		int temp_row = cellDetails[row][col].parent_i;
-		int temp_col = cellDetails[row][col].parent_j;
-		row = temp_row;
+		Path.push(make_tuple(col, row, k));
+		int temp_col = cellDetails[col][row][k].parent_i;
+		int temp_row = cellDetails[col][row][k].parent_j;
+		int temp_k = cellDetails[col][row][k].parent_k;
 		col = temp_col;
+		row = temp_row;		
+		k = temp_k;
 	}
 
-	Path.push(make_pair(row, col));
-	while (!Path.empty())
-	{
-		pair<int, int> p = Path.top();
-		Path.pop();
-		printf("-> (%d,%d) ", p.first, p.second);
-	}
+	Path.push(make_tuple(col, row, k));	
 
-	return;
+	return Path;
 }
 
 // A Function to find the shortest path between 
 // a given source cell to a destination cell according 
 // to A* Search Algorithm 
-void aStarSearch(vector<vector<int>> grid, Pair src, Pair dest)
+stack<Triple> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
+	const Game& game)
 {
+	// z-index:
+	// 0 - standing
+	// 1 - falling
+	// 2 - jumping
+	
 	const auto ROW = grid.size();
 	const auto COL = grid[0].size();
+	const auto Z_SIZE = 3;
+
+	const auto start_x = get<0>(src);
+	const auto start_y = get<1>(src);
+	const auto start_z = get<2>(src);
+	
 	// If the source is out of range 
-	if (isValid(src.first, src.second, ROW, COL) == false)
+	if (isValid(start_x, start_y, ROW, COL) == false)
 	{
-		printf("Source is invalid\n");
-		return;
+		throw runtime_error("Source is invalid\n");
 	}
 
 	// If the destination is out of range 
 	if (isValid(dest.first, dest.second, ROW, COL) == false)
 	{
-		printf("Destination is invalid\n");
-		return;
+		throw runtime_error("Destination is invalid\n");
 	}
 
 	// Either the source or the destination is blocked 
-	if (isUnBlocked(grid, src.first, src.second) == false ||
+	if (isUnBlocked(grid, start_x, start_y) == false ||
 		isUnBlocked(grid, dest.first, dest.second) == false)
 	{
-		printf("Source or the destination is blocked\n");
-		return;
+		throw runtime_error("Source or the destination is blocked\n");
 	}
 
 	// If the destination cell is the same as source cell 
-	if (isDestination(src.first, src.second, dest) == true)
+	if (isDestination(start_x, start_y, dest) == true)
 	{
-		printf("We are already at the destination\n");
-		return;
+		throw runtime_error("We are already at the destination\n");
 	}
 
 	// Create a closed list and initialise it to false which means 
 	// that no cell has been included yet 
 	// This closed list is implemented as a boolean 2D array
 
-	vector<vector<bool>> closedList(ROW, vector<bool>(COL, false));
+	vector<vector<vector<bool>>> closedList(
+		ROW, vector<vector<bool>>(
+			COL, vector<bool>(Z_SIZE, false)));
 
 	// Declare a 2D array of structure to hold the details 
 	//of that cell
-	vector<vector<cell>> cellDetails(ROW, vector<cell>(COL));
+	vector<vector<vector<cell>>> cellDetails(
+		ROW, vector<vector<cell>>(COL, 
+			vector<cell>(Z_SIZE)));
 
-	int i, j;
+	int i, j, k;
 
 	for (i = 0; i < ROW; i++)
 	{
 		for (j = 0; j < COL; j++)
 		{
-			cellDetails[i][j].f = FLT_MAX;
-			cellDetails[i][j].g = FLT_MAX;
-			cellDetails[i][j].h = FLT_MAX;
-			cellDetails[i][j].parent_i = -1;
-			cellDetails[i][j].parent_j = -1;
+			for (k = 0; k < Z_SIZE; ++k) {
+				cellDetails[i][j][k].f = FLT_MAX;
+				cellDetails[i][j][k].g = FLT_MAX;
+				cellDetails[i][j][k].h = FLT_MAX;
+				cellDetails[i][j][k].parent_i = -1;
+				cellDetails[i][j][k].parent_j = -1;
+				cellDetails[i][j][k].parent_k = -1;
+			}
 		}
 	}
 
 	// Initialising the parameters of the starting node 
-	i = src.first, j = src.second;
-	cellDetails[i][j].f = 0.0;
-	cellDetails[i][j].g = 0.0;
-	cellDetails[i][j].h = 0.0;
-	cellDetails[i][j].parent_i = i;
-	cellDetails[i][j].parent_j = j;
+	i = start_x, j = start_y; k = start_z;
+	cellDetails[i][j][k].f = 0.0;
+	cellDetails[i][j][k].g = 0.0;
+	cellDetails[i][j][k].h = 0.0;
+	cellDetails[i][j][k].parent_i = i;
+	cellDetails[i][j][k].parent_j = j;
+	cellDetails[i][j][k].parent_k = k;
 
 	/*
 	 Create an open list having information as-
@@ -175,12 +191,15 @@ void aStarSearch(vector<vector<int>> grid, Pair src, Pair dest)
 	set<pPair> openList;
 
 	// Put the starting cell on the open list and set its 
-	// 'f' as 0 
-	openList.insert(make_pair(0.0, make_pair(i, j)));
+	// 'f' as 0
+	
+	openList.insert(make_pair(0.0, 
+		make_tuple(i, j, start_z)));
 
 	// We set this boolean value as false as initially 
 	// the destination is not reached. 
 	bool foundDest = false;
+	int foundDestK = -1;
 
 	while (!openList.empty())
 	{
@@ -190,9 +209,10 @@ void aStarSearch(vector<vector<int>> grid, Pair src, Pair dest)
 		openList.erase(openList.begin());
 
 		// Add this vertex to the closed list 
-		i = p.second.first;
-		j = p.second.second;
-		closedList[i][j] = true;
+		i = get<0>(p.second);
+		j = get<1>(p.second);
+		k = get<2>(p.second);
+		closedList[i][j][k] = true;
 
 		/*
 		 Generating all the 8 successor of this cell
@@ -217,31 +237,35 @@ void aStarSearch(vector<vector<int>> grid, Pair src, Pair dest)
 
 		 // To store the 'g', 'h' and 'f' of the 8 successors 
 		double gNew, hNew, fNew;
+		int kNew;
 
-		//----------- 1st Successor (North) ------------ 
+		//----------- 1st Successor (WEST) ------------ 
 
 		// Only process this cell if this is a valid one 
-		if (isValid(i - 1, j, ROW, COL) == true)
+		if (isValid(i - 1, j, ROW, COL) == true && k == 0)
 		{
+			kNew = game.level.tiles[i - 1][j - 1] == EMPTY ||
+				game.level.tiles[i - 1][j - 1] == JUMP_PAD ?
+				1 :	0;
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i - 1, j, dest) == true)
 			{
 				// Set the Parent of the destination cell 
-				cellDetails[i - 1][j].parent_i = i;
-				cellDetails[i - 1][j].parent_j = j;
-				printf("The destination cell is found\n");
-				tracePath(cellDetails, dest);
+				cellDetails[i - 1][j][kNew].parent_i = i;
+				cellDetails[i - 1][j][kNew].parent_j = j;
+				cellDetails[i - 1][j][kNew].parent_k = k;
 				foundDest = true;
-				return;
+				foundDestK = kNew;
+				break;
 			}
 			// If the successor is already on the closed 
 			// list or if it is blocked, then ignore it. 
 			// Else do the following 
-			else if (closedList[i - 1][j] == false &&
+			else if (closedList[i - 1][j][kNew] == false &&
 				isUnBlocked(grid, i - 1, j) == true)
 			{
-				gNew = cellDetails[i][j].g + 1.0;
+				gNew = cellDetails[i][j][k].g + 1.0;
 				hNew = calculateHValue(i - 1, j, dest);
 				fNew = gNew + hNew;
 
@@ -253,46 +277,50 @@ void aStarSearch(vector<vector<int>> grid, Pair src, Pair dest)
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i - 1][j].f == FLT_MAX ||
-					cellDetails[i - 1][j].f > fNew)
+				if (cellDetails[i - 1][j][kNew].f == FLT_MAX ||
+					cellDetails[i - 1][j][kNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
-						make_pair(i - 1, j)));
+						make_tuple(i - 1, j, kNew)));
 
 					// Update the details of this cell 
-					cellDetails[i - 1][j].f = fNew;
-					cellDetails[i - 1][j].g = gNew;
-					cellDetails[i - 1][j].h = hNew;
-					cellDetails[i - 1][j].parent_i = i;
-					cellDetails[i - 1][j].parent_j = j;
+					cellDetails[i - 1][j][kNew].f = fNew;
+					cellDetails[i - 1][j][kNew].g = gNew;
+					cellDetails[i - 1][j][kNew].h = hNew;
+					cellDetails[i - 1][j][kNew].parent_i = i;
+					cellDetails[i - 1][j][kNew].parent_j = j;
+					cellDetails[i - 1][j][kNew].parent_k = k;
 				}
 			}
 		}
 
-		//----------- 2nd Successor (South) ------------ 
+		//----------- 2nd Successor (EAST) ------------ 
 
 		// Only process this cell if this is a valid one 
-		if (isValid(i + 1, j, ROW, COL) == true)
+		if (isValid(i + 1, j, ROW, COL) == true && k == 0)
 		{
+			kNew = game.level.tiles[i + 1][j - 1] == EMPTY ||
+				game.level.tiles[i + 1][j - 1] == JUMP_PAD ?
+				1 : 0;
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i + 1, j, dest) == true)
 			{
 				// Set the Parent of the destination cell 
-				cellDetails[i + 1][j].parent_i = i;
-				cellDetails[i + 1][j].parent_j = j;
-				printf("The destination cell is found\n");
-				tracePath(cellDetails, dest);
+				cellDetails[i + 1][j][kNew].parent_i = i;
+				cellDetails[i + 1][j][kNew].parent_j = j;
+				cellDetails[i + 1][j][kNew].parent_k = k;
 				foundDest = true;
-				return;
+				foundDestK = kNew;
+				break;
 			}
 			// If the successor is already on the closed 
 			// list or if it is blocked, then ignore it. 
 			// Else do the following 
-			else if (closedList[i + 1][j] == false &&
+			else if (closedList[i + 1][j][kNew] == false &&
 				isUnBlocked(grid, i + 1, j) == true)
 			{
-				gNew = cellDetails[i][j].g + 1.0;
+				gNew = cellDetails[i][j][k].g + 1.0;
 				hNew = calculateHValue(i + 1, j, dest);
 				fNew = gNew + hNew;
 
@@ -304,45 +332,47 @@ void aStarSearch(vector<vector<int>> grid, Pair src, Pair dest)
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i + 1][j].f == FLT_MAX ||
-					cellDetails[i + 1][j].f > fNew)
+				if (cellDetails[i + 1][j][kNew].f == FLT_MAX ||
+					cellDetails[i + 1][j][kNew].f > fNew)
 				{
-					openList.insert(make_pair(fNew, make_pair(i + 1, j)));
+					openList.insert(make_pair(fNew, make_tuple(i + 1, j, kNew)));
 					// Update the details of this cell 
-					cellDetails[i + 1][j].f = fNew;
-					cellDetails[i + 1][j].g = gNew;
-					cellDetails[i + 1][j].h = hNew;
-					cellDetails[i + 1][j].parent_i = i;
-					cellDetails[i + 1][j].parent_j = j;
+					cellDetails[i + 1][j][kNew].f = fNew;
+					cellDetails[i + 1][j][kNew].g = gNew;
+					cellDetails[i + 1][j][kNew].h = hNew;
+					cellDetails[i + 1][j][kNew].parent_i = i;
+					cellDetails[i + 1][j][kNew].parent_j = j;
+					cellDetails[i + 1][j][kNew].parent_k = k;
 				}
 			}
 		}
 
-		//----------- 3rd Successor (East) ------------ 
+		//----------- 3.0 Successor (NORTH-2) ------------ 
 
 		// Only process this cell if this is a valid one 
-		if (isValid(i, j + 1, ROW, COL) == true)
+		if (isValid(i, j + 1, ROW, COL) == true && k != 1)
 		{
+			kNew = 2;
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i, j + 1, dest) == true)
 			{
 				// Set the Parent of the destination cell 
-				cellDetails[i][j + 1].parent_i = i;
-				cellDetails[i][j + 1].parent_j = j;
-				printf("The destination cell is found\n");
-				tracePath(cellDetails, dest);
+				cellDetails[i][j + 1][kNew].parent_i = i;
+				cellDetails[i][j + 1][kNew].parent_j = j;
+				cellDetails[i][j + 1][kNew].parent_k = k;
 				foundDest = true;
-				return;
+				foundDestK = kNew;
+				break;
 			}
 
 			// If the successor is already on the closed 
 			// list or if it is blocked, then ignore it. 
 			// Else do the following 
-			else if (closedList[i][j + 1] == false &&
+			else if (closedList[i][j + 1][kNew] == false &&
 				isUnBlocked(grid, i, j + 1) == true)
 			{
-				gNew = cellDetails[i][j].g + 1.0;
+				gNew = cellDetails[i][j][k].g + 1.0;
 				hNew = calculateHValue(i, j + 1, dest);
 				fNew = gNew + hNew;
 
@@ -354,47 +384,108 @@ void aStarSearch(vector<vector<int>> grid, Pair src, Pair dest)
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i][j + 1].f == FLT_MAX ||
-					cellDetails[i][j + 1].f > fNew)
+				if (cellDetails[i][j + 1][kNew].f == FLT_MAX ||
+					cellDetails[i][j + 1][kNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
-						make_pair(i, j + 1)));
+						make_tuple(i, j + 1, kNew)));
 
 					// Update the details of this cell 
-					cellDetails[i][j + 1].f = fNew;
-					cellDetails[i][j + 1].g = gNew;
-					cellDetails[i][j + 1].h = hNew;
-					cellDetails[i][j + 1].parent_i = i;
-					cellDetails[i][j + 1].parent_j = j;
+					cellDetails[i][j + 1][kNew].f = fNew;
+					cellDetails[i][j + 1][kNew].g = gNew;
+					cellDetails[i][j + 1][kNew].h = hNew;
+					cellDetails[i][j + 1][kNew].parent_i = i;
+					cellDetails[i][j + 1][kNew].parent_j = j;
+					cellDetails[i][j + 1][kNew].parent_k = k;
 				}
 			}
 		}
 
-		//----------- 4th Successor (West) ------------ 
+		//----------- 3rd Successor (NORTH-0) ------------ 
 
 		// Only process this cell if this is a valid one 
-		if (isValid(i, j - 1, ROW, COL) == true)
+		if (isValid(i, j + 1, ROW, COL) == true && k == 2 &&
+			(game.level.tiles[i][j] == PLATFORM || game.level.tiles[i][j] == LADDER))
 		{
+			kNew = 0;
 			// If the destination cell is the same as the 
 			// current successor 
-			if (isDestination(i, j - 1, dest) == true)
+			if (isDestination(i, j + 1, dest) == true)
 			{
 				// Set the Parent of the destination cell 
-				cellDetails[i][j - 1].parent_i = i;
-				cellDetails[i][j - 1].parent_j = j;
-				printf("The destination cell is found\n");
-				tracePath(cellDetails, dest);
+				cellDetails[i][j + 1][kNew].parent_i = i;
+				cellDetails[i][j + 1][kNew].parent_j = j;
+				cellDetails[i][j + 1][kNew].parent_k = k;
 				foundDest = true;
-				return;
+				foundDestK = kNew;
+				break;
 			}
 
 			// If the successor is already on the closed 
 			// list or if it is blocked, then ignore it. 
 			// Else do the following 
-			else if (closedList[i][j - 1] == false &&
+			else if (closedList[i][j + 1][kNew] == false &&
+				isUnBlocked(grid, i, j + 1) == true)
+			{
+				gNew = cellDetails[i][j][k].g + 1.0;
+				hNew = calculateHValue(i, j + 1, dest);
+				fNew = gNew + hNew;
+
+				// If it isn’t on the open list, add it to 
+				// the open list. Make the current square 
+				// the parent of this square. Record the 
+				// f, g, and h costs of the square cell 
+				//                OR 
+				// If it is on the open list already, check 
+				// to see if this path to that square is better, 
+				// using 'f' cost as the measure. 
+				if (cellDetails[i][j + 1][kNew].f == FLT_MAX ||
+					cellDetails[i][j + 1][kNew].f > fNew)
+				{
+					openList.insert(make_pair(fNew,
+						make_tuple(i, j + 1, kNew)));
+
+					// Update the details of this cell 
+					cellDetails[i][j + 1][kNew].f = fNew;
+					cellDetails[i][j + 1][kNew].g = gNew;
+					cellDetails[i][j + 1][kNew].h = hNew;
+					cellDetails[i][j + 1][kNew].parent_i = i;
+					cellDetails[i][j + 1][kNew].parent_j = j;
+					cellDetails[i][j + 1][kNew].parent_k = k;
+				}
+			}
+		}
+
+		//TODO: NORTH-1
+
+		//----------- 4th Successor (SOUTH) ------------ 
+
+		// Only process this cell if this is a valid one 
+		if (isValid(i, j - 1, ROW, COL) == true && (k == 1 || k == 2))
+		{
+			kNew = game.level.tiles[i][j - 2] == EMPTY ||
+				game.level.tiles[i][j - 2] == JUMP_PAD ?
+				1 : 0;
+			// If the destination cell is the same as the 
+			// current successor 
+			if (isDestination(i, j - 1, dest) == true)
+			{
+				// Set the Parent of the destination cell 
+				cellDetails[i][j - 1][kNew].parent_i = i;
+				cellDetails[i][j - 1][kNew].parent_j = j;
+				cellDetails[i][j - 1][kNew].parent_k = k;
+				foundDest = true;
+				foundDestK = kNew;
+				break;
+			}
+
+			// If the successor is already on the closed 
+			// list or if it is blocked, then ignore it. 
+			// Else do the following 
+			else if (closedList[i][j - 1][kNew] == false &&
 				isUnBlocked(grid, i, j - 1) == true)
 			{
-				gNew = cellDetails[i][j].g + 1.0;
+				gNew = cellDetails[i][j][k].g + 1.0;
 				hNew = calculateHValue(i, j - 1, dest);
 				fNew = gNew + hNew;
 
@@ -406,227 +497,220 @@ void aStarSearch(vector<vector<int>> grid, Pair src, Pair dest)
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i][j - 1].f == FLT_MAX ||
-					cellDetails[i][j - 1].f > fNew)
+				if (cellDetails[i][j - 1][kNew].f == FLT_MAX ||
+					cellDetails[i][j - 1][kNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
-						make_pair(i, j - 1)));
+						make_tuple(i, j - 1, kNew)));
 
 					// Update the details of this cell 
-					cellDetails[i][j - 1].f = fNew;
-					cellDetails[i][j - 1].g = gNew;
-					cellDetails[i][j - 1].h = hNew;
-					cellDetails[i][j - 1].parent_i = i;
-					cellDetails[i][j - 1].parent_j = j;
+					cellDetails[i][j - 1][kNew].f = fNew;
+					cellDetails[i][j - 1][kNew].g = gNew;
+					cellDetails[i][j - 1][kNew].h = hNew;
+					cellDetails[i][j - 1][kNew].parent_i = i;
+					cellDetails[i][j - 1][kNew].parent_j = j;
+					cellDetails[i][j - 1][kNew].parent_k = k;
 				}
 			}
 		}
 
-		//----------- 5th Successor (North-East) ------------ 
+	//	//----------- 5th Successor (North-East) ------------ 
 
-		// Only process this cell if this is a valid one 
-		if (isValid(i - 1, j + 1, ROW, COL) == true)
-		{
-			// If the destination cell is the same as the 
-			// current successor 
-			if (isDestination(i - 1, j + 1, dest) == true)
-			{
-				// Set the Parent of the destination cell 
-				cellDetails[i - 1][j + 1].parent_i = i;
-				cellDetails[i - 1][j + 1].parent_j = j;
-				printf("The destination cell is found\n");
-				tracePath(cellDetails, dest);
-				foundDest = true;
-				return;
-			}
+	//	// Only process this cell if this is a valid one 
+	//	if (isValid(i - 1, j + 1, ROW, COL) == true)
+	//	{
+	//		// If the destination cell is the same as the 
+	//		// current successor 
+	//		if (isDestination(i - 1, j + 1, dest) == true)
+	//		{
+	//			// Set the Parent of the destination cell 
+	//			cellDetails[i - 1][j + 1].parent_i = i;
+	//			cellDetails[i - 1][j + 1].parent_j = j;
+	//			foundDest = true;
+	//			break;
+	//		}
 
-			// If the successor is already on the closed 
-			// list or if it is blocked, then ignore it. 
-			// Else do the following 
-			else if (closedList[i - 1][j + 1] == false &&
-				isUnBlocked(grid, i - 1, j + 1) == true)
-			{
-				gNew = cellDetails[i][j].g + 1.414;
-				hNew = calculateHValue(i - 1, j + 1, dest);
-				fNew = gNew + hNew;
+	//		// If the successor is already on the closed 
+	//		// list or if it is blocked, then ignore it. 
+	//		// Else do the following 
+	//		else if (closedList[i - 1][j + 1] == false &&
+	//			isUnBlocked(grid, i - 1, j + 1) == true)
+	//		{
+	//			gNew = cellDetails[i][j].g + 1.414;
+	//			hNew = calculateHValue(i - 1, j + 1, dest);
+	//			fNew = gNew + hNew;
 
-				// If it isn’t on the open list, add it to 
-				// the open list. Make the current square 
-				// the parent of this square. Record the 
-				// f, g, and h costs of the square cell 
-				//                OR 
-				// If it is on the open list already, check 
-				// to see if this path to that square is better, 
-				// using 'f' cost as the measure. 
-				if (cellDetails[i - 1][j + 1].f == FLT_MAX ||
-					cellDetails[i - 1][j + 1].f > fNew)
-				{
-					openList.insert(make_pair(fNew,
-						make_pair(i - 1, j + 1)));
+	//			// If it isn’t on the open list, add it to 
+	//			// the open list. Make the current square 
+	//			// the parent of this square. Record the 
+	//			// f, g, and h costs of the square cell 
+	//			//                OR 
+	//			// If it is on the open list already, check 
+	//			// to see if this path to that square is better, 
+	//			// using 'f' cost as the measure. 
+	//			if (cellDetails[i - 1][j + 1].f == FLT_MAX ||
+	//				cellDetails[i - 1][j + 1].f > fNew)
+	//			{
+	//				openList.insert(make_pair(fNew,
+	//					make_pair(i - 1, j + 1)));
 
-					// Update the details of this cell 
-					cellDetails[i - 1][j + 1].f = fNew;
-					cellDetails[i - 1][j + 1].g = gNew;
-					cellDetails[i - 1][j + 1].h = hNew;
-					cellDetails[i - 1][j + 1].parent_i = i;
-					cellDetails[i - 1][j + 1].parent_j = j;
-				}
-			}
-		}
+	//				// Update the details of this cell 
+	//				cellDetails[i - 1][j + 1].f = fNew;
+	//				cellDetails[i - 1][j + 1].g = gNew;
+	//				cellDetails[i - 1][j + 1].h = hNew;
+	//				cellDetails[i - 1][j + 1].parent_i = i;
+	//				cellDetails[i - 1][j + 1].parent_j = j;
+	//			}
+	//		}
+	//	}
 
-		//----------- 6th Successor (North-West) ------------ 
+	//	//----------- 6th Successor (North-West) ------------ 
 
-		// Only process this cell if this is a valid one 
-		if (isValid(i - 1, j - 1, ROW, COL) == true)
-		{
-			// If the destination cell is the same as the 
-			// current successor 
-			if (isDestination(i - 1, j - 1, dest) == true)
-			{
-				// Set the Parent of the destination cell 
-				cellDetails[i - 1][j - 1].parent_i = i;
-				cellDetails[i - 1][j - 1].parent_j = j;
-				printf("The destination cell is found\n");
-				tracePath(cellDetails, dest);
-				foundDest = true;
-				return;
-			}
+	//	// Only process this cell if this is a valid one 
+	//	if (isValid(i - 1, j - 1, ROW, COL) == true)
+	//	{
+	//		// If the destination cell is the same as the 
+	//		// current successor 
+	//		if (isDestination(i - 1, j - 1, dest) == true)
+	//		{
+	//			// Set the Parent of the destination cell 
+	//			cellDetails[i - 1][j - 1].parent_i = i;
+	//			cellDetails[i - 1][j - 1].parent_j = j;
+	//			foundDest = true;
+	//			break;
+	//		}
 
-			// If the successor is already on the closed 
-			// list or if it is blocked, then ignore it. 
-			// Else do the following 
-			else if (closedList[i - 1][j - 1] == false &&
-				isUnBlocked(grid, i - 1, j - 1) == true)
-			{
-				gNew = cellDetails[i][j].g + 1.414;
-				hNew = calculateHValue(i - 1, j - 1, dest);
-				fNew = gNew + hNew;
+	//		// If the successor is already on the closed 
+	//		// list or if it is blocked, then ignore it. 
+	//		// Else do the following 
+	//		else if (closedList[i - 1][j - 1] == false &&
+	//			isUnBlocked(grid, i - 1, j - 1) == true)
+	//		{
+	//			gNew = cellDetails[i][j].g + 1.414;
+	//			hNew = calculateHValue(i - 1, j - 1, dest);
+	//			fNew = gNew + hNew;
 
-				// If it isn’t on the open list, add it to 
-				// the open list. Make the current square 
-				// the parent of this square. Record the 
-				// f, g, and h costs of the square cell 
-				//                OR 
-				// If it is on the open list already, check 
-				// to see if this path to that square is better, 
-				// using 'f' cost as the measure. 
-				if (cellDetails[i - 1][j - 1].f == FLT_MAX ||
-					cellDetails[i - 1][j - 1].f > fNew)
-				{
-					openList.insert(make_pair(fNew, make_pair(i - 1, j - 1)));
-					// Update the details of this cell 
-					cellDetails[i - 1][j - 1].f = fNew;
-					cellDetails[i - 1][j - 1].g = gNew;
-					cellDetails[i - 1][j - 1].h = hNew;
-					cellDetails[i - 1][j - 1].parent_i = i;
-					cellDetails[i - 1][j - 1].parent_j = j;
-				}
-			}
-		}
+	//			// If it isn’t on the open list, add it to 
+	//			// the open list. Make the current square 
+	//			// the parent of this square. Record the 
+	//			// f, g, and h costs of the square cell 
+	//			//                OR 
+	//			// If it is on the open list already, check 
+	//			// to see if this path to that square is better, 
+	//			// using 'f' cost as the measure. 
+	//			if (cellDetails[i - 1][j - 1].f == FLT_MAX ||
+	//				cellDetails[i - 1][j - 1].f > fNew)
+	//			{
+	//				openList.insert(make_pair(fNew, make_pair(i - 1, j - 1)));
+	//				// Update the details of this cell 
+	//				cellDetails[i - 1][j - 1].f = fNew;
+	//				cellDetails[i - 1][j - 1].g = gNew;
+	//				cellDetails[i - 1][j - 1].h = hNew;
+	//				cellDetails[i - 1][j - 1].parent_i = i;
+	//				cellDetails[i - 1][j - 1].parent_j = j;
+	//			}
+	//		}
+	//	}
 
-		//----------- 7th Successor (South-East) ------------ 
+	//	//----------- 7th Successor (South-East) ------------ 
 
-		// Only process this cell if this is a valid one 
-		if (isValid(i + 1, j + 1, ROW, COL) == true)
-		{
-			// If the destination cell is the same as the 
-			// current successor 
-			if (isDestination(i + 1, j + 1, dest) == true)
-			{
-				// Set the Parent of the destination cell 
-				cellDetails[i + 1][j + 1].parent_i = i;
-				cellDetails[i + 1][j + 1].parent_j = j;
-				printf("The destination cell is found\n");
-				tracePath(cellDetails, dest);
-				foundDest = true;
-				return;
-			}
+	//	// Only process this cell if this is a valid one 
+	//	if (isValid(i + 1, j + 1, ROW, COL) == true)
+	//	{
+	//		// If the destination cell is the same as the 
+	//		// current successor 
+	//		if (isDestination(i + 1, j + 1, dest) == true)
+	//		{
+	//			// Set the Parent of the destination cell 
+	//			cellDetails[i + 1][j + 1].parent_i = i;
+	//			cellDetails[i + 1][j + 1].parent_j = j;
+	//			foundDest = true;
+	//			break;
+	//		}
 
-			// If the successor is already on the closed 
-			// list or if it is blocked, then ignore it. 
-			// Else do the following 
-			else if (closedList[i + 1][j + 1] == false &&
-				isUnBlocked(grid, i + 1, j + 1) == true)
-			{
-				gNew = cellDetails[i][j].g + 1.414;
-				hNew = calculateHValue(i + 1, j + 1, dest);
-				fNew = gNew + hNew;
+	//		// If the successor is already on the closed 
+	//		// list or if it is blocked, then ignore it. 
+	//		// Else do the following 
+	//		else if (closedList[i + 1][j + 1] == false &&
+	//			isUnBlocked(grid, i + 1, j + 1) == true)
+	//		{
+	//			gNew = cellDetails[i][j].g + 1.414;
+	//			hNew = calculateHValue(i + 1, j + 1, dest);
+	//			fNew = gNew + hNew;
 
-				// If it isn’t on the open list, add it to 
-				// the open list. Make the current square 
-				// the parent of this square. Record the 
-				// f, g, and h costs of the square cell 
-				//                OR 
-				// If it is on the open list already, check 
-				// to see if this path to that square is better, 
-				// using 'f' cost as the measure. 
-				if (cellDetails[i + 1][j + 1].f == FLT_MAX ||
-					cellDetails[i + 1][j + 1].f > fNew)
-				{
-					openList.insert(make_pair(fNew,
-						make_pair(i + 1, j + 1)));
+	//			// If it isn’t on the open list, add it to 
+	//			// the open list. Make the current square 
+	//			// the parent of this square. Record the 
+	//			// f, g, and h costs of the square cell 
+	//			//                OR 
+	//			// If it is on the open list already, check 
+	//			// to see if this path to that square is better, 
+	//			// using 'f' cost as the measure. 
+	//			if (cellDetails[i + 1][j + 1].f == FLT_MAX ||
+	//				cellDetails[i + 1][j + 1].f > fNew)
+	//			{
+	//				openList.insert(make_pair(fNew,
+	//					make_pair(i + 1, j + 1)));
 
-					// Update the details of this cell 
-					cellDetails[i + 1][j + 1].f = fNew;
-					cellDetails[i + 1][j + 1].g = gNew;
-					cellDetails[i + 1][j + 1].h = hNew;
-					cellDetails[i + 1][j + 1].parent_i = i;
-					cellDetails[i + 1][j + 1].parent_j = j;
-				}
-			}
-		}
+	//				// Update the details of this cell 
+	//				cellDetails[i + 1][j + 1].f = fNew;
+	//				cellDetails[i + 1][j + 1].g = gNew;
+	//				cellDetails[i + 1][j + 1].h = hNew;
+	//				cellDetails[i + 1][j + 1].parent_i = i;
+	//				cellDetails[i + 1][j + 1].parent_j = j;
+	//			}
+	//		}
+	//	}
 
-		//----------- 8th Successor (South-West) ------------ 
+	//	//----------- 8th Successor (South-West) ------------ 
 
-		// Only process this cell if this is a valid one 
-		if (isValid(i + 1, j - 1, ROW, COL) == true)
-		{
-			// If the destination cell is the same as the 
-			// current successor 
-			if (isDestination(i + 1, j - 1, dest) == true)
-			{
-				// Set the Parent of the destination cell 
-				cellDetails[i + 1][j - 1].parent_i = i;
-				cellDetails[i + 1][j - 1].parent_j = j;
-				printf("The destination cell is found\n");
-				tracePath(cellDetails, dest);
-				foundDest = true;
-				return;
-			}
+	//	// Only process this cell if this is a valid one 
+	//	if (isValid(i + 1, j - 1, ROW, COL) == true)
+	//	{
+	//		// If the destination cell is the same as the 
+	//		// current successor 
+	//		if (isDestination(i + 1, j - 1, dest) == true)
+	//		{
+	//			// Set the Parent of the destination cell 
+	//			cellDetails[i + 1][j - 1].parent_i = i;
+	//			cellDetails[i + 1][j - 1].parent_j = j;
+	//			foundDest = true;
+	//			break;
+	//		}
 
-			// If the successor is already on the closed 
-			// list or if it is blocked, then ignore it. 
-			// Else do the following 
-			else if (closedList[i + 1][j - 1] == false &&
-				isUnBlocked(grid, i + 1, j - 1) == true)
-			{
-				gNew = cellDetails[i][j].g + 1.414;
-				hNew = calculateHValue(i + 1, j - 1, dest);
-				fNew = gNew + hNew;
+	//		// If the successor is already on the closed 
+	//		// list or if it is blocked, then ignore it. 
+	//		// Else do the following 
+	//		else if (closedList[i + 1][j - 1] == false &&
+	//			isUnBlocked(grid, i + 1, j - 1) == true)
+	//		{
+	//			gNew = cellDetails[i][j].g + 1.414;
+	//			hNew = calculateHValue(i + 1, j - 1, dest);
+	//			fNew = gNew + hNew;
 
-				// If it isn’t on the open list, add it to 
-				// the open list. Make the current square 
-				// the parent of this square. Record the 
-				// f, g, and h costs of the square cell 
-				//                OR 
-				// If it is on the open list already, check 
-				// to see if this path to that square is better, 
-				// using 'f' cost as the measure. 
-				if (cellDetails[i + 1][j - 1].f == FLT_MAX ||
-					cellDetails[i + 1][j - 1].f > fNew)
-				{
-					openList.insert(make_pair(fNew,
-						make_pair(i + 1, j - 1)));
+	//			// If it isn’t on the open list, add it to 
+	//			// the open list. Make the current square 
+	//			// the parent of this square. Record the 
+	//			// f, g, and h costs of the square cell 
+	//			//                OR 
+	//			// If it is on the open list already, check 
+	//			// to see if this path to that square is better, 
+	//			// using 'f' cost as the measure. 
+	//			if (cellDetails[i + 1][j - 1].f == FLT_MAX ||
+	//				cellDetails[i + 1][j - 1].f > fNew)
+	//			{
+	//				openList.insert(make_pair(fNew,
+	//					make_pair(i + 1, j - 1)));
 
-					// Update the details of this cell 
-					cellDetails[i + 1][j - 1].f = fNew;
-					cellDetails[i + 1][j - 1].g = gNew;
-					cellDetails[i + 1][j - 1].h = hNew;
-					cellDetails[i + 1][j - 1].parent_i = i;
-					cellDetails[i + 1][j - 1].parent_j = j;
-				}
-			}
-		}
+	//				// Update the details of this cell 
+	//				cellDetails[i + 1][j - 1].f = fNew;
+	//				cellDetails[i + 1][j - 1].g = gNew;
+	//				cellDetails[i + 1][j - 1].h = hNew;
+	//				cellDetails[i + 1][j - 1].parent_i = i;
+	//				cellDetails[i + 1][j - 1].parent_j = j;
+	//			}
+	//		}
+	//	}
 	}
 
 	// When the destination cell is not found and the open 
@@ -636,7 +720,7 @@ void aStarSearch(vector<vector<int>> grid, Pair src, Pair dest)
 	if (foundDest == false)
 		printf("Failed to find the Destination Cell\n");
 
-	return;
+	return tracePath(cellDetails, dest, foundDestK);
 }
 
 
