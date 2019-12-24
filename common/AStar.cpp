@@ -212,6 +212,8 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 		i = get<0>(p.second);
 		j = get<1>(p.second);
 		k = get<2>(p.second);
+		const auto kValue = k == maxJumpTicks + 1 ? -1 : k;
+		
 		closedList[i][j][k] = true;
 
 		/*
@@ -351,7 +353,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 
 		// Only process this cell if this is a valid one 
 		if (isValid(i, j + 1, ROW, COL) == true && 
-			k >= 0 && k < maxJumpTicks &&
+			kValue >= 0 && kValue < maxJumpTicks &&
 			isUnBlocked(grid, i, j + 1) == true)
 		{
 			kNew = k+1;
@@ -406,7 +408,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 
 		// Only process this cell if this is a valid one 
 		if (isValid(i, j + 1, ROW, COL) == true && 
-			k >=0 && k < maxJumpTicks &&
+			kValue >=0 && kValue < maxJumpTicks &&
 			isUnBlocked(grid, i, j + 1) == true &&
 			(game.level.tiles[i][j] == PLATFORM || game.level.tiles[i][j] == LADDER))
 		{
@@ -464,12 +466,12 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 
 		// Only process this cell if this is a valid one 
 		if (isValid(i, j - 1, ROW, COL) == true && 
-			(k != 0) &&
+			(kValue != 0) &&
 			isUnBlocked(grid, i, j - 1) == true)
 		{
 			kNew = game.level.tiles[i][j - 2] == EMPTY ||
 				game.level.tiles[i][j - 2] == JUMP_PAD ?
-				-1 : 0;
+				maxJumpTicks + 1 : 0;
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i, j - 1, dest) == true)
@@ -522,11 +524,11 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 		// Only process this cell if this is a valid one 
 		if (isValid(i - 1, j - 1, ROW, COL) == true &&
 			isUnBlocked(grid, i - 1, j - 1) == true &&
-			(k != 0 || k == 0 && isUnBlocked(grid, i - 1, j)))
+			(kValue != 0 || kValue == 0 && isUnBlocked(grid, i - 1, j)))
 		{
 			kNew = game.level.tiles[i - 1][j - 2] == EMPTY ||
 				game.level.tiles[i - 1][j - 2] == JUMP_PAD ?
-				-1 : 0;
+				maxJumpTicks + 1 : 0;
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i - 1, j - 1, dest) == true)
@@ -559,7 +561,8 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				if (cellDetails[i - 1][j - 1][kNew].f == FLT_MAX ||
 					cellDetails[i - 1][j - 1][kNew].f > fNew)
 				{
-					openList.insert(make_pair(fNew, make_tuple(i - 1, j - 1, kNew)));
+					openList.insert(make_pair(fNew,
+						make_tuple(i - 1, j - 1, kNew)));
 					// Update the details of this cell 
 					cellDetails[i - 1][j - 1][kNew].f = fNew;
 					cellDetails[i - 1][j - 1][kNew].g = gNew;
@@ -576,11 +579,11 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 		// Only process this cell if this is a valid one 
 		if (isValid(i + 1, j - 1, ROW, COL) == true &&
 			isUnBlocked(grid, i + 1, j - 1) == true &&
-			(k != 0 || k == 0 && isUnBlocked(grid, i + 1, j)))
+			(kValue != 0 || kValue == 0 && isUnBlocked(grid, i + 1, j)))
 		{
 			kNew = game.level.tiles[i + 1][j - 2] == EMPTY ||
 				game.level.tiles[i + 1][j - 2] == JUMP_PAD ?
-				-1 : 0;
+				maxJumpTicks + 1 : 0;
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i + 1, j - 1, dest) == true)
@@ -631,7 +634,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 
 		// Only process this cell if this is a valid one 
 		if (isValid(i - 1, j + 1, ROW, COL) == true && 
-			k >= 0 && k < maxJumpTicks &&
+			kValue >= 0 && kValue < maxJumpTicks &&
 			isUnBlocked(grid, i - 1, j + 1) == true)
 		{
 			kNew = k + 1;
@@ -686,7 +689,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 
 	// Only process this cell if this is a valid one 
 		if (isValid(i - 1, j + 1, ROW, COL) == true && 
-			k >=0 && k < maxJumpTicks &&
+			kValue >=0 && kValue < maxJumpTicks &&
 			isUnBlocked(grid, i - 1, j + 1) == true &&
 			(game.level.tiles[i - 1][j] == PLATFORM || game.level.tiles[i - 1][j] == LADDER || game.level.tiles[i - 1][j] == WALL))
 		{
@@ -744,10 +747,10 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 
 		// Only process this cell if this is a valid one 
 		if (isValid(i + 1, j + 1, ROW, COL) == true && 
-			k >= 0 && k < maxJumpTicks &&
+			kValue >= 0 && kValue < maxJumpTicks &&
 			isUnBlocked(grid, i + 1, j + 1) == true)
 		{
-			kNew = 2;
+			kNew = k + 1;
 			
 			// If the destination cell is the same as the 
 			// current successor 
@@ -800,7 +803,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 
 		// Only process this cell if this is a valid one 
 		if (isValid(i + 1, j + 1, ROW, COL) == true &&
-			k >=0 && k < maxJumpTicks &&
+			kValue >=0 && kValue < maxJumpTicks &&
 			isUnBlocked(grid, i + 1, j + 1) == true &&
 			(game.level.tiles[i + 1][j] == PLATFORM || game.level.tiles[i + 1][j] == LADDER || game.level.tiles[i + 1][j] == WALL))
 		{

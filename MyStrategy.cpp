@@ -324,28 +324,29 @@ void initAStarAction(const Unit& me, const Vec2Double& targetPos, UnitAction& ac
 	const auto isJumping = me.jumpState.canJump && me.jumpState.canCancel;
 	const auto isFalling = !me.jumpState.canJump && !me.jumpState.canCancel;
 
-
 	const auto bottomTile = game.level.tiles[size_t(me.position.x)][size_t(me.position.y - 1)];
+	const auto maxJumpTiles = static_cast<int>(game.properties.unitJumpTime * game.properties.unitJumpSpeed);
+	
 	int start_z = 0;
 	if (bottomTile == EMPTY || bottomTile == JUMP_PAD)
-	{
-		if (isFalling) start_z = -1;
+	{			   		
+		if (isFalling) start_z = maxJumpTiles + 1;
 		else if (isJumping)
 		{
-			const auto jumpTimeLeft = game.properties.unitJumpTime - me.jumpState.maxTime;
-			start_z = static_cast<int>(jumpTimeLeft / tickTime);
-			if (size_t(me.position.y + jumpTimeLeft * game.properties.unitJumpSpeed) > size_t(me.position.y)) 
-				start_z++; //смогу подняться на 1 тайл
+			const auto jumpingTime = game.properties.unitJumpTime - me.jumpState.maxTime;
+			start_z = static_cast<int>(jumpingTime * game.properties.unitJumpSpeed);
+			//if (size_t(me.position.y + jumpTimeLeft * game.properties.unitJumpSpeed) > size_t(me.position.y)) 
+			//	start_z++; //смогу подняться на 1 тайл
 		}
 		//TODO: прыжок на батуте
 	}
 
-	const auto maxJumpingTicks = static_cast<int>(game.properties.unitJumpTime / tickTime);
+	
 	
 	const auto startPos =
 		make_tuple(size_t(me.position.x), size_t(me.position.y), start_z);
 
-	auto path = aStarSearch(grid, startPos, endPos, maxJumpingTicks, game);
+	auto path = aStarSearch(grid, startPos, endPos, maxJumpTiles, game);
 	const auto myTile = path.top();
 	debug.draw(CustomData::Rect(
 		vec2DoubleToVec2Float({ static_cast<double>(myTile.first), static_cast<double>(myTile.second) }),
