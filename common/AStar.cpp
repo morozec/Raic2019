@@ -241,6 +241,7 @@ vector<Pair> aStarSearch(
 		// Only process this cell if this is a valid one 
 		if (isValid(i - 1, j, ROW, COL) == true &&
 			isUnBlocked(grid, i - 1, j) == true &&
+			l != 1 &&
 			game.level.tiles[i - 1][j - 1] != EMPTY &&
 			game.level.tiles[i - 1][j - 1] != JUMP_PAD)
 		{
@@ -300,6 +301,7 @@ vector<Pair> aStarSearch(
 		// Only process this cell if this is a valid one 
 		if (isValid(i + 1, j, ROW, COL) == true &&
 			isUnBlocked(grid, i + 1, j) == true &&
+			l != 1 &&
 			game.level.tiles[i + 1][j - 1] != EMPTY &&
 			game.level.tiles[i + 1][j - 1] != JUMP_PAD)
 		{
@@ -352,24 +354,26 @@ vector<Pair> aStarSearch(
 			}
 		}
 
+		const auto addNorth = l == 0 ? 1 : 2;
+
 		//----------- 3.0 Successor (NORTH-2) ------------ 
 
 		// Only process this cell if this is a valid one 
-		if (isValid(i, j + 1, ROW, COL) == true && 
+		if (isValid(i, j + addNorth, ROW, COL) == true && 
 			kValue >= 0 && kValue < maxJumpTicks &&
-			isUnBlocked(grid, i, j + 1) == true)
+			isUnBlocked(grid, i, j + addNorth) == true)
 		{
 			kNew = k+1;
 			lNew = 0;
 			// If the destination cell is the same as the 
 			// current successor 
-			if (isDestination(i, j + 1, dest) == true)
+			if (isDestination(i, j + addNorth, dest) == true)
 			{
 				// Set the Parent of the destination cell 
-				cellDetails[i][j + 1][kNew][lNew].parent_i = i;
-				cellDetails[i][j + 1][kNew][lNew].parent_j = j;
-				cellDetails[i][j + 1][kNew][lNew].parent_k = k;
-				cellDetails[i][j + 1][kNew][lNew].parent_l = l;
+				cellDetails[i][j + addNorth][kNew][lNew].parent_i = i;
+				cellDetails[i][j + addNorth][kNew][lNew].parent_j = j;
+				cellDetails[i][j + addNorth][kNew][lNew].parent_k = k;
+				cellDetails[i][j + addNorth][kNew][lNew].parent_l = l;
 				foundDest = true;
 				foundDestK = kNew;
 				foundDestL = lNew;
@@ -379,10 +383,10 @@ vector<Pair> aStarSearch(
 			// If the successor is already on the closed 
 			// list or if it is blocked, then ignore it. 
 			// Else do the following 
-			else if (closedList[i][j + 1][kNew][lNew] == false)
+			else if (closedList[i][j + addNorth][kNew][lNew] == false)
 			{
 				gNew = cellDetails[i][j][k][l].g + 1.0;
-				hNew = calculateHValue(i, j + 1, dest);
+				hNew = calculateHValue(i, j + addNorth, dest);
 				fNew = gNew + hNew;
 
 				// If it isn’t on the open list, add it to 
@@ -393,20 +397,20 @@ vector<Pair> aStarSearch(
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i][j + 1][kNew][lNew].f == INT_MAX ||
-					cellDetails[i][j + 1][kNew][lNew].f > fNew)
+				if (cellDetails[i][j + addNorth][kNew][lNew].f == INT_MAX ||
+					cellDetails[i][j + addNorth][kNew][lNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
-						make_tuple(i, j + 1, kNew, lNew)));
+						make_tuple(i, j + addNorth, kNew, lNew)));
 
 					// Update the details of this cell 
-					cellDetails[i][j + 1][kNew][lNew].f = fNew;
-					cellDetails[i][j + 1][kNew][lNew].g = gNew;
-					cellDetails[i][j + 1][kNew][lNew].h = hNew;
-					cellDetails[i][j + 1][kNew][lNew].parent_i = i;
-					cellDetails[i][j + 1][kNew][lNew].parent_j = j;
-					cellDetails[i][j + 1][kNew][lNew].parent_k = k;
-					cellDetails[i][j + 1][kNew][lNew].parent_l = l;
+					cellDetails[i][j + addNorth][kNew][lNew].f = fNew;
+					cellDetails[i][j + addNorth][kNew][lNew].g = gNew;
+					cellDetails[i][j + addNorth][kNew][lNew].h = hNew;
+					cellDetails[i][j + addNorth][kNew][lNew].parent_i = i;
+					cellDetails[i][j + addNorth][kNew][lNew].parent_j = j;
+					cellDetails[i][j + addNorth][kNew][lNew].parent_k = k;
+					cellDetails[i][j + addNorth][kNew][lNew].parent_l = l;
 				}
 			}
 		}
@@ -414,22 +418,22 @@ vector<Pair> aStarSearch(
 		//----------- 3rd Successor (NORTH-0) ------------ 
 
 		// Only process this cell if this is a valid one 
-		if (isValid(i, j + 1, ROW, COL) == true && 
+		if (isValid(i, j + addNorth, ROW, COL) == true &&
 			kValue >=0 && kValue < maxJumpTicks &&
-			isUnBlocked(grid, i, j + 1) == true &&
-			(game.level.tiles[i][j] == PLATFORM || game.level.tiles[i][j] == LADDER))
+			isUnBlocked(grid, i, j + addNorth) == true &&
+			(game.level.tiles[i][j + addNorth - 1] == PLATFORM || game.level.tiles[i][j + addNorth - 1] == LADDER))
 		{
 			kNew = 0;
 			lNew = 0;
 			// If the destination cell is the same as the 
 			// current successor 
-			if (isDestination(i, j + 1, dest) == true)
+			if (isDestination(i, j + addNorth, dest) == true)
 			{
 				// Set the Parent of the destination cell 
-				cellDetails[i][j + 1][kNew][lNew].parent_i = i;
-				cellDetails[i][j + 1][kNew][lNew].parent_j = j;
-				cellDetails[i][j + 1][kNew][lNew].parent_k = k;
-				cellDetails[i][j + 1][kNew][lNew].parent_l = l;
+				cellDetails[i][j + addNorth][kNew][lNew].parent_i = i;
+				cellDetails[i][j + addNorth][kNew][lNew].parent_j = j;
+				cellDetails[i][j + addNorth][kNew][lNew].parent_k = k;
+				cellDetails[i][j + addNorth][kNew][lNew].parent_l = l;
 				foundDest = true;
 				foundDestK = kNew;
 				foundDestL = lNew;
@@ -439,10 +443,10 @@ vector<Pair> aStarSearch(
 			// If the successor is already on the closed 
 			// list or if it is blocked, then ignore it. 
 			// Else do the following 
-			else if (closedList[i][j + 1][kNew][lNew] == false)
+			else if (closedList[i][j + addNorth][kNew][lNew] == false)
 			{
 				gNew = cellDetails[i][j][k][l].g + 1.0;
-				hNew = calculateHValue(i, j + 1, dest);
+				hNew = calculateHValue(i, j + addNorth, dest);
 				fNew = gNew + hNew;
 
 				// If it isn’t on the open list, add it to 
@@ -453,32 +457,286 @@ vector<Pair> aStarSearch(
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i][j + 1][kNew][lNew].f == INT_MAX ||
-					cellDetails[i][j + 1][kNew][lNew].f > fNew)
+				if (cellDetails[i][j + addNorth][kNew][lNew].f == INT_MAX ||
+					cellDetails[i][j + addNorth][kNew][lNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
-						make_tuple(i, j + 1, kNew, lNew)));
+						make_tuple(i, j + addNorth, kNew, lNew)));
 
 					// Update the details of this cell 
-					cellDetails[i][j + 1][kNew][lNew].f = fNew;
-					cellDetails[i][j + 1][kNew][lNew].g = gNew;
-					cellDetails[i][j + 1][kNew][lNew].h = hNew;
-					cellDetails[i][j + 1][kNew][lNew].parent_i = i;
-					cellDetails[i][j + 1][kNew][lNew].parent_j = j;
-					cellDetails[i][j + 1][kNew][lNew].parent_k = k;
-					cellDetails[i][j + 1][kNew][lNew].parent_l = l;
+					cellDetails[i][j + addNorth][kNew][lNew].f = fNew;
+					cellDetails[i][j + addNorth][kNew][lNew].g = gNew;
+					cellDetails[i][j + addNorth][kNew][lNew].h = hNew;
+					cellDetails[i][j + addNorth][kNew][lNew].parent_i = i;
+					cellDetails[i][j + addNorth][kNew][lNew].parent_j = j;
+					cellDetails[i][j + addNorth][kNew][lNew].parent_k = k;
+					cellDetails[i][j + addNorth][kNew][lNew].parent_l = l;
 				}
 			}
 		}
 
 		//TODO: NORTH-1
+				
 
-		
+		//----------- 7th Successor (NORTH-WEST-2) ------------ 
+
+	// Only process this cell if this is a valid one 
+		if (isValid(i - 1, j + addNorth, ROW, COL) == true &&
+			kValue >= 0 && kValue < maxJumpTicks &&
+			isUnBlocked(grid, i - 1, j + addNorth) == true &&
+			isUnBlocked(grid, i, j + addNorth) == true)
+		{
+			kNew = k + 1;
+			lNew = game.level.tiles[i - 1][j + addNorth] == JUMP_PAD ? 1 : 0;
+			// If the destination cell is the same as the 
+			// current successor 
+			if (isDestination(i - 1, j + addNorth, dest) == true)
+			{
+				// Set the Parent of the destination cell 
+				cellDetails[i - 1][j + addNorth][kNew][lNew].parent_i = i;
+				cellDetails[i - 1][j + addNorth][kNew][lNew].parent_j = j;
+				cellDetails[i - 1][j + addNorth][kNew][lNew].parent_k = k;
+				cellDetails[i - 1][j + addNorth][kNew][lNew].parent_l = l;
+				foundDest = true;
+				foundDestK = kNew;
+				foundDestL = lNew;
+				break;
+			}
+
+			// If the successor is already on the closed 
+			// list or if it is blocked, then ignore it. 
+			// Else do the following 
+			else if (closedList[i - 1][j + addNorth][kNew][lNew] == false &&
+				isUnBlocked(grid, i - 1, j + addNorth) == true)
+			{
+				gNew = cellDetails[i][j][k][l].g + 1.0 + diagonalAddWeight;
+				hNew = calculateHValue(i - 1, j + addNorth, dest);
+				fNew = gNew + hNew;
+
+				// If it isn’t on the open list, add it to 
+				// the open list. Make the current square 
+				// the parent of this square. Record the 
+				// f, g, and h costs of the square cell 
+				//                OR 
+				// If it is on the open list already, check 
+				// to see if this path to that square is better, 
+				// using 'f' cost as the measure. 
+				if (cellDetails[i - 1][j + addNorth][kNew][lNew].f == INT_MAX ||
+					cellDetails[i - 1][j + addNorth][kNew][lNew].f > fNew)
+				{
+					openList.insert(make_pair(fNew,
+						make_tuple(i - 1, j + addNorth, kNew, lNew)));
+
+					// Update the details of this cell 
+					cellDetails[i - 1][j + addNorth][kNew][lNew].f = fNew;
+					cellDetails[i - 1][j + addNorth][kNew][lNew].g = gNew;
+					cellDetails[i - 1][j + addNorth][kNew][lNew].h = hNew;
+					cellDetails[i - 1][j + addNorth][kNew][lNew].parent_i = i;
+					cellDetails[i - 1][j + addNorth][kNew][lNew].parent_j = j;
+					cellDetails[i - 1][j + addNorth][kNew][lNew].parent_k = k;
+					cellDetails[i - 1][j + addNorth][kNew][lNew].parent_l = l;
+				}
+			}
+		}
+
+		//----------- 7th Successor (NORTH-WEST-0) ------------ 
+
+	// Only process this cell if this is a valid one 
+		if (isValid(i - 1, j + addNorth, ROW, COL) == true &&
+			kValue >= 0 && kValue < maxJumpTicks &&
+			isUnBlocked(grid, i - 1, j + addNorth) == true &&
+			isUnBlocked(grid, i, j + addNorth) == true &&
+			(game.level.tiles[i - 1][j + addNorth - 1] == PLATFORM || game.level.tiles[i - 1][j + addNorth - 1] == LADDER || game.level.tiles[i - 1][j + addNorth - 1] == WALL))
+		{
+			kNew = 0;
+			lNew = game.level.tiles[i - 1][j + addNorth] == JUMP_PAD ? 1 : 0;
+			// If the destination cell is the same as the 
+			// current successor 
+			if (isDestination(i - 1, j + addNorth, dest) == true)
+			{
+				// Set the Parent of the destination cell 
+				cellDetails[i - 1][j + addNorth][kNew][lNew].parent_i = i;
+				cellDetails[i - 1][j + addNorth][kNew][lNew].parent_j = j;
+				cellDetails[i - 1][j + addNorth][kNew][lNew].parent_k = k;
+				cellDetails[i - 1][j + addNorth][kNew][lNew].parent_l = l;
+				foundDest = true;
+				foundDestK = kNew;
+				foundDestL = lNew;
+				break;
+			}
+
+			// If the successor is already on the closed 
+			// list or if it is blocked, then ignore it. 
+			// Else do the following 
+			else if (closedList[i - 1][j + addNorth][kNew][lNew] == false &&
+				isUnBlocked(grid, i - 1, j + addNorth) == true)
+			{
+				gNew = cellDetails[i][j][k][l].g + 1.0 + diagonalAddWeight;
+				hNew = calculateHValue(i - 1, j + addNorth, dest);
+				fNew = gNew + hNew;
+
+				// If it isn’t on the open list, add it to 
+				// the open list. Make the current square 
+				// the parent of this square. Record the 
+				// f, g, and h costs of the square cell 
+				//                OR 
+				// If it is on the open list already, check 
+				// to see if this path to that square is better, 
+				// using 'f' cost as the measure. 
+				if (cellDetails[i - 1][j + addNorth][kNew][lNew].f == INT_MAX ||
+					cellDetails[i - 1][j + addNorth][kNew][lNew].f > fNew)
+				{
+					openList.insert(make_pair(fNew,
+						make_tuple(i - 1, j + addNorth, kNew, lNew)));
+
+					// Update the details of this cell 
+					cellDetails[i - 1][j + addNorth][kNew][lNew].f = fNew;
+					cellDetails[i - 1][j + addNorth][kNew][lNew].g = gNew;
+					cellDetails[i - 1][j + addNorth][kNew][lNew].h = hNew;
+					cellDetails[i - 1][j + addNorth][kNew][lNew].parent_i = i;
+					cellDetails[i - 1][j + addNorth][kNew][lNew].parent_j = j;
+					cellDetails[i - 1][j + addNorth][kNew][lNew].parent_k = k;
+					cellDetails[i - 1][j + addNorth][kNew][lNew].parent_l = l;
+				}
+			}
+		}
+
+		//TODO: NORTH-WEST-1				
+
+		//----------- 8th Successor (NORTH-EAST-2) ------------ 
+
+		// Only process this cell if this is a valid one 
+		if (isValid(i + 1, j + addNorth, ROW, COL) == true &&
+			kValue >= 0 && kValue < maxJumpTicks &&
+			isUnBlocked(grid, i + 1, j + addNorth) == true &&
+			isUnBlocked(grid, i, j + addNorth) == true)
+		{
+			kNew = k + 1;
+			lNew = game.level.tiles[i + 1][j + addNorth] == JUMP_PAD ? 1 : 0;
+
+			// If the destination cell is the same as the 
+			// current successor 
+			if (isDestination(i + 1, j + addNorth, dest) == true)
+			{
+				// Set the Parent of the destination cell 
+				cellDetails[i + 1][j + addNorth][kNew][lNew].parent_i = i;
+				cellDetails[i + 1][j + addNorth][kNew][lNew].parent_j = j;
+				cellDetails[i + 1][j + addNorth][kNew][lNew].parent_k = k;
+				cellDetails[i + 1][j + addNorth][kNew][lNew].parent_l = l;
+				foundDest = true;
+				foundDestK = kNew;
+				foundDestL = lNew;
+				break;
+			}
+
+			// If the successor is already on the closed 
+			// list or if it is blocked, then ignore it. 
+			// Else do the following 
+			else if (closedList[i + 1][j + addNorth][kNew][lNew] == false &&
+				isUnBlocked(grid, i + 1, j + addNorth) == true)
+			{
+				gNew = cellDetails[i][j][k][l].g + 1.0 + diagonalAddWeight;
+				hNew = calculateHValue(i + 1, j + addNorth, dest);
+				fNew = gNew + hNew;
+
+				// If it isn’t on the open list, add it to 
+				// the open list. Make the current square 
+				// the parent of this square. Record the 
+				// f, g, and h costs of the square cell 
+				//                OR 
+				// If it is on the open list already, check 
+				// to see if this path to that square is better, 
+				// using 'f' cost as the measure. 
+				if (cellDetails[i + 1][j + addNorth][kNew][lNew].f == INT_MAX ||
+					cellDetails[i + 1][j + addNorth][kNew][lNew].f > fNew)
+				{
+					openList.insert(make_pair(fNew,
+						make_tuple(i + 1, j + addNorth, kNew, lNew)));
+
+					// Update the details of this cell 
+					cellDetails[i + 1][j + addNorth][kNew][lNew].f = fNew;
+					cellDetails[i + 1][j + addNorth][kNew][lNew].g = gNew;
+					cellDetails[i + 1][j + addNorth][kNew][lNew].h = hNew;
+					cellDetails[i + 1][j + addNorth][kNew][lNew].parent_i = i;
+					cellDetails[i + 1][j + addNorth][kNew][lNew].parent_j = j;
+					cellDetails[i + 1][j + addNorth][kNew][lNew].parent_k = k;
+					cellDetails[i + 1][j + addNorth][kNew][lNew].parent_l = l;
+				}
+			}
+		}
+
+		//----------- 8th Successor (NORTH-EAST-0) ------------ 
+
+		// Only process this cell if this is a valid one 
+		if (isValid(i + 1, j + addNorth, ROW, COL) == true &&
+			kValue >= 0 && kValue < maxJumpTicks &&
+			isUnBlocked(grid, i + 1, j + addNorth) == true &&
+			isUnBlocked(grid, i, j + addNorth) == true &&
+			(game.level.tiles[i + 1][j + addNorth - 1] == PLATFORM || game.level.tiles[i + 1][j + addNorth - 1] == LADDER || game.level.tiles[i + 1][j + addNorth - 1] == WALL))
+		{
+			kNew = 0;
+			lNew = game.level.tiles[i + 1][j + addNorth] == JUMP_PAD ? 1 : 0;
+
+			// If the destination cell is the same as the 
+			// current successor 
+			if (isDestination(i + 1, j + addNorth, dest) == true)
+			{
+				// Set the Parent of the destination cell 
+				cellDetails[i + 1][j + addNorth][kNew][lNew].parent_i = i;
+				cellDetails[i + 1][j + addNorth][kNew][lNew].parent_j = j;
+				cellDetails[i + 1][j + addNorth][kNew][lNew].parent_k = k;
+				cellDetails[i + 1][j + addNorth][kNew][lNew].parent_l = l;
+				foundDest = true;
+				foundDestK = kNew;
+				foundDestL = lNew;
+				break;
+			}
+
+			// If the successor is already on the closed 
+			// list or if it is blocked, then ignore it. 
+			// Else do the following 
+			else if (closedList[i + 1][j + addNorth][kNew][lNew] == false &&
+				isUnBlocked(grid, i + 1, j + addNorth) == true)
+			{
+				gNew = cellDetails[i][j][k][l].g + 1.0 + diagonalAddWeight;
+				hNew = calculateHValue(i + 1, j + addNorth, dest);
+				fNew = gNew + hNew;
+
+				// If it isn’t on the open list, add it to 
+				// the open list. Make the current square 
+				// the parent of this square. Record the 
+				// f, g, and h costs of the square cell 
+				//                OR 
+				// If it is on the open list already, check 
+				// to see if this path to that square is better, 
+				// using 'f' cost as the measure. 
+				if (cellDetails[i + 1][j + addNorth][kNew][lNew].f == INT_MAX ||
+					cellDetails[i + 1][j + addNorth][kNew][lNew].f > fNew)
+				{
+					openList.insert(make_pair(fNew,
+						make_tuple(i + 1, j + addNorth, kNew, lNew)));
+
+					// Update the details of this cell 
+					cellDetails[i + 1][j + addNorth][kNew][lNew].f = fNew;
+					cellDetails[i + 1][j + addNorth][kNew][lNew].g = gNew;
+					cellDetails[i + 1][j + addNorth][kNew][lNew].h = hNew;
+					cellDetails[i + 1][j + addNorth][kNew][lNew].parent_i = i;
+					cellDetails[i + 1][j + addNorth][kNew][lNew].parent_j = j;
+					cellDetails[i + 1][j + addNorth][kNew][lNew].parent_k = k;
+					cellDetails[i + 1][j + addNorth][kNew][lNew].parent_l = l;
+				}
+			}
+		}
+
+
+		//TODO: NORTH-EAST-1
+
 
 		//----------- 4th Successor (SOUTH) ------------ 
 
 		// Only process this cell if this is a valid one 
-		if (isValid(i, j - 1, ROW, COL) == true && 
+		if (isValid(i, j - 1, ROW, COL) == true &&
+			l != 1 &&
 			(kValue != 0) &&
 			isUnBlocked(grid, i, j - 1) == true)
 		{
@@ -486,7 +744,7 @@ vector<Pair> aStarSearch(
 				game.level.tiles[i][j - 2] == JUMP_PAD ?
 				maxJumpTicks + 1 : 0;
 			lNew = game.level.tiles[i][j - 1] == JUMP_PAD ? 1 : 0;
-			
+
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i, j - 1, dest) == true)
@@ -535,262 +793,8 @@ vector<Pair> aStarSearch(
 					cellDetails[i][j - 1][kNew][lNew].parent_l = l;
 				}
 			}
-		}	
-
-
-
-		//----------- 7th Successor (NORTH-WEST-2) ------------ 
-
-	// Only process this cell if this is a valid one 
-		if (isValid(i - 1, j + 1, ROW, COL) == true &&
-			kValue >= 0 && kValue < maxJumpTicks &&
-			isUnBlocked(grid, i - 1, j + 1) == true &&
-			isUnBlocked(grid, i, j + 1) == true)
-		{
-			kNew = k + 1;
-			lNew = game.level.tiles[i - 1][j + 1] == JUMP_PAD ? 1 : 0;
-			// If the destination cell is the same as the 
-			// current successor 
-			if (isDestination(i - 1, j + 1, dest) == true)
-			{
-				// Set the Parent of the destination cell 
-				cellDetails[i - 1][j + 1][kNew][lNew].parent_i = i;
-				cellDetails[i - 1][j + 1][kNew][lNew].parent_j = j;
-				cellDetails[i - 1][j + 1][kNew][lNew].parent_k = k;
-				cellDetails[i - 1][j + 1][kNew][lNew].parent_l = l;
-				foundDest = true;
-				foundDestK = kNew;
-				foundDestL = lNew;
-				break;
-			}
-
-			// If the successor is already on the closed 
-			// list or if it is blocked, then ignore it. 
-			// Else do the following 
-			else if (closedList[i - 1][j + 1][kNew][lNew] == false &&
-				isUnBlocked(grid, i - 1, j + 1) == true)
-			{
-				gNew = cellDetails[i][j][k][l].g + 1.0 + diagonalAddWeight;
-				hNew = calculateHValue(i - 1, j + 1, dest);
-				fNew = gNew + hNew;
-
-				// If it isn’t on the open list, add it to 
-				// the open list. Make the current square 
-				// the parent of this square. Record the 
-				// f, g, and h costs of the square cell 
-				//                OR 
-				// If it is on the open list already, check 
-				// to see if this path to that square is better, 
-				// using 'f' cost as the measure. 
-				if (cellDetails[i - 1][j + 1][kNew][lNew].f == INT_MAX ||
-					cellDetails[i - 1][j + 1][kNew][lNew].f > fNew)
-				{
-					openList.insert(make_pair(fNew,
-						make_tuple(i - 1, j + 1, kNew, lNew)));
-
-					// Update the details of this cell 
-					cellDetails[i - 1][j + 1][kNew][lNew].f = fNew;
-					cellDetails[i - 1][j + 1][kNew][lNew].g = gNew;
-					cellDetails[i - 1][j + 1][kNew][lNew].h = hNew;
-					cellDetails[i - 1][j + 1][kNew][lNew].parent_i = i;
-					cellDetails[i - 1][j + 1][kNew][lNew].parent_j = j;
-					cellDetails[i - 1][j + 1][kNew][lNew].parent_k = k;
-					cellDetails[i - 1][j + 1][kNew][lNew].parent_l = l;
-				}
-			}
 		}
 
-		//----------- 7th Successor (NORTH-WEST-0) ------------ 
-
-	// Only process this cell if this is a valid one 
-		if (isValid(i - 1, j + 1, ROW, COL) == true &&
-			kValue >= 0 && kValue < maxJumpTicks &&
-			isUnBlocked(grid, i - 1, j + 1) == true &&
-			isUnBlocked(grid, i, j + 1) == true &&
-			(game.level.tiles[i - 1][j] == PLATFORM || game.level.tiles[i - 1][j] == LADDER || game.level.tiles[i - 1][j] == WALL))
-		{
-			kNew = 0;
-			lNew = game.level.tiles[i - 1][j + 1] == JUMP_PAD ? 1 : 0;
-			// If the destination cell is the same as the 
-			// current successor 
-			if (isDestination(i - 1, j + 1, dest) == true)
-			{
-				// Set the Parent of the destination cell 
-				cellDetails[i - 1][j + 1][kNew][lNew].parent_i = i;
-				cellDetails[i - 1][j + 1][kNew][lNew].parent_j = j;
-				cellDetails[i - 1][j + 1][kNew][lNew].parent_k = k;
-				cellDetails[i - 1][j + 1][kNew][lNew].parent_l = l;
-				foundDest = true;
-				foundDestK = kNew;
-				foundDestL = lNew;
-				break;
-			}
-
-			// If the successor is already on the closed 
-			// list or if it is blocked, then ignore it. 
-			// Else do the following 
-			else if (closedList[i - 1][j + 1][kNew][lNew] == false &&
-				isUnBlocked(grid, i - 1, j + 1) == true)
-			{
-				gNew = cellDetails[i][j][k][l].g + 1.0 + diagonalAddWeight;
-				hNew = calculateHValue(i - 1, j + 1, dest);
-				fNew = gNew + hNew;
-
-				// If it isn’t on the open list, add it to 
-				// the open list. Make the current square 
-				// the parent of this square. Record the 
-				// f, g, and h costs of the square cell 
-				//                OR 
-				// If it is on the open list already, check 
-				// to see if this path to that square is better, 
-				// using 'f' cost as the measure. 
-				if (cellDetails[i - 1][j + 1][kNew][lNew].f == INT_MAX ||
-					cellDetails[i - 1][j + 1][kNew][lNew].f > fNew)
-				{
-					openList.insert(make_pair(fNew,
-						make_tuple(i - 1, j + 1, kNew, lNew)));
-
-					// Update the details of this cell 
-					cellDetails[i - 1][j + 1][kNew][lNew].f = fNew;
-					cellDetails[i - 1][j + 1][kNew][lNew].g = gNew;
-					cellDetails[i - 1][j + 1][kNew][lNew].h = hNew;
-					cellDetails[i - 1][j + 1][kNew][lNew].parent_i = i;
-					cellDetails[i - 1][j + 1][kNew][lNew].parent_j = j;
-					cellDetails[i - 1][j + 1][kNew][lNew].parent_k = k;
-					cellDetails[i - 1][j + 1][kNew][lNew].parent_l = l;
-				}
-			}
-		}
-
-		//TODO: NORTH-WEST-1
-
-		//----------- 8th Successor (NORTH-EAST-2) ------------ 
-
-		// Only process this cell if this is a valid one 
-		if (isValid(i + 1, j + 1, ROW, COL) == true &&
-			kValue >= 0 && kValue < maxJumpTicks &&
-			isUnBlocked(grid, i + 1, j + 1) == true &&
-			isUnBlocked(grid, i, j + 1) == true)
-		{
-			kNew = k + 1;
-			lNew = game.level.tiles[i + 1][j + 1] == JUMP_PAD ? 1 : 0;
-
-			// If the destination cell is the same as the 
-			// current successor 
-			if (isDestination(i + 1, j + 1, dest) == true)
-			{
-				// Set the Parent of the destination cell 
-				cellDetails[i + 1][j + 1][kNew][lNew].parent_i = i;
-				cellDetails[i + 1][j + 1][kNew][lNew].parent_j = j;
-				cellDetails[i + 1][j + 1][kNew][lNew].parent_k = k;
-				cellDetails[i + 1][j + 1][kNew][lNew].parent_l = l;
-				foundDest = true;
-				foundDestK = kNew;
-				foundDestL = lNew;
-				break;
-			}
-
-			// If the successor is already on the closed 
-			// list or if it is blocked, then ignore it. 
-			// Else do the following 
-			else if (closedList[i + 1][j + 1][kNew][lNew] == false &&
-				isUnBlocked(grid, i + 1, j + 1) == true)
-			{
-				gNew = cellDetails[i][j][k][l].g + 1.0 + diagonalAddWeight;
-				hNew = calculateHValue(i + 1, j + 1, dest);
-				fNew = gNew + hNew;
-
-				// If it isn’t on the open list, add it to 
-				// the open list. Make the current square 
-				// the parent of this square. Record the 
-				// f, g, and h costs of the square cell 
-				//                OR 
-				// If it is on the open list already, check 
-				// to see if this path to that square is better, 
-				// using 'f' cost as the measure. 
-				if (cellDetails[i + 1][j + 1][kNew][lNew].f == INT_MAX ||
-					cellDetails[i + 1][j + 1][kNew][lNew].f > fNew)
-				{
-					openList.insert(make_pair(fNew,
-						make_tuple(i + 1, j + 1, kNew, lNew)));
-
-					// Update the details of this cell 
-					cellDetails[i + 1][j + 1][kNew][lNew].f = fNew;
-					cellDetails[i + 1][j + 1][kNew][lNew].g = gNew;
-					cellDetails[i + 1][j + 1][kNew][lNew].h = hNew;
-					cellDetails[i + 1][j + 1][kNew][lNew].parent_i = i;
-					cellDetails[i + 1][j + 1][kNew][lNew].parent_j = j;
-					cellDetails[i + 1][j + 1][kNew][lNew].parent_k = k;
-					cellDetails[i + 1][j + 1][kNew][lNew].parent_l = l;
-				}
-			}
-		}
-
-		//----------- 8th Successor (NORTH-EAST-0) ------------ 
-
-		// Only process this cell if this is a valid one 
-		if (isValid(i + 1, j + 1, ROW, COL) == true &&
-			kValue >= 0 && kValue < maxJumpTicks &&
-			isUnBlocked(grid, i + 1, j + 1) == true &&
-			isUnBlocked(grid, i, j + 1) == true &&
-			(game.level.tiles[i + 1][j] == PLATFORM || game.level.tiles[i + 1][j] == LADDER || game.level.tiles[i + 1][j] == WALL))
-		{
-			kNew = 0;
-			lNew = game.level.tiles[i + 1][j + 1] == JUMP_PAD ? 1 : 0;
-
-			// If the destination cell is the same as the 
-			// current successor 
-			if (isDestination(i + 1, j + 1, dest) == true)
-			{
-				// Set the Parent of the destination cell 
-				cellDetails[i + 1][j + 1][kNew][lNew].parent_i = i;
-				cellDetails[i + 1][j + 1][kNew][lNew].parent_j = j;
-				cellDetails[i + 1][j + 1][kNew][lNew].parent_k = k;
-				cellDetails[i + 1][j + 1][kNew][lNew].parent_l = l;
-				foundDest = true;
-				foundDestK = kNew;
-				foundDestL = lNew;
-				break;
-			}
-
-			// If the successor is already on the closed 
-			// list or if it is blocked, then ignore it. 
-			// Else do the following 
-			else if (closedList[i + 1][j + 1][kNew][lNew] == false &&
-				isUnBlocked(grid, i + 1, j + 1) == true)
-			{
-				gNew = cellDetails[i][j][k][l].g + 1.0 + diagonalAddWeight;
-				hNew = calculateHValue(i + 1, j + 1, dest);
-				fNew = gNew + hNew;
-
-				// If it isn’t on the open list, add it to 
-				// the open list. Make the current square 
-				// the parent of this square. Record the 
-				// f, g, and h costs of the square cell 
-				//                OR 
-				// If it is on the open list already, check 
-				// to see if this path to that square is better, 
-				// using 'f' cost as the measure. 
-				if (cellDetails[i + 1][j + 1][kNew][lNew].f == INT_MAX ||
-					cellDetails[i + 1][j + 1][kNew][lNew].f > fNew)
-				{
-					openList.insert(make_pair(fNew,
-						make_tuple(i + 1, j + 1, kNew, lNew)));
-
-					// Update the details of this cell 
-					cellDetails[i + 1][j + 1][kNew][lNew].f = fNew;
-					cellDetails[i + 1][j + 1][kNew][lNew].g = gNew;
-					cellDetails[i + 1][j + 1][kNew][lNew].h = hNew;
-					cellDetails[i + 1][j + 1][kNew][lNew].parent_i = i;
-					cellDetails[i + 1][j + 1][kNew][lNew].parent_j = j;
-					cellDetails[i + 1][j + 1][kNew][lNew].parent_k = k;
-					cellDetails[i + 1][j + 1][kNew][lNew].parent_l = l;
-				}
-			}
-		}
-
-
-		//TODO: NORTH-EAST-1
 
 
 		
@@ -799,6 +803,7 @@ vector<Pair> aStarSearch(
 		// Only process this cell if this is a valid one 
 		if (isValid(i - 1, j - 1, ROW, COL) == true &&
 			isUnBlocked(grid, i - 1, j - 1) == true &&
+			l != 1 &&
 			(kValue != 0 || kValue == 0 && isUnBlocked(grid, i - 1, j)))
 		{
 			kNew = game.level.tiles[i - 1][j - 2] == EMPTY ||
@@ -860,6 +865,7 @@ vector<Pair> aStarSearch(
 		// Only process this cell if this is a valid one 
 		if (isValid(i + 1, j - 1, ROW, COL) == true &&
 			isUnBlocked(grid, i + 1, j - 1) == true &&
+			l != 1 &&
 			(kValue != 0 || kValue == 0 && isUnBlocked(grid, i + 1, j)))
 		{
 			kNew = game.level.tiles[i + 1][j - 2] == EMPTY ||
