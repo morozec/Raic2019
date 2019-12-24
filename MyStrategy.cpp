@@ -321,8 +321,9 @@ void initAStarAction(const Unit& me, const Vec2Double& targetPos, UnitAction& ac
 	const auto endPos =
 		make_pair(size_t(targetPos.x), size_t(targetPos.y));
 
-	const auto isJumping = me.jumpState.canJump && me.jumpState.canCancel;
-	const auto isFalling = !me.jumpState.canJump && !me.jumpState.canCancel;
+	const auto isOnAir = Simulator::isUnitOnAir(me.position, me.size, me.id, game);
+	const auto isJumping = isOnAir && me.jumpState.canJump && me.jumpState.canCancel;
+	const auto isFalling = isOnAir && !me.jumpState.canJump && !me.jumpState.canCancel;
 
 	const auto bottomTile = game.level.tiles[size_t(me.position.x)][size_t(me.position.y - 1)];
 	const auto maxJumpTiles = static_cast<int>(game.properties.unitJumpTime * game.properties.unitJumpSpeed);
@@ -391,7 +392,7 @@ void initAStarAction(const Unit& me, const Vec2Double& targetPos, UnitAction& ac
 
 	if (nextTile.second > myTile.second)
 	{
-		if (nextTile.first == myTile.first || Simulator::isUnitOnAir(me.position, me.size, me.id, game))
+		if (nextTile.first == myTile.first || isOnAir)
 		{
 			action.jump = true;
 		}
@@ -1246,10 +1247,10 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	action.plantMine = false;
 	action.shoot = false;
 
-	if (unit.weapon == nullptr) {
+	//if (unit.weapon == nullptr) {
 		initAStarAction(unit, nearestWeapon->position, action, game, debug);
 		return action;
-	}
+	//}
 
 	if (nearestEnemy == nullptr) return action;	
 
