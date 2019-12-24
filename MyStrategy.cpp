@@ -1470,8 +1470,9 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 						game, debug);
 
 					auto goodWay = true;
-					for (const auto& pos : curMeAttackingPositions)
+					for (size_t i = 1; i < curMeAttackingPositions.size(); ++i)
 					{
+						const auto& pos = curMeAttackingPositions[i];
 						for (const auto& enemyUnit : game.units)
 						{
 							if (enemyUnit.playerId == unit.playerId) continue;
