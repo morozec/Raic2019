@@ -542,6 +542,7 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				cellDetails[i - 1][j + 1][kNew].parent_j = j;
 				cellDetails[i - 1][j + 1][kNew].parent_k = k;
 				foundDest = true;
+				foundDestK = kNew;
 				break;
 			}
 
@@ -599,6 +600,7 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				cellDetails[i - 1][j + 1][kNew].parent_j = j;
 				cellDetails[i - 1][j + 1][kNew].parent_k = k;
 				foundDest = true;
+				foundDestK = kNew;
 				break;
 			}
 
@@ -658,6 +660,7 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				cellDetails[i + 1][j + 1][kNew].parent_j = j;
 				cellDetails[i + 1][j + 1][kNew].parent_k = k;
 				foundDest = true;
+				foundDestK = kNew;
 				break;
 			}
 
@@ -716,6 +719,7 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				cellDetails[i + 1][j + 1][kNew].parent_j = j;
 				cellDetails[i + 1][j + 1][kNew].parent_k = k;
 				foundDest = true;
+				foundDestK = kNew;
 				break;
 			}
 
@@ -778,6 +782,7 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				cellDetails[i - 1][j - 1][kNew].parent_j = j;
 				cellDetails[i - 1][j - 1][kNew].parent_k = k;
 				foundDest = true;
+				foundDestK = kNew;
 				break;
 			}
 
@@ -833,6 +838,7 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				cellDetails[i + 1][j - 1][kNew].parent_j = j;
 				cellDetails[i + 1][j - 1][kNew].parent_k = k;
 				foundDest = true;
+				foundDestK = kNew;
 				break;
 			}
 
@@ -876,9 +882,8 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 	// list is empty, then we conclude that we failed to 
 	// reach the destiantion cell. This may happen when the 
 	// there is no way to destination cell (due to blockages) 
-	if (foundDest == false)
-		printf("Failed to find the Destination Cell\n");
-
+	if (!foundDest) throw runtime_error("Failed to find the Destination Cell\n");
+	
 	return tracePath(cellDetails, dest, foundDestK);
 }
 
