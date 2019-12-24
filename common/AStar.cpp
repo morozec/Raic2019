@@ -138,7 +138,7 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 	// If the destination cell is the same as source cell 
 	if (isDestination(start_x, start_y, dest) == true)
 	{
-		throw runtime_error("We are already at the destination\n");
+		return vector<Pair>(0);
 	}
 
 	// Create a closed list and initialise it to false which means 

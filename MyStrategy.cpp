@@ -440,6 +440,40 @@ void initAStarAction(const Unit& me, const Vec2Double& targetPos, const Vec2Doub
 	mePositions.emplace_back(curPosition);
 	meJumpStates.emplace_back(curJumpState);
 
+	if (path.empty()) //уже в нужном тайле
+	{
+		UnitAction curAction;
+		const auto dx = targetPos.x - me.position.x;
+		if (std::abs(dx) < TOLERANCE) curAction.velocity = 0;
+		else if (dx > 0) curAction.velocity = INT_MAX;
+		else curAction.velocity = -INT_MAX;
+
+		const auto dy = targetPos.y - me.position.y;
+		if (std::abs(dy) < TOLERANCE)
+		{
+			curAction.jump = false;
+			curAction.jumpDown = false;
+		}
+		else if (dy > 0)
+		{
+			curAction.jump = true;
+			curAction.jumpDown = false;
+		}
+		else
+		{
+			curAction.jump = false;
+			curAction.jumpDown = true;
+		}
+		
+		curPosition = Simulator::getUnitInTimePosition(curPosition, me.size, me.id, curAction, tickTime, curJumpState, game);
+
+		action = curAction;
+		mePositions.emplace_back(curPosition);
+		meJumpStates.emplace_back(curJumpState);
+		
+		return;
+	}
+
 	for (int i = 0; i < path.size() - 1; ++i)
 	{
 		const auto& myTile = path[i];
