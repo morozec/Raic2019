@@ -18,7 +18,7 @@ using namespace std;
 
 
 // Creating a shortcut for pair<int, pair<int, int>> type 
-typedef pair<double, Triple> pPair;
+typedef pair<int, Triple> pPair;
 
 // A structure to hold the neccesary parameters 
 struct cell
@@ -27,7 +27,7 @@ struct cell
 	// Note that 0 <= i <= ROW-1 & 0 <= j <= COL-1 
 	int parent_i, parent_j, parent_k;
 	// f = g + h 
-	double f, g, h;
+	int f, g, h;
 };
 
 // A Utility Function to check whether given cell (row, col) 
@@ -53,20 +53,19 @@ bool isUnBlocked(vector<vector<int>> grid, int col, int row)
 
 // A Utility Function to check whether destination cell has 
 // been reached or not 
-bool isDestination(int row, int col, Pair dest)
+bool isDestination(int col, int row, Pair dest)
 {
-	if (row == dest.first && col == dest.second)
+	if (col == dest.first && row == dest.second)
 		return (true);
 	else
 		return (false);
 }
 
 // A Utility Function to calculate the 'h' heuristics. 
-double calculateHValue(int row, int col, Pair dest)
+int calculateHValue(int col, int row, Pair dest)
 {
 	// Return using the distance formula 
-	return ((double)sqrt((row - dest.first) * (row - dest.first)
-		+ (col - dest.second) * (col - dest.second)));
+	return std::abs(col - dest.first) + std::abs(row - dest.second);
 }
 
 // A Utility Function to trace the path from the source 
@@ -162,9 +161,9 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 		for (j = 0; j < COL; j++)
 		{
 			for (k = 0; k < Z_SIZE; ++k) {
-				cellDetails[i][j][k].f = FLT_MAX;
-				cellDetails[i][j][k].g = FLT_MAX;
-				cellDetails[i][j][k].h = FLT_MAX;
+				cellDetails[i][j][k].f = INT_MAX;
+				cellDetails[i][j][k].g = INT_MAX;
+				cellDetails[i][j][k].h = INT_MAX;
 				cellDetails[i][j][k].parent_i = -1;
 				cellDetails[i][j][k].parent_j = -1;
 				cellDetails[i][j][k].parent_k = -2;
@@ -238,7 +237,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 		 S.W--> South-West  (i+1, j-1)*/
 
 		 // To store the 'g', 'h' and 'f' of the 8 successors 
-		double gNew, hNew, fNew;
+		int gNew, hNew, fNew;
 		int kNew;
 
 		//----------- 1st Successor (WEST) ------------ 
@@ -267,7 +266,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			// Else do the following 
 			else if (closedList[i - 1][j][kNew] == false)
 			{
-				gNew = cellDetails[i][j][k].g + 1.0;
+				gNew = cellDetails[i][j][k].g + 1;
 				hNew = calculateHValue(i - 1, j, dest);
 				fNew = gNew + hNew;
 
@@ -279,7 +278,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i - 1][j][kNew].f == FLT_MAX ||
+				if (cellDetails[i - 1][j][kNew].f == INT_MAX ||
 					cellDetails[i - 1][j][kNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
@@ -322,7 +321,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			// Else do the following 
 			else if (closedList[i + 1][j][kNew] == false )
 			{
-				gNew = cellDetails[i][j][k].g + 1.0;
+				gNew = cellDetails[i][j][k].g + 1;
 				hNew = calculateHValue(i + 1, j, dest);
 				fNew = gNew + hNew;
 
@@ -334,7 +333,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i + 1][j][kNew].f == FLT_MAX ||
+				if (cellDetails[i + 1][j][kNew].f == INT_MAX ||
 					cellDetails[i + 1][j][kNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew, make_tuple(i + 1, j, kNew)));
@@ -375,7 +374,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			// Else do the following 
 			else if (closedList[i][j + 1][kNew] == false)
 			{
-				gNew = cellDetails[i][j][k].g + 1.0;
+				gNew = cellDetails[i][j][k].g + 1;
 				hNew = calculateHValue(i, j + 1, dest);
 				fNew = gNew + hNew;
 
@@ -387,7 +386,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i][j + 1][kNew].f == FLT_MAX ||
+				if (cellDetails[i][j + 1][kNew].f == INT_MAX ||
 					cellDetails[i][j + 1][kNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
@@ -431,7 +430,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			// Else do the following 
 			else if (closedList[i][j + 1][kNew] == false)
 			{
-				gNew = cellDetails[i][j][k].g + 1.0;
+				gNew = cellDetails[i][j][k].g + 1;
 				hNew = calculateHValue(i, j + 1, dest);
 				fNew = gNew + hNew;
 
@@ -443,7 +442,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i][j + 1][kNew].f == FLT_MAX ||
+				if (cellDetails[i][j + 1][kNew].f == INT_MAX ||
 					cellDetails[i][j + 1][kNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
@@ -490,7 +489,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			// Else do the following 
 			else if (closedList[i][j - 1][kNew] == false)
 			{
-				gNew = cellDetails[i][j][k].g + 1.0;
+				gNew = cellDetails[i][j][k].g + 1;
 				hNew = calculateHValue(i, j - 1, dest);
 				fNew = gNew + hNew;
 
@@ -502,7 +501,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i][j - 1][kNew].f == FLT_MAX ||
+				if (cellDetails[i][j - 1][kNew].f == INT_MAX ||
 					cellDetails[i][j - 1][kNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
@@ -546,7 +545,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			// Else do the following 
 			else if (closedList[i - 1][j - 1][kNew] == false)
 			{
-				gNew = cellDetails[i][j][k].g + 1.414;
+				gNew = cellDetails[i][j][k].g + 1;
 				hNew = calculateHValue(i - 1, j - 1, dest);
 				fNew = gNew + hNew;
 
@@ -558,7 +557,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i - 1][j - 1][kNew].f == FLT_MAX ||
+				if (cellDetails[i - 1][j - 1][kNew].f == INT_MAX ||
 					cellDetails[i - 1][j - 1][kNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
@@ -601,7 +600,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			// Else do the following 
 			else if (closedList[i + 1][j - 1][kNew] == false)
 			{
-				gNew = cellDetails[i][j][k].g + 1.414;
+				gNew = cellDetails[i][j][k].g + 1;
 				hNew = calculateHValue(i + 1, j - 1, dest);
 				fNew = gNew + hNew;
 
@@ -613,7 +612,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i + 1][j - 1][kNew].f == FLT_MAX ||
+				if (cellDetails[i + 1][j - 1][kNew].f == INT_MAX ||
 					cellDetails[i + 1][j - 1][kNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
@@ -656,7 +655,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			else if (closedList[i - 1][j + 1][kNew] == false &&
 				isUnBlocked(grid, i - 1, j + 1) == true)
 			{
-				gNew = cellDetails[i][j][k].g + 1.414;
+				gNew = cellDetails[i][j][k].g + 1;
 				hNew = calculateHValue(i - 1, j + 1, dest);
 				fNew = gNew + hNew;
 
@@ -668,7 +667,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i - 1][j + 1][kNew].f == FLT_MAX ||
+				if (cellDetails[i - 1][j + 1][kNew].f == INT_MAX ||
 					cellDetails[i - 1][j + 1][kNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
@@ -712,7 +711,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			else if (closedList[i - 1][j + 1][kNew] == false &&
 				isUnBlocked(grid, i - 1, j + 1) == true)
 			{
-				gNew = cellDetails[i][j][k].g + 1.414;
+				gNew = cellDetails[i][j][k].g + 1;
 				hNew = calculateHValue(i - 1, j + 1, dest);
 				fNew = gNew + hNew;
 
@@ -724,7 +723,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i - 1][j + 1][kNew].f == FLT_MAX ||
+				if (cellDetails[i - 1][j + 1][kNew].f == INT_MAX ||
 					cellDetails[i - 1][j + 1][kNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
@@ -770,7 +769,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			else if (closedList[i + 1][j + 1][kNew] == false &&
 				isUnBlocked(grid, i + 1, j + 1) == true)
 			{
-				gNew = cellDetails[i][j][k].g + 1.414;
+				gNew = cellDetails[i][j][k].g + 1;
 				hNew = calculateHValue(i + 1, j + 1, dest);
 				fNew = gNew + hNew;
 
@@ -782,7 +781,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i + 1][j + 1][kNew].f == FLT_MAX ||
+				if (cellDetails[i + 1][j + 1][kNew].f == INT_MAX ||
 					cellDetails[i + 1][j + 1][kNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
@@ -827,7 +826,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			else if (closedList[i + 1][j + 1][kNew] == false &&
 				isUnBlocked(grid, i + 1, j + 1) == true)
 			{
-				gNew = cellDetails[i][j][k].g + 1.414;
+				gNew = cellDetails[i][j][k].g + 1;
 				hNew = calculateHValue(i + 1, j + 1, dest);
 				fNew = gNew + hNew;
 
@@ -839,7 +838,7 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i + 1][j + 1][kNew].f == FLT_MAX ||
+				if (cellDetails[i + 1][j + 1][kNew].f == INT_MAX ||
 					cellDetails[i + 1][j + 1][kNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
