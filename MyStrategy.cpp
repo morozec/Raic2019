@@ -419,6 +419,7 @@ void initAStarAction(
 
 	const auto bottomTile = game.level.tiles[size_t(me.position.x)][size_t(me.position.y - 1)];
 	const auto maxJumpTiles = static_cast<int>(game.properties.unitJumpTime * game.properties.unitJumpSpeed);
+	const auto maxJumpPadJumpTiles = static_cast<int>(game.properties.jumpPadJumpTime * game.properties.jumpPadJumpSpeed);
 	
 	int start_z = 0;
 	if (bottomTile == EMPTY || bottomTile == JUMP_PAD)
@@ -431,13 +432,18 @@ void initAStarAction(
 			//if (size_t(me.position.y + jumpTimeLeft * game.properties.unitJumpSpeed) > size_t(me.position.y)) 
 			//	start_z++; //смогу подняться на 1 тайл
 		}
-		//TODO: прыжок на батуте
+		else if (isJumpPadJumping)
+		{
+			const auto jumpingTime = game.properties.jumpPadJumpTime - me.jumpState.maxTime;
+			start_z = static_cast<int>(jumpingTime * game.properties.jumpPadJumpSpeed);
+		}
 	}	
 	
 	const auto startPos =
 		make_tuple(size_t(me.position.x), size_t(me.position.y), start_z, isJumpPadJumping ? 1 : 0);
 
-	const auto path = aStarSearch(strategy.grid, strategy.closedList, strategy.cellDetails, startPos, endPos, maxJumpTiles, game);
+	const auto path = aStarSearch(
+		strategy.grid, strategy.closedList, strategy.cellDetails, startPos, endPos, maxJumpTiles, game);
 	auto curPosition = me.position;
 	auto curJumpState = me.jumpState;
 	mePositions.emplace_back(curPosition);
