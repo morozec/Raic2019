@@ -391,7 +391,42 @@ void initAStarAction(const Unit& me, const Vec2Double& targetPos, UnitAction& ac
 
 	if (nextTile.second > myTile.second)
 	{
-		action.jump = true;
+		if (nextTile.first == myTile.first || Simulator::isUnitOnAir(me.position, me.size, me.id, game))
+		{
+			action.jump = true;
+		}
+		else
+		{
+			bool isDangerousCorner = false;			
+			for (int i = 1; i < path.size() - 1; ++i)
+			{
+				const auto& curStep = path[i];
+				if (nextTile.first > myTile.first)
+				{
+					if (game.level.tiles[path[i].first - 1][path[i].second + 2] == WALL &&
+						me.position.x < myTile.first + 0.5 - TOLERANCE)
+					{
+						isDangerousCorner = true;
+						break;
+					}
+				}
+				else if (nextTile.first < myTile.first)
+				{
+					if (game.level.tiles[path[i].first + 1][path[i].second + 2] == WALL &&
+						me.position.x > myTile.first + 0.5 + TOLERANCE)
+					{
+						isDangerousCorner = true;
+						break;
+					}
+				}
+				
+				const auto& nextStep = path[i + 1];
+				if (nextStep.second <= curStep.second) break;
+				if (nextTile.first - myTile.first != nextStep.first - curStep.first) break;
+			}			
+						
+			action.jump = !isDangerousCorner;
+		}
 	}
 	else if (nextTile.second <= myTile.second && isJumping &&
 		(game.level.tiles[myTile.first][myTile.second - 1] == EMPTY || game.level.tiles[myTile.first][myTile.second - 1] == JUMP_PAD) &&
