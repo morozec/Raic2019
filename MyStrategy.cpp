@@ -413,6 +413,7 @@ void initAStarAction(const Unit& me, const Vec2Double& targetPos, const Vec2Doub
 	const auto isOnAir = Simulator::isUnitOnAir(me.position, me.size, me.id, game);
 	const auto isJumping = isOnAir && me.jumpState.canJump && me.jumpState.canCancel;
 	const auto isFalling = isOnAir && !me.jumpState.canJump && !me.jumpState.canCancel;
+	const auto isJumpPadJumping = me.jumpState.canJump && !me.jumpState.canCancel;
 
 	const auto bottomTile = game.level.tiles[size_t(me.position.x)][size_t(me.position.y - 1)];
 	const auto maxJumpTiles = static_cast<int>(game.properties.unitJumpTime * game.properties.unitJumpSpeed);
@@ -432,7 +433,7 @@ void initAStarAction(const Unit& me, const Vec2Double& targetPos, const Vec2Doub
 	}	
 	
 	const auto startPos =
-		make_tuple(size_t(me.position.x), size_t(me.position.y), start_z);
+		make_tuple(size_t(me.position.x), size_t(me.position.y), start_z, isJumpPadJumping ? 1 : 0);
 
 	const auto path = aStarSearch(grid, startPos, endPos, maxJumpTiles, game);
 	auto curPosition = me.position;

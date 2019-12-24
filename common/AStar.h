@@ -5,8 +5,8 @@
 #include <vector>
 class Game;
 typedef std::pair<int, int> Pair;
-typedef std::tuple<int, int, int> Triple;
+typedef std::tuple<int, int, int, int> Four;
 
-std::vector<Pair>  aStarSearch(std::vector<std::vector<int>> grid, Triple src, Pair dest,
+std::vector<Pair>  aStarSearch(std::vector<std::vector<int>> grid, Four src, Pair dest,
 	int maxJumpTicks,
 	const Game& game);

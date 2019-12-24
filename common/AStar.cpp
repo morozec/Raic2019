@@ -18,14 +18,14 @@ using namespace std;
 
 
 // Creating a shortcut for pair<int, pair<int, int>> type 
-typedef pair<double, Triple> pPair;
+typedef pair<double, Four> pPair;
 
 // A structure to hold the neccesary parameters 
 struct cell
 {
 	// Row and Column index of its parent 
 	// Note that 0 <= i <= ROW-1 & 0 <= j <= COL-1 
-	int parent_i, parent_j, parent_k;
+	int parent_i, parent_j, parent_k, parent_l;
 	// f = g + h 
 	double f, g, h;
 };
@@ -70,24 +70,27 @@ int calculateHValue(int col, int row, Pair dest)
 
 // A Utility Function to trace the path from the source 
 // to destination 
-vector<Pair> tracePath(vector<vector<vector<cell>>> cellDetails, Pair dest, int foundDestK)
+vector<Pair> tracePath(vector<vector<vector<vector<cell>>>> cellDetails, Pair dest, int foundDestK, int foundDestL)
 {
 	int col = dest.first;
 	int row = dest.second;
 	int k = foundDestK;
+	int l = foundDestL;
 
 	vector<Pair> Path;
 
-	while (!(cellDetails[col][row][k].parent_i == col
-		&& cellDetails[col][row][k].parent_j == row))
+	while (!(cellDetails[col][row][k][l].parent_i == col
+		&& cellDetails[col][row][k][l].parent_j == row))
 	{
 		Path.emplace_back(make_pair(col, row));
-		int temp_col = cellDetails[col][row][k].parent_i;
-		int temp_row = cellDetails[col][row][k].parent_j;
-		int temp_k = cellDetails[col][row][k].parent_k;
+		int temp_col = cellDetails[col][row][k][l].parent_i;
+		int temp_row = cellDetails[col][row][k][l].parent_j;
+		int temp_k = cellDetails[col][row][k][l].parent_k;
+		int temp_l = cellDetails[col][row][k][l].parent_l;
 		col = temp_col;
 		row = temp_row;		
 		k = temp_k;
+		l = temp_l;
 	}
 
 	Path.emplace_back(make_pair(col, row));
@@ -99,7 +102,7 @@ vector<Pair> tracePath(vector<vector<vector<cell>>> cellDetails, Pair dest, int 
 // A Function to find the shortest path between 
 // a given source cell to a destination cell according 
 // to A* Search Algorithm 
-vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
+vector<Pair> aStarSearch(vector<vector<int>> grid, Four src, Pair dest,
 	int maxJumpTicks,
 	const Game& game)
 {
@@ -111,10 +114,12 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 	const auto ROW = grid.size();
 	const auto COL = grid[0].size();
 	const auto Z_SIZE = maxJumpTicks + 2; //+1 - на падение, +1 - на стояние
+	const auto PAD_JUMP_STATE_SIZE = 2;
 
 	const auto start_x = get<0>(src);
 	const auto start_y = get<1>(src);
 	const auto start_z = get<2>(src);
+	const auto start_pad_jump_state = get<3>(src);
 	
 	// If the source is out of range 
 	if (isValid(start_x, start_y, ROW, COL) == false)
@@ -145,41 +150,47 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 	// that no cell has been included yet 
 	// This closed list is implemented as a boolean 2D array
 
-	vector<vector<vector<bool>>> closedList(
-		ROW, vector<vector<bool>>(
-			COL, vector<bool>(Z_SIZE, false)));
+	vector<vector<vector<vector<bool>>>> closedList(
+		ROW, vector<vector<vector<bool>>>(
+			COL, vector<vector<bool>>(
+				Z_SIZE, vector<bool>(PAD_JUMP_STATE_SIZE, false))));
 
 	// Declare a 2D array of structure to hold the details 
 	//of that cell
-	vector<vector<vector<cell>>> cellDetails(
-		ROW, vector<vector<cell>>(COL, 
-			vector<cell>(Z_SIZE)));
+	vector<vector<vector<vector<cell>>>> cellDetails(
+		ROW, vector<vector<vector<cell>>>(COL, 
+			vector<vector<cell>>(
+				Z_SIZE,	vector<cell>(2))));
 
-	int i, j, k;
+	int i, j, k, l;
 
 	for (i = 0; i < ROW; i++)
 	{
 		for (j = 0; j < COL; j++)
 		{
 			for (k = 0; k < Z_SIZE; ++k) {
-				cellDetails[i][j][k].f = INT_MAX;
-				cellDetails[i][j][k].g = INT_MAX;
-				cellDetails[i][j][k].h = INT_MAX;
-				cellDetails[i][j][k].parent_i = -1;
-				cellDetails[i][j][k].parent_j = -1;
-				cellDetails[i][j][k].parent_k = -2;
+				for (l = 0; l < PAD_JUMP_STATE_SIZE; ++l) {
+					cellDetails[i][j][k][l].f = INT_MAX;
+					cellDetails[i][j][k][l].g = INT_MAX;
+					cellDetails[i][j][k][l].h = INT_MAX;
+					cellDetails[i][j][k][l].parent_i = -1;
+					cellDetails[i][j][k][l].parent_j = -1;
+					cellDetails[i][j][k][l].parent_k = -1;
+					cellDetails[i][j][k][l].parent_l = -1;
+				}
 			}
 		}
 	}
 
 	// Initialising the parameters of the starting node 
-	i = start_x, j = start_y; k = start_z;
-	cellDetails[i][j][k].f = 0.0;
-	cellDetails[i][j][k].g = 0.0;
-	cellDetails[i][j][k].h = 0.0;
-	cellDetails[i][j][k].parent_i = i;
-	cellDetails[i][j][k].parent_j = j;
-	cellDetails[i][j][k].parent_k = k;
+	i = start_x, j = start_y; k = start_z; l = start_pad_jump_state;
+	cellDetails[i][j][k][l].f = 0.0;
+	cellDetails[i][j][k][l].g = 0.0;
+	cellDetails[i][j][k][l].h = 0.0;
+	cellDetails[i][j][k][l].parent_i = i;
+	cellDetails[i][j][k][l].parent_j = j;
+	cellDetails[i][j][k][l].parent_k = k;
+	cellDetails[i][j][k][l].parent_l = l;
 
 	/*
 	 Create an open list having information as-
@@ -195,12 +206,13 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 	// 'f' as 0
 	
 	openList.insert(make_pair(0.0, 
-		make_tuple(i, j, start_z)));
+		make_tuple(i, j, start_z, start_pad_jump_state)));
 
 	// We set this boolean value as false as initially 
 	// the destination is not reached. 
 	bool foundDest = false;
 	int foundDestK = -1;
+	int foundDestL = -1;
 
 	while (!openList.empty())
 	{
@@ -213,9 +225,10 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 		i = get<0>(p.second);
 		j = get<1>(p.second);
 		k = get<2>(p.second);
+		l = get<3>(p.second);
 		const auto kValue = k == maxJumpTicks + 1 ? -1 : k;
 		
-		closedList[i][j][k] = true;
+		closedList[i][j][k][l] = true;
 
 		/*
 		 Generating all the 8 successor of this cell
@@ -240,7 +253,7 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 
 		 // To store the 'g', 'h' and 'f' of the 8 successors 
 		double gNew, hNew, fNew;
-		int kNew;
+		int kNew, lNew;
 
 		//----------- 1st Successor (WEST) ------------ 
 
@@ -251,24 +264,27 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			game.level.tiles[i - 1][j - 1] != JUMP_PAD)
 		{
 			kNew = 0;
+			lNew = game.level.tiles[i - 1][j] == JUMP_PAD ? 1 : 0;
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i - 1, j, dest) == true)
 			{
 				// Set the Parent of the destination cell 
-				cellDetails[i - 1][j][kNew].parent_i = i;
-				cellDetails[i - 1][j][kNew].parent_j = j;
-				cellDetails[i - 1][j][kNew].parent_k = k;
+				cellDetails[i - 1][j][kNew][lNew].parent_i = i;
+				cellDetails[i - 1][j][kNew][lNew].parent_j = j;
+				cellDetails[i - 1][j][kNew][lNew].parent_k = k;
+				cellDetails[i - 1][j][kNew][lNew].parent_l = l;
 				foundDest = true;
 				foundDestK = kNew;
+				foundDestL = lNew;
 				break;
 			}
 			// If the successor is already on the closed 
 			// list or if it is blocked, then ignore it. 
 			// Else do the following 
-			else if (closedList[i - 1][j][kNew] == false)
+			else if (closedList[i - 1][j][kNew][lNew] == false)
 			{
-				gNew = cellDetails[i][j][k].g + 1.0;
+				gNew = cellDetails[i][j][k][l].g + 1.0;
 				hNew = calculateHValue(i - 1, j, dest);
 				fNew = gNew + hNew;
 
@@ -280,19 +296,20 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i - 1][j][kNew].f == INT_MAX ||
-					cellDetails[i - 1][j][kNew].f > fNew)
+				if (cellDetails[i - 1][j][kNew][lNew].f == INT_MAX ||
+					cellDetails[i - 1][j][kNew][lNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
-						make_tuple(i - 1, j, kNew)));
+						make_tuple(i - 1, j, kNew, lNew)));
 
 					// Update the details of this cell 
-					cellDetails[i - 1][j][kNew].f = fNew;
-					cellDetails[i - 1][j][kNew].g = gNew;
-					cellDetails[i - 1][j][kNew].h = hNew;
-					cellDetails[i - 1][j][kNew].parent_i = i;
-					cellDetails[i - 1][j][kNew].parent_j = j;
-					cellDetails[i - 1][j][kNew].parent_k = k;
+					cellDetails[i - 1][j][kNew][lNew].f = fNew;
+					cellDetails[i - 1][j][kNew][lNew].g = gNew;
+					cellDetails[i - 1][j][kNew][lNew].h = hNew;
+					cellDetails[i - 1][j][kNew][lNew].parent_i = i;
+					cellDetails[i - 1][j][kNew][lNew].parent_j = j;
+					cellDetails[i - 1][j][kNew][lNew].parent_k = k;
+					cellDetails[i - 1][j][kNew][lNew].parent_l = l;
 				}
 			}
 		}
@@ -306,24 +323,27 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			game.level.tiles[i + 1][j - 1] != JUMP_PAD)
 		{
 			kNew = 0;
+			lNew = game.level.tiles[i + 1][j] == JUMP_PAD ? 1 : 0;
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i + 1, j, dest) == true)
 			{
 				// Set the Parent of the destination cell 
-				cellDetails[i + 1][j][kNew].parent_i = i;
-				cellDetails[i + 1][j][kNew].parent_j = j;
-				cellDetails[i + 1][j][kNew].parent_k = k;
+				cellDetails[i + 1][j][kNew][lNew].parent_i = i;
+				cellDetails[i + 1][j][kNew][lNew].parent_j = j;
+				cellDetails[i + 1][j][kNew][lNew].parent_k = k;
+				cellDetails[i + 1][j][kNew][lNew].parent_l = l;
 				foundDest = true;
 				foundDestK = kNew;
+				foundDestL = lNew;
 				break;
 			}
 			// If the successor is already on the closed 
 			// list or if it is blocked, then ignore it. 
 			// Else do the following 
-			else if (closedList[i + 1][j][kNew] == false )
+			else if (closedList[i + 1][j][kNew][lNew] == false )
 			{
-				gNew = cellDetails[i][j][k].g + 1.0;
+				gNew = cellDetails[i][j][k][l].g + 1.0;
 				hNew = calculateHValue(i + 1, j, dest);
 				fNew = gNew + hNew;
 
@@ -335,17 +355,18 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i + 1][j][kNew].f == INT_MAX ||
-					cellDetails[i + 1][j][kNew].f > fNew)
+				if (cellDetails[i + 1][j][kNew][lNew].f == INT_MAX ||
+					cellDetails[i + 1][j][kNew][lNew].f > fNew)
 				{
-					openList.insert(make_pair(fNew, make_tuple(i + 1, j, kNew)));
+					openList.insert(make_pair(fNew, make_tuple(i + 1, j, kNew, lNew)));
 					// Update the details of this cell 
-					cellDetails[i + 1][j][kNew].f = fNew;
-					cellDetails[i + 1][j][kNew].g = gNew;
-					cellDetails[i + 1][j][kNew].h = hNew;
-					cellDetails[i + 1][j][kNew].parent_i = i;
-					cellDetails[i + 1][j][kNew].parent_j = j;
-					cellDetails[i + 1][j][kNew].parent_k = k;
+					cellDetails[i + 1][j][kNew][lNew].f = fNew;
+					cellDetails[i + 1][j][kNew][lNew].g = gNew;
+					cellDetails[i + 1][j][kNew][lNew].h = hNew;
+					cellDetails[i + 1][j][kNew][lNew].parent_i = i;
+					cellDetails[i + 1][j][kNew][lNew].parent_j = j;
+					cellDetails[i + 1][j][kNew][lNew].parent_k = k;
+					cellDetails[i + 1][j][kNew][lNew].parent_l = l;
 				}
 			}
 		}
@@ -358,25 +379,28 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			isUnBlocked(grid, i, j + 1) == true)
 		{
 			kNew = k+1;
+			lNew = 0;
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i, j + 1, dest) == true)
 			{
 				// Set the Parent of the destination cell 
-				cellDetails[i][j + 1][kNew].parent_i = i;
-				cellDetails[i][j + 1][kNew].parent_j = j;
-				cellDetails[i][j + 1][kNew].parent_k = k;
+				cellDetails[i][j + 1][kNew][lNew].parent_i = i;
+				cellDetails[i][j + 1][kNew][lNew].parent_j = j;
+				cellDetails[i][j + 1][kNew][lNew].parent_k = k;
+				cellDetails[i][j + 1][kNew][lNew].parent_l = l;
 				foundDest = true;
 				foundDestK = kNew;
+				foundDestL = lNew;
 				break;
 			}
 
 			// If the successor is already on the closed 
 			// list or if it is blocked, then ignore it. 
 			// Else do the following 
-			else if (closedList[i][j + 1][kNew] == false)
+			else if (closedList[i][j + 1][kNew][lNew] == false)
 			{
-				gNew = cellDetails[i][j][k].g + 1.0;
+				gNew = cellDetails[i][j][k][l].g + 1.0;
 				hNew = calculateHValue(i, j + 1, dest);
 				fNew = gNew + hNew;
 
@@ -388,19 +412,20 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i][j + 1][kNew].f == INT_MAX ||
-					cellDetails[i][j + 1][kNew].f > fNew)
+				if (cellDetails[i][j + 1][kNew][lNew].f == INT_MAX ||
+					cellDetails[i][j + 1][kNew][lNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
-						make_tuple(i, j + 1, kNew)));
+						make_tuple(i, j + 1, kNew, lNew)));
 
 					// Update the details of this cell 
-					cellDetails[i][j + 1][kNew].f = fNew;
-					cellDetails[i][j + 1][kNew].g = gNew;
-					cellDetails[i][j + 1][kNew].h = hNew;
-					cellDetails[i][j + 1][kNew].parent_i = i;
-					cellDetails[i][j + 1][kNew].parent_j = j;
-					cellDetails[i][j + 1][kNew].parent_k = k;
+					cellDetails[i][j + 1][kNew][lNew].f = fNew;
+					cellDetails[i][j + 1][kNew][lNew].g = gNew;
+					cellDetails[i][j + 1][kNew][lNew].h = hNew;
+					cellDetails[i][j + 1][kNew][lNew].parent_i = i;
+					cellDetails[i][j + 1][kNew][lNew].parent_j = j;
+					cellDetails[i][j + 1][kNew][lNew].parent_k = k;
+					cellDetails[i][j + 1][kNew][lNew].parent_l = l;
 				}
 			}
 		}
@@ -414,25 +439,28 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			(game.level.tiles[i][j] == PLATFORM || game.level.tiles[i][j] == LADDER))
 		{
 			kNew = 0;
+			lNew = 0;
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i, j + 1, dest) == true)
 			{
 				// Set the Parent of the destination cell 
-				cellDetails[i][j + 1][kNew].parent_i = i;
-				cellDetails[i][j + 1][kNew].parent_j = j;
-				cellDetails[i][j + 1][kNew].parent_k = k;
+				cellDetails[i][j + 1][kNew][lNew].parent_i = i;
+				cellDetails[i][j + 1][kNew][lNew].parent_j = j;
+				cellDetails[i][j + 1][kNew][lNew].parent_k = k;
+				cellDetails[i][j + 1][kNew][lNew].parent_l = l;
 				foundDest = true;
 				foundDestK = kNew;
+				foundDestL = lNew;
 				break;
 			}
 
 			// If the successor is already on the closed 
 			// list or if it is blocked, then ignore it. 
 			// Else do the following 
-			else if (closedList[i][j + 1][kNew] == false)
+			else if (closedList[i][j + 1][kNew][lNew] == false)
 			{
-				gNew = cellDetails[i][j][k].g + 1.0;
+				gNew = cellDetails[i][j][k][l].g + 1.0;
 				hNew = calculateHValue(i, j + 1, dest);
 				fNew = gNew + hNew;
 
@@ -444,19 +472,20 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i][j + 1][kNew].f == INT_MAX ||
-					cellDetails[i][j + 1][kNew].f > fNew)
+				if (cellDetails[i][j + 1][kNew][lNew].f == INT_MAX ||
+					cellDetails[i][j + 1][kNew][lNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
-						make_tuple(i, j + 1, kNew)));
+						make_tuple(i, j + 1, kNew, lNew)));
 
 					// Update the details of this cell 
-					cellDetails[i][j + 1][kNew].f = fNew;
-					cellDetails[i][j + 1][kNew].g = gNew;
-					cellDetails[i][j + 1][kNew].h = hNew;
-					cellDetails[i][j + 1][kNew].parent_i = i;
-					cellDetails[i][j + 1][kNew].parent_j = j;
-					cellDetails[i][j + 1][kNew].parent_k = k;
+					cellDetails[i][j + 1][kNew][lNew].f = fNew;
+					cellDetails[i][j + 1][kNew][lNew].g = gNew;
+					cellDetails[i][j + 1][kNew][lNew].h = hNew;
+					cellDetails[i][j + 1][kNew][lNew].parent_i = i;
+					cellDetails[i][j + 1][kNew][lNew].parent_j = j;
+					cellDetails[i][j + 1][kNew][lNew].parent_k = k;
+					cellDetails[i][j + 1][kNew][lNew].parent_l = l;
 				}
 			}
 		}
@@ -475,25 +504,29 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			kNew = game.level.tiles[i][j - 2] == EMPTY ||
 				game.level.tiles[i][j - 2] == JUMP_PAD ?
 				maxJumpTicks + 1 : 0;
+			lNew = game.level.tiles[i][j - 1] == JUMP_PAD ? 1 : 0;
+			
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i, j - 1, dest) == true)
 			{
 				// Set the Parent of the destination cell 
-				cellDetails[i][j - 1][kNew].parent_i = i;
-				cellDetails[i][j - 1][kNew].parent_j = j;
-				cellDetails[i][j - 1][kNew].parent_k = k;
+				cellDetails[i][j - 1][kNew][lNew].parent_i = i;
+				cellDetails[i][j - 1][kNew][lNew].parent_j = j;
+				cellDetails[i][j - 1][kNew][lNew].parent_k = k;
+				cellDetails[i][j - 1][kNew][lNew].parent_l = l;
 				foundDest = true;
 				foundDestK = kNew;
+				foundDestL = lNew;
 				break;
 			}
 
 			// If the successor is already on the closed 
 			// list or if it is blocked, then ignore it. 
 			// Else do the following 
-			else if (closedList[i][j - 1][kNew] == false)
+			else if (closedList[i][j - 1][kNew][lNew] == false)
 			{
-				gNew = cellDetails[i][j][k].g + 1.0;
+				gNew = cellDetails[i][j][k][l].g + 1.0;
 				hNew = calculateHValue(i, j - 1, dest);
 				fNew = gNew + hNew;
 
@@ -505,19 +538,20 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i][j - 1][kNew].f == INT_MAX ||
-					cellDetails[i][j - 1][kNew].f > fNew)
+				if (cellDetails[i][j - 1][kNew][lNew].f == INT_MAX ||
+					cellDetails[i][j - 1][kNew][lNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
-						make_tuple(i, j - 1, kNew)));
+						make_tuple(i, j - 1, kNew, lNew)));
 
 					// Update the details of this cell 
-					cellDetails[i][j - 1][kNew].f = fNew;
-					cellDetails[i][j - 1][kNew].g = gNew;
-					cellDetails[i][j - 1][kNew].h = hNew;
-					cellDetails[i][j - 1][kNew].parent_i = i;
-					cellDetails[i][j - 1][kNew].parent_j = j;
-					cellDetails[i][j - 1][kNew].parent_k = k;
+					cellDetails[i][j - 1][kNew][lNew].f = fNew;
+					cellDetails[i][j - 1][kNew][lNew].g = gNew;
+					cellDetails[i][j - 1][kNew][lNew].h = hNew;
+					cellDetails[i][j - 1][kNew][lNew].parent_i = i;
+					cellDetails[i][j - 1][kNew][lNew].parent_j = j;
+					cellDetails[i][j - 1][kNew][lNew].parent_k = k;
+					cellDetails[i][j - 1][kNew][lNew].parent_l = l;
 				}
 			}
 		}	
@@ -533,26 +567,29 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			isUnBlocked(grid, i, j + 1) == true)
 		{
 			kNew = k + 1;
+			lNew = game.level.tiles[i - 1][j + 1] == JUMP_PAD ? 1 : 0;
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i - 1, j + 1, dest) == true)
 			{
 				// Set the Parent of the destination cell 
-				cellDetails[i - 1][j + 1][kNew].parent_i = i;
-				cellDetails[i - 1][j + 1][kNew].parent_j = j;
-				cellDetails[i - 1][j + 1][kNew].parent_k = k;
+				cellDetails[i - 1][j + 1][kNew][lNew].parent_i = i;
+				cellDetails[i - 1][j + 1][kNew][lNew].parent_j = j;
+				cellDetails[i - 1][j + 1][kNew][lNew].parent_k = k;
+				cellDetails[i - 1][j + 1][kNew][lNew].parent_l = l;
 				foundDest = true;
 				foundDestK = kNew;
+				foundDestL = lNew;
 				break;
 			}
 
 			// If the successor is already on the closed 
 			// list or if it is blocked, then ignore it. 
 			// Else do the following 
-			else if (closedList[i - 1][j + 1][kNew] == false &&
+			else if (closedList[i - 1][j + 1][kNew][lNew] == false &&
 				isUnBlocked(grid, i - 1, j + 1) == true)
 			{
-				gNew = cellDetails[i][j][k].g + 1.0 + diagonalAddWeight;
+				gNew = cellDetails[i][j][k][l].g + 1.0 + diagonalAddWeight;
 				hNew = calculateHValue(i - 1, j + 1, dest);
 				fNew = gNew + hNew;
 
@@ -564,19 +601,20 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i - 1][j + 1][kNew].f == INT_MAX ||
-					cellDetails[i - 1][j + 1][kNew].f > fNew)
+				if (cellDetails[i - 1][j + 1][kNew][lNew].f == INT_MAX ||
+					cellDetails[i - 1][j + 1][kNew][lNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
-						make_tuple(i - 1, j + 1, kNew)));
+						make_tuple(i - 1, j + 1, kNew, lNew)));
 
 					// Update the details of this cell 
-					cellDetails[i - 1][j + 1][kNew].f = fNew;
-					cellDetails[i - 1][j + 1][kNew].g = gNew;
-					cellDetails[i - 1][j + 1][kNew].h = hNew;
-					cellDetails[i - 1][j + 1][kNew].parent_i = i;
-					cellDetails[i - 1][j + 1][kNew].parent_j = j;
-					cellDetails[i - 1][j + 1][kNew].parent_k = k;
+					cellDetails[i - 1][j + 1][kNew][lNew].f = fNew;
+					cellDetails[i - 1][j + 1][kNew][lNew].g = gNew;
+					cellDetails[i - 1][j + 1][kNew][lNew].h = hNew;
+					cellDetails[i - 1][j + 1][kNew][lNew].parent_i = i;
+					cellDetails[i - 1][j + 1][kNew][lNew].parent_j = j;
+					cellDetails[i - 1][j + 1][kNew][lNew].parent_k = k;
+					cellDetails[i - 1][j + 1][kNew][lNew].parent_l = l;
 				}
 			}
 		}
@@ -591,26 +629,29 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			(game.level.tiles[i - 1][j] == PLATFORM || game.level.tiles[i - 1][j] == LADDER || game.level.tiles[i - 1][j] == WALL))
 		{
 			kNew = 0;
+			lNew = game.level.tiles[i - 1][j + 1] == JUMP_PAD ? 1 : 0;
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i - 1, j + 1, dest) == true)
 			{
 				// Set the Parent of the destination cell 
-				cellDetails[i - 1][j + 1][kNew].parent_i = i;
-				cellDetails[i - 1][j + 1][kNew].parent_j = j;
-				cellDetails[i - 1][j + 1][kNew].parent_k = k;
+				cellDetails[i - 1][j + 1][kNew][lNew].parent_i = i;
+				cellDetails[i - 1][j + 1][kNew][lNew].parent_j = j;
+				cellDetails[i - 1][j + 1][kNew][lNew].parent_k = k;
+				cellDetails[i - 1][j + 1][kNew][lNew].parent_l = l;
 				foundDest = true;
 				foundDestK = kNew;
+				foundDestL = lNew;
 				break;
 			}
 
 			// If the successor is already on the closed 
 			// list or if it is blocked, then ignore it. 
 			// Else do the following 
-			else if (closedList[i - 1][j + 1][kNew] == false &&
+			else if (closedList[i - 1][j + 1][kNew][lNew] == false &&
 				isUnBlocked(grid, i - 1, j + 1) == true)
 			{
-				gNew = cellDetails[i][j][k].g + 1.0 + diagonalAddWeight;
+				gNew = cellDetails[i][j][k][l].g + 1.0 + diagonalAddWeight;
 				hNew = calculateHValue(i - 1, j + 1, dest);
 				fNew = gNew + hNew;
 
@@ -622,19 +663,20 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i - 1][j + 1][kNew].f == INT_MAX ||
-					cellDetails[i - 1][j + 1][kNew].f > fNew)
+				if (cellDetails[i - 1][j + 1][kNew][lNew].f == INT_MAX ||
+					cellDetails[i - 1][j + 1][kNew][lNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
-						make_tuple(i - 1, j + 1, kNew)));
+						make_tuple(i - 1, j + 1, kNew, lNew)));
 
 					// Update the details of this cell 
-					cellDetails[i - 1][j + 1][kNew].f = fNew;
-					cellDetails[i - 1][j + 1][kNew].g = gNew;
-					cellDetails[i - 1][j + 1][kNew].h = hNew;
-					cellDetails[i - 1][j + 1][kNew].parent_i = i;
-					cellDetails[i - 1][j + 1][kNew].parent_j = j;
-					cellDetails[i - 1][j + 1][kNew].parent_k = k;
+					cellDetails[i - 1][j + 1][kNew][lNew].f = fNew;
+					cellDetails[i - 1][j + 1][kNew][lNew].g = gNew;
+					cellDetails[i - 1][j + 1][kNew][lNew].h = hNew;
+					cellDetails[i - 1][j + 1][kNew][lNew].parent_i = i;
+					cellDetails[i - 1][j + 1][kNew][lNew].parent_j = j;
+					cellDetails[i - 1][j + 1][kNew][lNew].parent_k = k;
+					cellDetails[i - 1][j + 1][kNew][lNew].parent_l = l;
 				}
 			}
 		}
@@ -650,27 +692,30 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			isUnBlocked(grid, i, j + 1) == true)
 		{
 			kNew = k + 1;
+			lNew = game.level.tiles[i + 1][j + 1] == JUMP_PAD ? 1 : 0;
 
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i + 1, j + 1, dest) == true)
 			{
 				// Set the Parent of the destination cell 
-				cellDetails[i + 1][j + 1][kNew].parent_i = i;
-				cellDetails[i + 1][j + 1][kNew].parent_j = j;
-				cellDetails[i + 1][j + 1][kNew].parent_k = k;
+				cellDetails[i + 1][j + 1][kNew][lNew].parent_i = i;
+				cellDetails[i + 1][j + 1][kNew][lNew].parent_j = j;
+				cellDetails[i + 1][j + 1][kNew][lNew].parent_k = k;
+				cellDetails[i + 1][j + 1][kNew][lNew].parent_l = l;
 				foundDest = true;
 				foundDestK = kNew;
+				foundDestL = lNew;
 				break;
 			}
 
 			// If the successor is already on the closed 
 			// list or if it is blocked, then ignore it. 
 			// Else do the following 
-			else if (closedList[i + 1][j + 1][kNew] == false &&
+			else if (closedList[i + 1][j + 1][kNew][lNew] == false &&
 				isUnBlocked(grid, i + 1, j + 1) == true)
 			{
-				gNew = cellDetails[i][j][k].g + 1.0 + diagonalAddWeight;
+				gNew = cellDetails[i][j][k][l].g + 1.0 + diagonalAddWeight;
 				hNew = calculateHValue(i + 1, j + 1, dest);
 				fNew = gNew + hNew;
 
@@ -682,19 +727,20 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i + 1][j + 1][kNew].f == INT_MAX ||
-					cellDetails[i + 1][j + 1][kNew].f > fNew)
+				if (cellDetails[i + 1][j + 1][kNew][lNew].f == INT_MAX ||
+					cellDetails[i + 1][j + 1][kNew][lNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
-						make_tuple(i + 1, j + 1, kNew)));
+						make_tuple(i + 1, j + 1, kNew, lNew)));
 
 					// Update the details of this cell 
-					cellDetails[i + 1][j + 1][kNew].f = fNew;
-					cellDetails[i + 1][j + 1][kNew].g = gNew;
-					cellDetails[i + 1][j + 1][kNew].h = hNew;
-					cellDetails[i + 1][j + 1][kNew].parent_i = i;
-					cellDetails[i + 1][j + 1][kNew].parent_j = j;
-					cellDetails[i + 1][j + 1][kNew].parent_k = k;
+					cellDetails[i + 1][j + 1][kNew][lNew].f = fNew;
+					cellDetails[i + 1][j + 1][kNew][lNew].g = gNew;
+					cellDetails[i + 1][j + 1][kNew][lNew].h = hNew;
+					cellDetails[i + 1][j + 1][kNew][lNew].parent_i = i;
+					cellDetails[i + 1][j + 1][kNew][lNew].parent_j = j;
+					cellDetails[i + 1][j + 1][kNew][lNew].parent_k = k;
+					cellDetails[i + 1][j + 1][kNew][lNew].parent_l = l;
 				}
 			}
 		}
@@ -709,27 +755,30 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			(game.level.tiles[i + 1][j] == PLATFORM || game.level.tiles[i + 1][j] == LADDER || game.level.tiles[i + 1][j] == WALL))
 		{
 			kNew = 0;
+			lNew = game.level.tiles[i + 1][j + 1] == JUMP_PAD ? 1 : 0;
 
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i + 1, j + 1, dest) == true)
 			{
 				// Set the Parent of the destination cell 
-				cellDetails[i + 1][j + 1][kNew].parent_i = i;
-				cellDetails[i + 1][j + 1][kNew].parent_j = j;
-				cellDetails[i + 1][j + 1][kNew].parent_k = k;
+				cellDetails[i + 1][j + 1][kNew][lNew].parent_i = i;
+				cellDetails[i + 1][j + 1][kNew][lNew].parent_j = j;
+				cellDetails[i + 1][j + 1][kNew][lNew].parent_k = k;
+				cellDetails[i + 1][j + 1][kNew][lNew].parent_l = l;
 				foundDest = true;
 				foundDestK = kNew;
+				foundDestL = lNew;
 				break;
 			}
 
 			// If the successor is already on the closed 
 			// list or if it is blocked, then ignore it. 
 			// Else do the following 
-			else if (closedList[i + 1][j + 1][kNew] == false &&
+			else if (closedList[i + 1][j + 1][kNew][lNew] == false &&
 				isUnBlocked(grid, i + 1, j + 1) == true)
 			{
-				gNew = cellDetails[i][j][k].g + 1.0 + diagonalAddWeight;
+				gNew = cellDetails[i][j][k][l].g + 1.0 + diagonalAddWeight;
 				hNew = calculateHValue(i + 1, j + 1, dest);
 				fNew = gNew + hNew;
 
@@ -741,19 +790,20 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i + 1][j + 1][kNew].f == INT_MAX ||
-					cellDetails[i + 1][j + 1][kNew].f > fNew)
+				if (cellDetails[i + 1][j + 1][kNew][lNew].f == INT_MAX ||
+					cellDetails[i + 1][j + 1][kNew][lNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
-						make_tuple(i + 1, j + 1, kNew)));
+						make_tuple(i + 1, j + 1, kNew, lNew)));
 
 					// Update the details of this cell 
-					cellDetails[i + 1][j + 1][kNew].f = fNew;
-					cellDetails[i + 1][j + 1][kNew].g = gNew;
-					cellDetails[i + 1][j + 1][kNew].h = hNew;
-					cellDetails[i + 1][j + 1][kNew].parent_i = i;
-					cellDetails[i + 1][j + 1][kNew].parent_j = j;
-					cellDetails[i + 1][j + 1][kNew].parent_k = k;
+					cellDetails[i + 1][j + 1][kNew][lNew].f = fNew;
+					cellDetails[i + 1][j + 1][kNew][lNew].g = gNew;
+					cellDetails[i + 1][j + 1][kNew][lNew].h = hNew;
+					cellDetails[i + 1][j + 1][kNew][lNew].parent_i = i;
+					cellDetails[i + 1][j + 1][kNew][lNew].parent_j = j;
+					cellDetails[i + 1][j + 1][kNew][lNew].parent_k = k;
+					cellDetails[i + 1][j + 1][kNew][lNew].parent_l = l;
 				}
 			}
 		}
@@ -773,25 +823,29 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			kNew = game.level.tiles[i - 1][j - 2] == EMPTY ||
 				game.level.tiles[i - 1][j - 2] == JUMP_PAD ?
 				maxJumpTicks + 1 : 0;
+			lNew = game.level.tiles[i - 1][j - 1] == JUMP_PAD ? 1 : 0;
+			
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i - 1, j - 1, dest) == true)
 			{
 				// Set the Parent of the destination cell 
-				cellDetails[i - 1][j - 1][kNew].parent_i = i;
-				cellDetails[i - 1][j - 1][kNew].parent_j = j;
-				cellDetails[i - 1][j - 1][kNew].parent_k = k;
+				cellDetails[i - 1][j - 1][kNew][lNew].parent_i = i;
+				cellDetails[i - 1][j - 1][kNew][lNew].parent_j = j;
+				cellDetails[i - 1][j - 1][kNew][lNew].parent_k = k;
+				cellDetails[i - 1][j - 1][kNew][lNew].parent_l = l;
 				foundDest = true;
 				foundDestK = kNew;
+				foundDestL = lNew;
 				break;
 			}
 
 			// If the successor is already on the closed 
 			// list or if it is blocked, then ignore it. 
 			// Else do the following 
-			else if (closedList[i - 1][j - 1][kNew] == false)
+			else if (closedList[i - 1][j - 1][kNew][lNew] == false)
 			{
-				gNew = cellDetails[i][j][k].g + 1.0 + diagonalAddWeight;
+				gNew = cellDetails[i][j][k][l].g + 1.0 + diagonalAddWeight;
 				hNew = calculateHValue(i - 1, j - 1, dest);
 				fNew = gNew + hNew;
 
@@ -803,18 +857,19 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i - 1][j - 1][kNew].f == INT_MAX ||
-					cellDetails[i - 1][j - 1][kNew].f > fNew)
+				if (cellDetails[i - 1][j - 1][kNew][lNew].f == INT_MAX ||
+					cellDetails[i - 1][j - 1][kNew][lNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
-						make_tuple(i - 1, j - 1, kNew)));
+						make_tuple(i - 1, j - 1, kNew, lNew)));
 					// Update the details of this cell 
-					cellDetails[i - 1][j - 1][kNew].f = fNew;
-					cellDetails[i - 1][j - 1][kNew].g = gNew;
-					cellDetails[i - 1][j - 1][kNew].h = hNew;
-					cellDetails[i - 1][j - 1][kNew].parent_i = i;
-					cellDetails[i - 1][j - 1][kNew].parent_j = j;
-					cellDetails[i - 1][j - 1][kNew].parent_k = k;
+					cellDetails[i - 1][j - 1][kNew][lNew].f = fNew;
+					cellDetails[i - 1][j - 1][kNew][lNew].g = gNew;
+					cellDetails[i - 1][j - 1][kNew][lNew].h = hNew;
+					cellDetails[i - 1][j - 1][kNew][lNew].parent_i = i;
+					cellDetails[i - 1][j - 1][kNew][lNew].parent_j = j;
+					cellDetails[i - 1][j - 1][kNew][lNew].parent_k = k;
+					cellDetails[i - 1][j - 1][kNew][lNew].parent_l = l;
 				}
 			}
 		}
@@ -829,25 +884,28 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			kNew = game.level.tiles[i + 1][j - 2] == EMPTY ||
 				game.level.tiles[i + 1][j - 2] == JUMP_PAD ?
 				maxJumpTicks + 1 : 0;
+			lNew = game.level.tiles[i + 1][j - 1] == JUMP_PAD ? 1 : 0;
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i + 1, j - 1, dest) == true)
 			{
 				// Set the Parent of the destination cell 
-				cellDetails[i + 1][j - 1][kNew].parent_i = i;
-				cellDetails[i + 1][j - 1][kNew].parent_j = j;
-				cellDetails[i + 1][j - 1][kNew].parent_k = k;
+				cellDetails[i + 1][j - 1][kNew][lNew].parent_i = i;
+				cellDetails[i + 1][j - 1][kNew][lNew].parent_j = j;
+				cellDetails[i + 1][j - 1][kNew][lNew].parent_k = k;
+				cellDetails[i + 1][j - 1][kNew][lNew].parent_l = l;
 				foundDest = true;
 				foundDestK = kNew;
+				foundDestL = lNew;
 				break;
 			}
 
 			// If the successor is already on the closed 
 			// list or if it is blocked, then ignore it. 
 			// Else do the following 
-			else if (closedList[i + 1][j - 1][kNew] == false)
+			else if (closedList[i + 1][j - 1][kNew][lNew] == false)
 			{
-				gNew = cellDetails[i][j][k].g + 1.0 + diagonalAddWeight;
+				gNew = cellDetails[i][j][k][l].g + 1.0 + diagonalAddWeight;
 				hNew = calculateHValue(i + 1, j - 1, dest);
 				fNew = gNew + hNew;
 
@@ -859,19 +917,20 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i + 1][j - 1][kNew].f == INT_MAX ||
-					cellDetails[i + 1][j - 1][kNew].f > fNew)
+				if (cellDetails[i + 1][j - 1][kNew][lNew].f == INT_MAX ||
+					cellDetails[i + 1][j - 1][kNew][lNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
-						make_tuple(i + 1, j - 1, kNew)));
+						make_tuple(i + 1, j - 1, kNew, lNew)));
 
 					// Update the details of this cell 
-					cellDetails[i + 1][j - 1][kNew].f = fNew;
-					cellDetails[i + 1][j - 1][kNew].g = gNew;
-					cellDetails[i + 1][j - 1][kNew].h = hNew;
-					cellDetails[i + 1][j - 1][kNew].parent_i = i;
-					cellDetails[i + 1][j - 1][kNew].parent_j = j;
-					cellDetails[i + 1][j - 1][kNew].parent_k = k;
+					cellDetails[i + 1][j - 1][kNew][lNew].f = fNew;
+					cellDetails[i + 1][j - 1][kNew][lNew].g = gNew;
+					cellDetails[i + 1][j - 1][kNew][lNew].h = hNew;
+					cellDetails[i + 1][j - 1][kNew][lNew].parent_i = i;
+					cellDetails[i + 1][j - 1][kNew][lNew].parent_j = j;
+					cellDetails[i + 1][j - 1][kNew][lNew].parent_k = k;
+					cellDetails[i + 1][j - 1][kNew][lNew].parent_l = l;
 				}
 			}
 		}
@@ -884,7 +943,7 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 	// there is no way to destination cell (due to blockages) 
 	if (!foundDest) throw runtime_error("Failed to find the Destination Cell\n");
 	
-	return tracePath(cellDetails, dest, foundDestK);
+	return tracePath(cellDetails, dest, foundDestK, foundDestL);
 }
 
 
