@@ -20,15 +20,7 @@ using namespace std;
 // Creating a shortcut for pair<int, pair<int, int>> type 
 typedef pair<double, Four> pPair;
 
-// A structure to hold the neccesary parameters 
-struct cell
-{
-	// Row and Column index of its parent 
-	// Note that 0 <= i <= ROW-1 & 0 <= j <= COL-1 
-	int parent_i, parent_j, parent_k, parent_l;
-	// f = g + h 
-	double f, g, h;
-};
+
 
 // A Utility Function to check whether given cell (row, col) 
 // is a valid cell or not. 
@@ -102,7 +94,10 @@ vector<Pair> tracePath(vector<vector<vector<vector<cell>>>> cellDetails, Pair de
 // A Function to find the shortest path between 
 // a given source cell to a destination cell according 
 // to A* Search Algorithm 
-vector<Pair> aStarSearch(vector<vector<int>> grid, Four src, Pair dest,
+vector<Pair> aStarSearch(
+	const std::vector<std::vector<int>>& grid, vector<vector<vector<vector<bool>>>>& closedList,
+	vector<vector<vector<vector<cell>>>>& cellDetails,
+	const Four& src, const Pair& dest,
 	int maxJumpTicks,
 	const Game& game)
 {
@@ -144,23 +139,7 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Four src, Pair dest,
 	if (isDestination(start_x, start_y, dest) == true)
 	{
 		return vector<Pair>(0);
-	}
-
-	// Create a closed list and initialise it to false which means 
-	// that no cell has been included yet 
-	// This closed list is implemented as a boolean 2D array
-
-	vector<vector<vector<vector<bool>>>> closedList(
-		ROW, vector<vector<vector<bool>>>(
-			COL, vector<vector<bool>>(
-				Z_SIZE, vector<bool>(PAD_JUMP_STATE_SIZE, false))));
-
-	// Declare a 2D array of structure to hold the details 
-	//of that cell
-	vector<vector<vector<vector<cell>>>> cellDetails(
-		ROW, vector<vector<vector<cell>>>(COL, 
-			vector<vector<cell>>(
-				Z_SIZE,	vector<cell>(2))));
+	}	
 
 	int i, j, k, l;
 
@@ -177,6 +156,8 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Four src, Pair dest,
 					cellDetails[i][j][k][l].parent_j = -1;
 					cellDetails[i][j][k][l].parent_k = -1;
 					cellDetails[i][j][k][l].parent_l = -1;
+
+					closedList[i][j][k][l] = false;
 				}
 			}
 		}

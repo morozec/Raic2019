@@ -399,14 +399,16 @@ void initOneStepAction(const pair<int,int>& myTile, const pair<int,int>& nextTil
 	else action.jumpDown = false;
 }
 
-void initAStarAction(const Unit& me, const Vec2Double& targetPos, const Vec2Double& targetSize,
+void initAStarAction(
+	const Unit& me, const Vec2Double& targetPos, const Vec2Double& targetSize,
 	vector<Vec2Double>& mePositions,
 	vector<JumpState>& meJumpStates,
 	UnitAction& action,
+	Strategy& strategy,
 	const Game& game, Debug& debug)
 {
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
-	const auto grid = getGrid(game);
+	
 	const auto endPos =
 		make_pair(size_t(targetPos.x), size_t(targetPos.y));
 
@@ -435,7 +437,7 @@ void initAStarAction(const Unit& me, const Vec2Double& targetPos, const Vec2Doub
 	const auto startPos =
 		make_tuple(size_t(me.position.x), size_t(me.position.y), start_z, isJumpPadJumping ? 1 : 0);
 
-	const auto path = aStarSearch(grid, startPos, endPos, maxJumpTiles, game);
+	const auto path = aStarSearch(strategy.grid, strategy.closedList, strategy.cellDetails, startPos, endPos, maxJumpTiles, game);
 	auto curPosition = me.position;
 	auto curJumpState = me.jumpState;
 	mePositions.emplace_back(curPosition);
@@ -1245,6 +1247,21 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		}
 		strategy_.isInit = true;
 		strategy_.setJumpingUnitId(-1);
+		strategy_.grid = getGrid(game);
+
+		const auto maxJumpTiles = static_cast<int>(game.properties.unitJumpTime * game.properties.unitJumpSpeed);
+		const auto Z_SIZE = maxJumpTiles + 2; //+1 - на падение, +1 - на стояние
+		const auto PAD_JUMP_STATE_SIZE = 2;
+		
+		strategy_.closedList = vector<vector<vector<vector<bool>>>> (
+			strategy_.grid.size(), vector<vector<vector<bool>>>(
+				strategy_.grid[0].size(), vector<vector<bool>>(
+					Z_SIZE, vector<bool>(PAD_JUMP_STATE_SIZE, false))));
+		
+		strategy_.cellDetails = vector<vector<vector<vector<cell>>>> (
+			strategy_.grid.size(), vector<vector<vector<cell>>>(
+				strategy_.grid[0].size(), vector<vector<cell>>(
+					Z_SIZE, vector<cell>(PAD_JUMP_STATE_SIZE))));
 	}
 	
 
@@ -1414,7 +1431,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			*nearestWeapon, meAttackingAction, startJumpY, jumpingUnitId, game);*/
 		initAStarAction(
 			unit, nearestWeapon->position, nearestWeapon->size, 
-			meAttackingPositions, meAttackingJumpStates, meAttackingAction, 
+			meAttackingPositions, meAttackingJumpStates, meAttackingAction,
+			strategy_,
 			game, debug);
 	}
 	else
@@ -1468,6 +1486,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 					initAStarAction(
 						unit, lb.position, lb.size,
 						curMeAttackingPositions, curMeAttackingJumpStates, curMeAttackingAction,
+						strategy_,
 						game, debug);
 
 					auto goodWay = true;
