@@ -347,29 +347,17 @@ void initAStarAction(const Unit& me, const Vec2Double& targetPos, UnitAction& ac
 		make_tuple(size_t(me.position.x), size_t(me.position.y), start_z);
 
 	auto path = aStarSearch(grid, startPos, endPos, maxJumpTiles, game);
-	const auto myTile = path.top();
-	debug.draw(CustomData::Rect(
-		vec2DoubleToVec2Float({ static_cast<double>(myTile.first), static_cast<double>(myTile.second) }),
-		{ 1, 1 },
-		ColorFloat(255, 255, 255, 0.2)
-	));
-	path.pop(); //убрали свою точку
-	const auto nextTile = path.top();
-	debug.draw(CustomData::Rect(
-		vec2DoubleToVec2Float({static_cast<double>(nextTile.first), static_cast<double>(nextTile.second)}),
-		{ 1, 1 },
-		ColorFloat(255, 255, 255, 0.2)
-	));
+	const auto myTile = path[0];	
+	const auto nextTile = path[1];
+	
 
-	while (!path.empty())
+	for (const auto& step:path)
 	{
-		const auto tile = path.top();
 		debug.draw(CustomData::Rect(
-			vec2DoubleToVec2Float({ static_cast<double>(tile.first), static_cast<double>(tile.second) }),
+			vec2DoubleToVec2Float({ static_cast<double>(step.first), static_cast<double>(step.second) }),
 			{ 1, 1 },
 			ColorFloat(255, 255, 255, 0.2)
 		));
-		path.pop();
 	}
 
 	
@@ -399,14 +387,18 @@ void initAStarAction(const Unit& me, const Vec2Double& targetPos, UnitAction& ac
 	}
 	const auto yBorderDist = me.position.y - myTile.second;
 
-	if (nextTile.second > myTile.second ||
-		nextTile.second <= myTile.second && isJumping &&
+	action.jump = false;
+
+	if (nextTile.second > myTile.second)
+	{
+		action.jump = true;
+	}
+	else if (nextTile.second <= myTile.second && isJumping &&
 		(game.level.tiles[myTile.first][myTile.second - 1] == EMPTY || game.level.tiles[myTile.first][myTile.second - 1] == JUMP_PAD) &&
 		xBorderDist > yBorderDist)
 	{
 		action.jump = true;
 	}
-	else action.jump = false;
 
 	if (nextTile.second < myTile.second) action.jumpDown = true;
 	else action.jumpDown = false;

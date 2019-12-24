@@ -70,18 +70,18 @@ int calculateHValue(int col, int row, Pair dest)
 
 // A Utility Function to trace the path from the source 
 // to destination 
-stack<Pair> tracePath(vector<vector<vector<cell>>> cellDetails, Pair dest, int foundDestK)
+vector<Pair> tracePath(vector<vector<vector<cell>>> cellDetails, Pair dest, int foundDestK)
 {
 	int col = dest.first;
 	int row = dest.second;
 	int k = foundDestK;
 
-	stack<Pair> Path;
+	vector<Pair> Path;
 
 	while (!(cellDetails[col][row][k].parent_i == col
 		&& cellDetails[col][row][k].parent_j == row))
 	{
-		Path.push(make_pair(col, row));
+		Path.emplace_back(make_pair(col, row));
 		int temp_col = cellDetails[col][row][k].parent_i;
 		int temp_row = cellDetails[col][row][k].parent_j;
 		int temp_k = cellDetails[col][row][k].parent_k;
@@ -90,7 +90,8 @@ stack<Pair> tracePath(vector<vector<vector<cell>>> cellDetails, Pair dest, int f
 		k = temp_k;
 	}
 
-	Path.push(make_pair(col, row));	
+	Path.emplace_back(make_pair(col, row));
+	std::reverse(Path.begin(), Path.end());
 
 	return Path;
 }
@@ -98,7 +99,7 @@ stack<Pair> tracePath(vector<vector<vector<cell>>> cellDetails, Pair dest, int f
 // A Function to find the shortest path between 
 // a given source cell to a destination cell according 
 // to A* Search Algorithm 
-stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
+vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 	int maxJumpTicks,
 	const Game& game)
 {
