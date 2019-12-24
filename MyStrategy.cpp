@@ -313,19 +313,24 @@ vector<vector<int>> getGrid(const Game& game)
 	return grid;
 }
 
-void initAStarAction(const Unit& me, const Vec2Double& targetPos, UnitAction& action, const Game& game)
+void initAStarAction(const Unit& me, const Vec2Double& targetPos, UnitAction& action, const Game& game, 
+	Debug& debug)
 {
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	const auto grid = getGrid(game);
 	const auto endPos =
 		make_pair(size_t(targetPos.x), size_t(targetPos.y));
 
+	const auto isJumping = me.jumpState.canJump && me.jumpState.canCancel;
+	const auto isFalling = !me.jumpState.canJump && !me.jumpState.canCancel;
+
+
 	const auto bottomTile = game.level.tiles[size_t(me.position.x)][size_t(me.position.y - 1)];
 	int start_z = 0;
 	if (bottomTile == EMPTY || bottomTile == JUMP_PAD)
 	{
-		if (!me.jumpState.canJump && !me.jumpState.canCancel) start_z = 1;
-		else if (me.jumpState.canJump && me.jumpState.canCancel) start_z = 2;
+		if (isFalling) start_z = 1;
+		else if (isJumping) start_z = 2;
 		//TODO: прыжок на батуте
 	}	
 	
@@ -334,9 +339,31 @@ void initAStarAction(const Unit& me, const Vec2Double& targetPos, UnitAction& ac
 
 	auto path = aStarSearch(grid, startPos, endPos, game);
 	const auto myTile = path.top();
+	debug.draw(CustomData::Rect(
+		vec2DoubleToVec2Float({ static_cast<double>(myTile.first), static_cast<double>(myTile.second) }),
+		{ 1, 1 },
+		ColorFloat(255, 255, 255, 0.2)
+	));
 	path.pop(); //убрали свою точку
 	const auto nextTile = path.top();
+	debug.draw(CustomData::Rect(
+		vec2DoubleToVec2Float({static_cast<double>(nextTile.first), static_cast<double>(nextTile.second)}),
+		{ 1, 1 },
+		ColorFloat(255, 255, 255, 0.2)
+	));
 
+	while (!path.empty())
+	{
+		const auto tile = path.top();
+		debug.draw(CustomData::Rect(
+			vec2DoubleToVec2Float({ static_cast<double>(tile.first), static_cast<double>(tile.second) }),
+			{ 1, 1 },
+			ColorFloat(255, 255, 255, 0.2)
+		));
+		path.pop();
+	}
+
+	
 	if (nextTile.first > myTile.first) action.velocity = INT_MAX;
 	else if (nextTile.first < myTile.first) action.velocity = -INT_MAX;
 	else 
@@ -361,10 +388,10 @@ void initAStarAction(const Unit& me, const Vec2Double& targetPos, UnitAction& ac
 	{
 		xBorderDist = me.position.x - me.size.x / 2 - (nextTile.first + 1);
 	}
-	const auto yBorderDist = me.position.y - nextTile.second;
+	const auto yBorderDist = me.position.y - myTile.second;
 
 	if (nextTile.second > myTile.second ||
-		nextTile.second == myTile.second &&
+		nextTile.second <= myTile.second && isJumping &&
 		(game.level.tiles[myTile.first][myTile.second - 1] == EMPTY || game.level.tiles[myTile.first][myTile.second - 1] == JUMP_PAD) &&
 		xBorderDist > yBorderDist)
 	{
@@ -1184,7 +1211,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	action.shoot = false;
 
 	if (unit.weapon == nullptr) {
-		initAStarAction(unit, nearestWeapon->position, action, game);
+		initAStarAction(unit, nearestWeapon->position, action, game, debug);
 		return action;
 	}
 
