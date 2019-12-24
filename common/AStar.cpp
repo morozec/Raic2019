@@ -18,7 +18,7 @@ using namespace std;
 
 
 // Creating a shortcut for pair<int, pair<int, int>> type 
-typedef pair<int, Triple> pPair;
+typedef pair<double, Triple> pPair;
 
 // A structure to hold the neccesary parameters 
 struct cell
@@ -27,7 +27,7 @@ struct cell
 	// Note that 0 <= i <= ROW-1 & 0 <= j <= COL-1 
 	int parent_i, parent_j, parent_k;
 	// f = g + h 
-	int f, g, h;
+	double f, g, h;
 };
 
 // A Utility Function to check whether given cell (row, col) 
@@ -189,6 +189,7 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 	 Note that 0 <= i <= ROW-1 & 0 <= j <= COL-1
 	 This open list is implenented as a set of pair of pair.*/
 	set<pPair> openList;
+	const auto diagonalAddWeight = 0.001;
 
 	// Put the starting cell on the open list and set its 
 	// 'f' as 0
@@ -238,7 +239,7 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 		 S.W--> South-West  (i+1, j-1)*/
 
 		 // To store the 'g', 'h' and 'f' of the 8 successors 
-		int gNew, hNew, fNew;
+		double gNew, hNew, fNew;
 		int kNew;
 
 		//----------- 1st Successor (WEST) ------------ 
@@ -267,7 +268,7 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			// Else do the following 
 			else if (closedList[i - 1][j][kNew] == false)
 			{
-				gNew = cellDetails[i][j][k].g + 1;
+				gNew = cellDetails[i][j][k].g + 1.0;
 				hNew = calculateHValue(i - 1, j, dest);
 				fNew = gNew + hNew;
 
@@ -322,7 +323,7 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			// Else do the following 
 			else if (closedList[i + 1][j][kNew] == false )
 			{
-				gNew = cellDetails[i][j][k].g + 1;
+				gNew = cellDetails[i][j][k].g + 1.0;
 				hNew = calculateHValue(i + 1, j, dest);
 				fNew = gNew + hNew;
 
@@ -375,7 +376,7 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			// Else do the following 
 			else if (closedList[i][j + 1][kNew] == false)
 			{
-				gNew = cellDetails[i][j][k].g + 1;
+				gNew = cellDetails[i][j][k].g + 1.0;
 				hNew = calculateHValue(i, j + 1, dest);
 				fNew = gNew + hNew;
 
@@ -431,7 +432,7 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			// Else do the following 
 			else if (closedList[i][j + 1][kNew] == false)
 			{
-				gNew = cellDetails[i][j][k].g + 1;
+				gNew = cellDetails[i][j][k].g + 1.0;
 				hNew = calculateHValue(i, j + 1, dest);
 				fNew = gNew + hNew;
 
@@ -492,7 +493,7 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			// Else do the following 
 			else if (closedList[i][j - 1][kNew] == false)
 			{
-				gNew = cellDetails[i][j][k].g + 1;
+				gNew = cellDetails[i][j][k].g + 1.0;
 				hNew = calculateHValue(i, j - 1, dest);
 				fNew = gNew + hNew;
 
@@ -550,7 +551,7 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			else if (closedList[i - 1][j + 1][kNew] == false &&
 				isUnBlocked(grid, i - 1, j + 1) == true)
 			{
-				gNew = cellDetails[i][j][k].g + 1;
+				gNew = cellDetails[i][j][k].g + 1.0 + diagonalAddWeight;
 				hNew = calculateHValue(i - 1, j + 1, dest);
 				fNew = gNew + hNew;
 
@@ -607,7 +608,7 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			else if (closedList[i - 1][j + 1][kNew] == false &&
 				isUnBlocked(grid, i - 1, j + 1) == true)
 			{
-				gNew = cellDetails[i][j][k].g + 1;
+				gNew = cellDetails[i][j][k].g + 1.0 + diagonalAddWeight;
 				hNew = calculateHValue(i - 1, j + 1, dest);
 				fNew = gNew + hNew;
 
@@ -666,7 +667,7 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			else if (closedList[i + 1][j + 1][kNew] == false &&
 				isUnBlocked(grid, i + 1, j + 1) == true)
 			{
-				gNew = cellDetails[i][j][k].g + 1;
+				gNew = cellDetails[i][j][k].g + 1.0 + diagonalAddWeight;
 				hNew = calculateHValue(i + 1, j + 1, dest);
 				fNew = gNew + hNew;
 
@@ -724,7 +725,7 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			else if (closedList[i + 1][j + 1][kNew] == false &&
 				isUnBlocked(grid, i + 1, j + 1) == true)
 			{
-				gNew = cellDetails[i][j][k].g + 1;
+				gNew = cellDetails[i][j][k].g + 1.0 + diagonalAddWeight;
 				hNew = calculateHValue(i + 1, j + 1, dest);
 				fNew = gNew + hNew;
 
@@ -785,7 +786,7 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			// Else do the following 
 			else if (closedList[i - 1][j - 1][kNew] == false)
 			{
-				gNew = cellDetails[i][j][k].g + 1;
+				gNew = cellDetails[i][j][k].g + 1.0 + diagonalAddWeight;
 				hNew = calculateHValue(i - 1, j - 1, dest);
 				fNew = gNew + hNew;
 
@@ -840,7 +841,7 @@ vector<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 			// Else do the following 
 			else if (closedList[i + 1][j - 1][kNew] == false)
 			{
-				gNew = cellDetails[i][j][k].g + 1;
+				gNew = cellDetails[i][j][k].g + 1.0 + diagonalAddWeight;
 				hNew = calculateHValue(i + 1, j - 1, dest);
 				fNew = gNew + hNew;
 
