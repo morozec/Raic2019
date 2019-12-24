@@ -424,7 +424,7 @@ void initAStarAction(
 	int start_z = 0;
 	if (bottomTile == EMPTY || bottomTile == JUMP_PAD)
 	{			   		
-		if (isFalling) start_z = maxJumpTiles + 1;
+		if (isFalling) start_z = maxJumpPadJumpTiles + 1;
 		else if (isJumping)
 		{
 			const auto jumpingTime = game.properties.unitJumpTime - me.jumpState.maxTime;
@@ -443,7 +443,9 @@ void initAStarAction(
 		make_tuple(size_t(me.position.x), size_t(me.position.y), start_z, isJumpPadJumping ? 1 : 0);
 
 	const auto path = aStarSearch(
-		strategy.grid, strategy.closedList, strategy.cellDetails, startPos, endPos, maxJumpTiles, game);
+		strategy.grid, strategy.closedList, strategy.cellDetails, startPos, endPos, 
+		maxJumpTiles, maxJumpPadJumpTiles,
+		game);
 	auto curPosition = me.position;
 	auto curJumpState = me.jumpState;
 	mePositions.emplace_back(curPosition);
@@ -1255,7 +1257,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		strategy_.setJumpingUnitId(-1);
 		strategy_.grid = getGrid(game);
 
-		const auto maxJumpTiles = static_cast<int>(game.properties.unitJumpTime * game.properties.unitJumpSpeed);
+		const auto maxJumpTiles = static_cast<int>(game.properties.jumpPadJumpTime * game.properties.jumpPadJumpSpeed);
 		const auto Z_SIZE = maxJumpTiles + 2; //+1 - на падение, +1 - на стояние
 		const auto PAD_JUMP_STATE_SIZE = 2;
 		

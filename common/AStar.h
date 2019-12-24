@@ -21,5 +21,5 @@ std::vector<Pair> aStarSearch(
 	const std::vector<std::vector<int>>& grid, std::vector<std::vector<std::vector<std::vector<bool>>>>& closedList,
 	std::vector<std::vector<std::vector<std::vector<cell>>>>& cellDetails,
 	const Four& src, const Pair& dest,
-	int maxJumpTiles,
+	int maxJumpTiles, int maxJumpPadJumpTiles,
 	const Game& game);
