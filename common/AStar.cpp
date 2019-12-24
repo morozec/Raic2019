@@ -241,11 +241,11 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 		//----------- 1st Successor (WEST) ------------ 
 
 		// Only process this cell if this is a valid one 
-		if (isValid(i - 1, j, ROW, COL) == true && k == 0)
+		if (isValid(i - 1, j, ROW, COL) == true && 
+			game.level.tiles[i - 1][j - 1] != EMPTY &&
+			game.level.tiles[i - 1][j - 1] != JUMP_PAD)
 		{
-			kNew = game.level.tiles[i - 1][j - 1] == EMPTY ||
-				game.level.tiles[i - 1][j - 1] == JUMP_PAD ?
-				1 :	0;
+			kNew = 0;
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i - 1, j, dest) == true)
@@ -296,11 +296,11 @@ stack<Pair> aStarSearch(vector<vector<int>> grid, Triple src, Pair dest,
 		//----------- 2nd Successor (EAST) ------------ 
 
 		// Only process this cell if this is a valid one 
-		if (isValid(i + 1, j, ROW, COL) == true && k == 0)
+		if (isValid(i + 1, j, ROW, COL) == true && 
+			game.level.tiles[i + 1][j - 1] != EMPTY &&
+			game.level.tiles[i + 1][j - 1] != JUMP_PAD)
 		{
-			kNew = game.level.tiles[i + 1][j - 1] == EMPTY ||
-				game.level.tiles[i + 1][j - 1] == JUMP_PAD ?
-				1 : 0;
+			kNew = 0;
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i + 1, j, dest) == true)

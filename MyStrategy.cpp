@@ -352,7 +352,24 @@ void initAStarAction(const Unit& me, const Vec2Double& targetPos, UnitAction& ac
 		}
 	}
 
-	if (nextTile.second > myTile.second) action.jump = true;
+	auto xBorderDist = 0.0;
+	if (nextTile.first > myTile.first)
+	{
+		xBorderDist = nextTile.first - (me.position.x + me.size.x / 2);
+	}
+	else if (nextTile.first < myTile.first)
+	{
+		xBorderDist = me.position.x - me.size.x / 2 - (nextTile.first + 1);
+	}
+	const auto yBorderDist = me.position.y - nextTile.second;
+
+	if (nextTile.second > myTile.second ||
+		nextTile.second == myTile.second &&
+		(game.level.tiles[myTile.first][myTile.second - 1] == EMPTY || game.level.tiles[myTile.first][myTile.second - 1] == JUMP_PAD) &&
+		xBorderDist > yBorderDist)
+	{
+		action.jump = true;
+	}
 	else action.jump = false;
 
 	if (nextTile.second < myTile.second) action.jumpDown = true;
@@ -1166,8 +1183,10 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	action.plantMine = false;
 	action.shoot = false;
 
-	initAStarAction(unit, nearestWeapon->position, action, game);
-	return action;		
+	if (unit.weapon == nullptr) {
+		initAStarAction(unit, nearestWeapon->position, action, game);
+		return action;
+	}
 
 	if (nearestEnemy == nullptr) return action;	
 
