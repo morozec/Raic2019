@@ -1659,49 +1659,75 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 		if (!goodWay)
 		{
-			const LootBox* nearestMine = nullptr;
+			const Unit* noWeaponEnemyUnit = nullptr;
 			minMHDist = INT_MAX;
-			for (const LootBox& lootBox : game.lootBoxes)
+			for (const auto& u:game.units)
 			{
-				if (std::dynamic_pointer_cast<Item::Mine>(lootBox.item))
+				if (u.playerId == unit.playerId) continue;
+				if (u.weapon != nullptr) continue;
+				const auto dist = MathHelper::getMHDist(unit.position, u.position);
+				if (dist < minMHDist)
 				{
-					auto isOtherUnitMine = false;
-					for (const auto& item : strategy_.lootboxes_)
-					{
-						if (item.first != unit.id &&
-							std::abs(item.second.x - lootBox.position.x) < TOLERANCE &&
-							std::abs(item.second.y - lootBox.position.y) < TOLERANCE)
-						{
-							isOtherUnitMine = true;
-							break;
-						}
-					}
-					if (isOtherUnitMine) continue;
-
-					if (nearestMine == nullptr ||
-						MathHelper::getVectorLength2(unit.position, lootBox.position) <
-						MathHelper::getVectorLength2(unit.position, nearestMine->position))
-					{
-						nearestMine = &lootBox;
-					}
+					minMHDist = dist;
+					noWeaponEnemyUnit = &u;
 				}
 			}
-			if (nearestMine != nullptr)
+
+			if (noWeaponEnemyUnit != nullptr)
 			{
-				strategy_.lootboxes_[unit.id] = nearestMine->position;
 				initAStarAction(
-					unit, nearestMine->position, nearestMine->size,
+					unit, noWeaponEnemyUnit->position, noWeaponEnemyUnit->size,
 					meAttackingPositions, meAttackingJumpStates, meAttackingAction,
 					strategy_,
 					game, debug);
 			}
 			else
-				getAttackingData(
-				unit,
-				meAttackingPositions, meAttackingJumpStates,
-				nearestEnemy->size, enemyPositions,
-				enemyFireTimer,
-				meAttackingAction, startJumpY, jumpingUnitId, isMonkeyMode, game);
+			{
+
+				const LootBox* nearestMine = nullptr;
+				minMHDist = INT_MAX;
+				for (const LootBox& lootBox : game.lootBoxes)
+				{
+					if (std::dynamic_pointer_cast<Item::Mine>(lootBox.item))
+					{
+						auto isOtherUnitMine = false;
+						for (const auto& item : strategy_.lootboxes_)
+						{
+							if (item.first != unit.id &&
+								std::abs(item.second.x - lootBox.position.x) < TOLERANCE &&
+								std::abs(item.second.y - lootBox.position.y) < TOLERANCE)
+							{
+								isOtherUnitMine = true;
+								break;
+							}
+						}
+						if (isOtherUnitMine) continue;
+
+						if (nearestMine == nullptr ||
+							MathHelper::getVectorLength2(unit.position, lootBox.position) <
+							MathHelper::getVectorLength2(unit.position, nearestMine->position))
+						{
+							nearestMine = &lootBox;
+						}
+					}
+				}
+				if (nearestMine != nullptr)
+				{
+					strategy_.lootboxes_[unit.id] = nearestMine->position;
+					initAStarAction(
+						unit, nearestMine->position, nearestMine->size,
+						meAttackingPositions, meAttackingJumpStates, meAttackingAction,
+						strategy_,
+						game, debug);
+				}
+				else
+					getAttackingData(
+						unit,
+						meAttackingPositions, meAttackingJumpStates,
+						nearestEnemy->size, enemyPositions,
+						enemyFireTimer,
+						meAttackingAction, startJumpY, jumpingUnitId, isMonkeyMode, game);
+			}
 		}
 	}
 	
