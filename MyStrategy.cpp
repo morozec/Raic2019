@@ -313,7 +313,7 @@ vector<vector<int>> getGrid(const Game& game)
 	return grid;
 }
 
-void initOneStepAction(const pair<int,int>& myTile, const pair<int,int>& nextTile, const vector<pair<int, int>>& path,
+void initOneStepAction(const Four& myTile, const Four& nextTile, const vector<Four>& path,
 	const Vec2Double& curPosition, const Vec2Double& unitSize, const JumpState& curJumpState, int unitId,
 	UnitAction& action, double tickTime, const Game& game)
 {
@@ -321,12 +321,17 @@ void initOneStepAction(const pair<int,int>& myTile, const pair<int,int>& nextTil
 	const auto isJumping = isOnAir && curJumpState.canJump && curJumpState.canCancel;
 	const auto isFalling = isOnAir && !curJumpState.canJump && !curJumpState.canCancel;
 
+	const auto myTileX = get<0>(myTile);
+	const auto myTileY = get<1>(myTile);
+
+	const auto nextTileX = get<0>(nextTile);
+	const auto nextTileY = get<1>(nextTile);
 	
-	if (nextTile.first > myTile.first) action.velocity = INT_MAX;
-	else if (nextTile.first < myTile.first) action.velocity = -INT_MAX;
+	if (nextTileX > myTileX) action.velocity = INT_MAX;
+	else if (nextTileX < myTileX) action.velocity = -INT_MAX;
 	else
 	{
-		const auto distToCenter = (myTile.first + 0.5) - curPosition.x;
+		const auto distToCenter = (myTileX + 0.5) - curPosition.x;
 		if (std::abs(distToCenter) < TOLERANCE)
 		{
 			action.velocity = 0;
@@ -338,20 +343,20 @@ void initOneStepAction(const pair<int,int>& myTile, const pair<int,int>& nextTil
 	}
 
 	auto xBorderDist = 0.0;
-	if (nextTile.first > myTile.first)
+	if (nextTileX > myTileX)
 	{
-		xBorderDist = nextTile.first - (curPosition.x + unitSize.x / 2);
+		xBorderDist = nextTileX - (curPosition.x + unitSize.x / 2);
 	}
-	else if (nextTile.first < myTile.first)
+	else if (nextTileX < myTileX)
 	{
-		xBorderDist = curPosition.x - unitSize.x / 2 - (nextTile.first + 1);
+		xBorderDist = curPosition.x - unitSize.x / 2 - (nextTileX + 1);
 	}
-	const auto yBorderDist = curPosition.y - myTile.second;
+	const auto yBorderDist = curPosition.y - myTileY;
 
 	action.jump = false;
-	if (nextTile.second > myTile.second)
+	if (nextTileY > myTileY)
 	{
-		if (nextTile.first == myTile.first || isOnAir)
+		if (nextTileX == myTileX || isOnAir)
 		{
 			action.jump = true;
 		}
@@ -361,19 +366,19 @@ void initOneStepAction(const pair<int,int>& myTile, const pair<int,int>& nextTil
 			for (int i = 1; i < path.size() - 1; ++i)
 			{
 				const auto& curStep = path[i];
-				if (nextTile.first > myTile.first)
+				if (nextTileX > myTileX)
 				{
-					if (game.level.tiles[path[i].first - 1][path[i].second + 2] == WALL &&
-						curPosition.x < myTile.first + 0.5 - TOLERANCE)
+					if (game.level.tiles[get<0>(path[i]) - 1][get<1>(path[i]) + 2] == WALL &&
+						curPosition.x < myTileX + 0.5 - TOLERANCE)
 					{
 						isDangerousCorner = true;
 						break;
 					}
 				}
-				else if (nextTile.first < myTile.first)
+				else if (nextTileX < myTileX)
 				{
-					if (game.level.tiles[path[i].first + 1][path[i].second + 2] == WALL &&
-						curPosition.x > myTile.first + 0.5 + TOLERANCE)
+					if (game.level.tiles[get<0>(path[i]) + 1][get<1>(path[i]) + 2] == WALL &&
+						curPosition.x > myTileX + 0.5 + TOLERANCE)
 					{
 						isDangerousCorner = true;
 						break;
@@ -381,21 +386,21 @@ void initOneStepAction(const pair<int,int>& myTile, const pair<int,int>& nextTil
 				}
 
 				const auto& nextStep = path[i + 1];
-				if (nextStep.second <= curStep.second) break;
-				if (nextTile.first - myTile.first != nextStep.first - curStep.first) break;
+				if (get<1>(nextStep) <= get<1>(curStep)) break;
+				if (nextTileX - myTileX != get<0>(nextStep) - get<0>(curStep)) break;
 			}
 
 			action.jump = !isDangerousCorner;
 		}
 	}
-	else if (nextTile.second <= myTile.second && isJumping &&
-		(game.level.tiles[myTile.first][myTile.second - 1] == EMPTY || game.level.tiles[myTile.first][myTile.second - 1] == JUMP_PAD) &&
+	else if (nextTileY <= myTileY && isJumping &&
+		(game.level.tiles[myTileX][myTileY - 1] == EMPTY || game.level.tiles[myTileX][myTileY - 1] == JUMP_PAD) &&
 		xBorderDist > yBorderDist)
 	{
 		action.jump = true;
 	}
 
-	if (nextTile.second < myTile.second) action.jumpDown = true;
+	if (nextTileY < myTileY) action.jumpDown = true;
 	else action.jumpDown = false;
 }
 
@@ -504,7 +509,7 @@ void initAStarAction(
 		if (isCross) return;
 		
 		debug.draw(CustomData::Rect(
-			vec2DoubleToVec2Float({ static_cast<double>(myTile.first), static_cast<double>(myTile.second) }),
+			vec2DoubleToVec2Float({ static_cast<double>(get<0>(myTile)), static_cast<double>(get<1>(myTile)) }),
 			{ 1, 1 },
 			ColorFloat(255, 255, 255, 0.2)
 		));
@@ -1314,7 +1319,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	const LootBox* nearestWeapon = nullptr;
 	for (const LootBox& lootBox : game.lootBoxes)
 	{
-		if (std::dynamic_pointer_cast<Item::Weapon>(lootBox.item))
+		if (std::dynamic_pointer_cast<Item::Weapon>(lootBox.item) &&
+			std::dynamic_pointer_cast<Item::Weapon>(lootBox.item)->weaponType == ROCKET_LAUNCHER)
 		{
 			if (nearestWeapon == nullptr ||
 				MathHelper::getVectorLength2(unit.position, lootBox.position) <
@@ -1340,9 +1346,18 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		return action;
 	}*/
 
+
+	vector<Vec2Double> meAttackingPositions;
+	vector<JumpState> meAttackingJumpStates;
+	UnitAction meAttackingAction;
+
 	//if (unit.weapon == nullptr) {
-	/*	initAStarAction(unit, nearestWeapon->position, action, game, debug);
-		return action;*/
+		initAStarAction(unit, nearestWeapon->position, nearestWeapon->size,
+			meAttackingPositions, meAttackingJumpStates, meAttackingAction, strategy_, game, debug);
+		action.velocity = meAttackingAction.velocity;
+		action.jump = meAttackingAction.jump;
+		action.jumpDown = meAttackingAction.jumpDown;
+		return action;
 	//}
 
 	if (nearestEnemy == nullptr) return action;	
@@ -1434,9 +1449,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 
 	//setMoveToEnemyAction(unit, nearestEnemy->position, needGo, game, action, strategy_);
-	vector<Vec2Double> meAttackingPositions;
-	vector<JumpState> meAttackingJumpStates;
-	UnitAction meAttackingAction;
+	
 	auto startJumpY = strategy_.getStartedJumpY(unit.id);
 	auto jumpingUnitId = strategy_.getJumpingUnitId();
 

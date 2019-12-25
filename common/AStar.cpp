@@ -65,19 +65,19 @@ int calculateHValue(int col, int row, Pair dest)
 
 // A Utility Function to trace the path from the source 
 // to destination 
-vector<Pair> tracePath(vector<vector<vector<vector<cell>>>> cellDetails, Pair dest, int foundDestK, int foundDestL)
+vector<Four> tracePath(vector<vector<vector<vector<cell>>>> cellDetails, Pair dest, int foundDestK, int foundDestL)
 {
 	int col = dest.first;
 	int row = dest.second;
 	int k = foundDestK;
 	int l = foundDestL;
 
-	vector<Pair> Path;
+	vector<Four> Path;
 
 	while (!(cellDetails[col][row][k][l].parent_i == col
 		&& cellDetails[col][row][k][l].parent_j == row))
 	{
-		Path.emplace_back(make_pair(col, row));
+		Path.emplace_back(make_tuple(col, row, k, l));
 		int temp_col = cellDetails[col][row][k][l].parent_i;
 		int temp_row = cellDetails[col][row][k][l].parent_j;
 		int temp_k = cellDetails[col][row][k][l].parent_k;
@@ -88,7 +88,7 @@ vector<Pair> tracePath(vector<vector<vector<vector<cell>>>> cellDetails, Pair de
 		l = temp_l;
 	}
 
-	Path.emplace_back(make_pair(col, row));
+	Path.emplace_back(make_tuple(col, row, k, l));
 	std::reverse(Path.begin(), Path.end());
 
 	return Path;
@@ -128,7 +128,7 @@ int getJumpPadJ(int startI, int startJ, int targetI, int targetJ, const Game& ga
 // A Function to find the shortest path between 
 // a given source cell to a destination cell according 
 // to A* Search Algorithm 
-vector<Pair> aStarSearch(
+vector<Four> aStarSearch(
 	const std::vector<std::vector<int>>& grid, vector<vector<vector<vector<bool>>>>& closedList,
 	vector<vector<vector<vector<cell>>>>& cellDetails,
 	const Four& src, const Pair& dest,
@@ -172,7 +172,7 @@ vector<Pair> aStarSearch(
 	// If the destination cell is the same as source cell 
 	if (isDestination(start_x, start_y, dest) == true)
 	{
-		return vector<Pair>(0);
+		return vector<Four>(0);
 	}	
 
 	int i, j, k, l;

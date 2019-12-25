@@ -17,7 +17,7 @@ struct cell
 	double f, g, h;
 };
 
-std::vector<Pair> aStarSearch(
+std::vector<Four> aStarSearch(
 	const std::vector<std::vector<int>>& grid, std::vector<std::vector<std::vector<std::vector<bool>>>>& closedList,
 	std::vector<std::vector<std::vector<std::vector<cell>>>>& cellDetails,
 	const Four& src, const Pair& dest,
