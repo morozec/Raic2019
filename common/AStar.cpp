@@ -1,3 +1,4 @@
+#define _USE_MATH_DEFINES
 
 #include "AStar.h"
 
@@ -9,6 +10,8 @@
 #include <vector>
 #include <stdexcept>
 #include <tuple>
+#include <climits>
+#include <algorithm>
 #include "../model/Game.hpp"
 using namespace std;
 
