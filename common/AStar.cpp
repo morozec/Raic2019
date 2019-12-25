@@ -75,7 +75,9 @@ vector<Four> tracePath(vector<vector<vector<vector<cell>>>> cellDetails, Pair de
 	vector<Four> Path;
 
 	while (!(cellDetails[col][row][k][l].parent_i == col
-		&& cellDetails[col][row][k][l].parent_j == row))
+		&& cellDetails[col][row][k][l].parent_j == row 
+		&& cellDetails[col][row][k][l].parent_k == k 
+		&& cellDetails[col][row][k][l].parent_l == l))
 	{
 		Path.emplace_back(make_tuple(col, row, k, l));
 		int temp_col = cellDetails[col][row][k][l].parent_i;
@@ -229,6 +231,8 @@ vector<Four> aStarSearch(
 	int foundDestK = -1;
 	int foundDestL = -1;
 
+	bool isStart = true;
+
 	while (!openList.empty())
 	{
 		pPair p = *openList.begin();
@@ -271,12 +275,54 @@ vector<Four> aStarSearch(
 		int kNew, lNew;
 		int jpJ;
 
+		//----------- 0   Successor (STAY ON PLATFORM) ------------
+
+		if (isStart &&
+			kValue > 0 && // прыгаем како-то врем€
+			(l == 0 || l == 1 && kValue == maxJumpPadJumpTiles) &&
+			game.level.tiles[i][j-1] == PLATFORM)
+		{
+			kNew = 0;
+			lNew = 0;
+			jpJ = j;
+
+
+			gNew = cellDetails[i][j][k][l].g + diagonalAddWeight; //посто€ть на платформе стоит не дорого
+			hNew = calculateHValue(i, jpJ, dest);
+			fNew = gNew + hNew;
+
+			// If it isnТt on the open list, add it to 
+			// the open list. Make the current square 
+			// the parent of this square. Record the 
+			// f, g, and h costs of the square cell 
+			//                OR 
+			// If it is on the open list already, check 
+			// to see if this path to that square is better, 
+			// using 'f' cost as the measure. 
+			if (cellDetails[i][jpJ][kNew][lNew].f == INT_MAX ||
+				cellDetails[i][jpJ][kNew][lNew].f > fNew)
+			{
+				openList.insert(make_pair(fNew,
+					make_tuple(i, jpJ, kNew, lNew)));
+
+				// Update the details of this cell 
+				cellDetails[i][jpJ][kNew][lNew].f = fNew;
+				cellDetails[i][jpJ][kNew][lNew].g = gNew;
+				cellDetails[i][jpJ][kNew][lNew].h = hNew;
+				cellDetails[i][jpJ][kNew][lNew].parent_i = i;
+				cellDetails[i][jpJ][kNew][lNew].parent_j = j;
+				cellDetails[i][jpJ][kNew][lNew].parent_k = k;
+				cellDetails[i][jpJ][kNew][lNew].parent_l = l;
+			}
+		}
+
+
 		//----------- 1st Successor (WEST) ------------ 
 
 		// Only process this cell if this is a valid one 
 		if (isValid(i - 1, j, ROW, COL) == true &&
 			isUnBlocked(grid, i - 1, j) == true &&
-			(l ==0 || l == 1 && k == maxJumpPadJumpTiles) &&
+			(l ==0 || l == 1 && kValue == maxJumpPadJumpTiles) &&
 			game.level.tiles[i - 1][j - 1] != EMPTY &&
 			game.level.tiles[i - 1][j - 1] != JUMP_PAD)
 		{
@@ -347,7 +393,7 @@ vector<Four> aStarSearch(
 		// Only process this cell if this is a valid one 
 		if (isValid(i + 1, j, ROW, COL) == true &&
 			isUnBlocked(grid, i + 1, j) == true &&
-			(l ==0 || l == 1 && k == maxJumpPadJumpTiles) &&
+			(l ==0 || l == 1 && kValue == maxJumpPadJumpTiles) &&
 			game.level.tiles[i + 1][j - 1] != EMPTY &&
 			game.level.tiles[i + 1][j - 1] != JUMP_PAD)
 		{
@@ -1095,7 +1141,7 @@ vector<Four> aStarSearch(
 				}
 			}
 		}
-
+		isStart = false;
 	}
 
 	// When the destination cell is not found and the open 

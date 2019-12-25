@@ -326,6 +326,15 @@ void initOneStepAction(const Four& myTile, const Four& nextTile, const vector<Fo
 
 	const auto nextTileX = get<0>(nextTile);
 	const auto nextTileY = get<1>(nextTile);
+
+	const auto needStopToRelax = nextTileX == myTileX && nextTileY == myTileY && get<2>(nextTile) == 0;
+	if (needStopToRelax)
+	{
+		action.velocity = 0;
+		action.jump = false;
+		action.jumpDown = false;
+		return;
+	}	
 	
 	if (nextTileX > myTileX) action.velocity = INT_MAX;
 	else if (nextTileX < myTileX) action.velocity = -INT_MAX;
@@ -354,6 +363,8 @@ void initOneStepAction(const Four& myTile, const Four& nextTile, const vector<Fo
 	const auto yBorderDist = curPosition.y - myTileY;
 
 	action.jump = false;
+	
+	
 	if (nextTileY > myTileY)
 	{
 		if (nextTileX == myTileX || isOnAir)
@@ -399,6 +410,7 @@ void initOneStepAction(const Four& myTile, const Four& nextTile, const vector<Fo
 	{
 		action.jump = true;
 	}
+	
 
 	if (nextTileY < myTileY) action.jumpDown = true;
 	else action.jumpDown = false;
@@ -418,7 +430,7 @@ void initAStarAction(
 		make_pair(size_t(targetPos.x), size_t(targetPos.y));
 
 	const auto isOnAir = Simulator::isUnitOnAir(me.position, me.size, me.id, game);
-	const auto isJumping = isOnAir && me.jumpState.canJump && me.jumpState.canCancel;
+	const auto isJumping = me.jumpState.canJump && me.jumpState.canCancel && me.jumpState.maxTime < game.properties.unitJumpTime - TOLERANCE;
 	const auto isFalling = isOnAir && !me.jumpState.canJump && !me.jumpState.canCancel;
 	const auto isJumpPadJumping = me.jumpState.canJump && !me.jumpState.canCancel;
 
@@ -434,15 +446,15 @@ void initAStarAction(
 		start_z = static_cast<int>(jumpingTime * game.properties.jumpPadJumpSpeed);
 	}
 	
-	if (bottomTile == EMPTY || bottomTile == JUMP_PAD)
-	{			   		
+	/*if (bottomTile == EMPTY || bottomTile == JUMP_PAD)
+	{	*/		   		
 		if (isFalling) start_z = maxJumpPadJumpTiles + 1;
 		else if (isJumping)
 		{
 			const auto jumpingTime = game.properties.unitJumpTime - me.jumpState.maxTime;
 			start_z = static_cast<int>(jumpingTime * game.properties.unitJumpSpeed);
 		}
-	}	
+	//}	
 	
 	const auto startPos =
 		make_tuple(size_t(me.position.x), size_t(me.position.y), start_z, isJumpPadJumping ? 1 : 0);
