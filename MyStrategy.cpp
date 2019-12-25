@@ -1472,6 +1472,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 		if (needHeal)
 		{
+			
 			for (const auto& lb : game.lootBoxes)
 			{
 				if (std::dynamic_pointer_cast<Item::HealthPack>(lb.item))
@@ -1489,55 +1490,61 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 					if (isGot) continue;
 					
 					const auto dist = MathHelper::getMHDist(unit.position, lb.position);
-					if (dist > minMHDist) continue;
-
-					vector<Vec2Double> curMeAttackingPositions;
-					vector<JumpState> curMeAttackingJumpStates;
-					UnitAction curMeAttackingAction;
-					size_t curStartJumpY = startJumpY;
-					int curJumpingUnitId = jumpingUnitId;
-					/*getHealingData(
-						unit, curMeAttackingPositions, curMeAttackingJumpStates,
-						lb, curMeAttackingAction, curStartJumpY, curJumpingUnitId, game);*/
-					initAStarAction(
-						unit, lb.position, lb.size,
-						curMeAttackingPositions, curMeAttackingJumpStates, curMeAttackingAction,
-						strategy_,
-						game, debug);
-
-					auto goodWay = true;
-					for (size_t i = 1; i < curMeAttackingPositions.size(); ++i)
-					{
-						const auto& pos = curMeAttackingPositions[i];
-						for (const auto& enemyUnit : game.units)
-						{
-							if (enemyUnit.playerId == unit.playerId) continue;
-							if (Simulator::areRectsTouch(pos, unit.size, enemyUnit.position, enemyUnit.size))
-							{
-								goodWay = false;
-								break;
-							}
-						}
-						if (!goodWay) break;
-					}
-
-					if (goodWay)
+					if (dist < minMHDist)
 					{
 						minMHDist = dist;
 						nearestHPLootBox = &lb;
-						meAttackingPositions = curMeAttackingPositions;
-						meAttackingJumpStates = curMeAttackingJumpStates;
-						meAttackingAction = curMeAttackingAction;
-						startJumpY = curStartJumpY;
-						jumpingUnitId = curJumpingUnitId;
-
-						strategy_.heal_boxes_[unit.id] = lb.position;
-					}
+					}				
 				}
 			}
 		}
 
-		if (nearestHPLootBox == nullptr)
+		auto goodWay = false;
+		if (nearestHPLootBox != nullptr)
+		{
+			goodWay = true;
+			vector<Vec2Double> curMeAttackingPositions;
+			vector<JumpState> curMeAttackingJumpStates;
+			UnitAction curMeAttackingAction;
+			size_t curStartJumpY = startJumpY;
+			int curJumpingUnitId = jumpingUnitId;
+			/*getHealingData(
+				unit, curMeAttackingPositions, curMeAttackingJumpStates,
+				lb, curMeAttackingAction, curStartJumpY, curJumpingUnitId, game);*/
+			initAStarAction(
+				unit,  nearestHPLootBox->position, nearestHPLootBox->size,
+				curMeAttackingPositions, curMeAttackingJumpStates, curMeAttackingAction,
+				strategy_,
+				game, debug);
+						
+			for (size_t i = 1; i < curMeAttackingPositions.size(); ++i)
+			{
+				const auto& pos = curMeAttackingPositions[i];
+				for (const auto& enemyUnit : game.units)
+				{
+					if (enemyUnit.playerId == unit.playerId) continue;
+					if (Simulator::areRectsTouch(pos, unit.size, enemyUnit.position, enemyUnit.size))
+					{
+						goodWay = false;
+						break;
+					}
+				}
+				if (!goodWay) break;
+			}
+
+			if (goodWay)
+			{
+				meAttackingPositions = curMeAttackingPositions;
+				meAttackingJumpStates = curMeAttackingJumpStates;
+				meAttackingAction = curMeAttackingAction;
+				startJumpY = curStartJumpY;
+				jumpingUnitId = curJumpingUnitId;
+
+				strategy_.heal_boxes_[unit.id] = nearestHPLootBox->position;
+			}
+		}
+
+		if (!goodWay)
 		{
 			getAttackingData(
 				unit,
