@@ -518,9 +518,18 @@ vector<Pair> aStarSearch(
 				l == 1 && kValue < maxJumpPadJumpTiles) &&
 			isUnBlocked(grid, i - 1, j + addNorth) == true &&
 			isUnBlocked(grid, i, j + addNorth) == true)
-		{
-			kNew = k + addNorth;
-			lNew = l;
+		{						
+			if (game.level.tiles[i - 1][j + addNorth - 1] == JUMP_PAD)
+			{
+				kNew = 0;
+				lNew = 1;
+			}
+			else
+			{
+				kNew = k + addNorth;
+				lNew = l;
+			}
+			
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i - 1, j + addNorth, dest) == true)
@@ -656,9 +665,17 @@ vector<Pair> aStarSearch(
 			isUnBlocked(grid, i + 1, j + addNorth) == true &&
 			isUnBlocked(grid, i, j + addNorth) == true)
 		{
-			kNew = k + addNorth;
-			lNew = l;
-
+			if (game.level.tiles[i + 1][j + addNorth - 1] == JUMP_PAD)
+			{
+				kNew = 0;
+				lNew = 1;
+			}
+			else
+			{
+				kNew = k + addNorth;
+				lNew = l;
+			}			
+		
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i + 1, j + addNorth, dest) == true)
@@ -872,19 +889,29 @@ vector<Pair> aStarSearch(
 			(l ==0 || l == 1 && kValue == maxJumpPadJumpTiles) &&
 			(kValue != 0 || kValue == 0 && isUnBlocked(grid, i - 1, j)))
 		{
-			kNew = game.level.tiles[i - 1][j - 2] == EMPTY ||
-				game.level.tiles[i - 1][j - 2] == JUMP_PAD ?
-				maxJumpPadJumpTiles + 1 : 0;
-
-			if (game.level.tiles[i - 1][j - 1] == JUMP_PAD)
+			if (game.level.tiles[i][j - 1] == JUMP_PAD)
 			{
+				kNew = 0;
 				lNew = 1;
 				jpJ = j;
 			}
+
 			else
-			{
-				lNew = 0;
-				jpJ = j - 1;
+			{		
+				if (game.level.tiles[i - 1][j - 1] == JUMP_PAD)
+				{
+					kNew = 0;
+					lNew = 1;
+					jpJ = j;
+				}
+				else
+				{
+					kNew = game.level.tiles[i - 1][j - 2] == EMPTY ||
+						game.level.tiles[i - 1][j - 2] == JUMP_PAD ?
+						maxJumpPadJumpTiles + 1 : 0;
+					lNew = 0;
+					jpJ = j - 1;
+				}
 			}
 			
 			// If the destination cell is the same as the 
@@ -944,19 +971,29 @@ vector<Pair> aStarSearch(
 			(l == 0 || l == 1 && kValue == maxJumpPadJumpTiles) &&
 			(kValue != 0 || kValue == 0 && isUnBlocked(grid, i + 1, j)))
 		{
-			kNew = game.level.tiles[i + 1][j - 2] == EMPTY ||
-				game.level.tiles[i + 1][j - 2] == JUMP_PAD ?
-				maxJumpPadJumpTiles + 1 : 0;
-
-			if (game.level.tiles[i + 1][j - 1] == JUMP_PAD)
+			if (game.level.tiles[i][j - 1] == JUMP_PAD)
 			{
+				kNew = 0;
 				lNew = 1;
 				jpJ = j;
 			}
+
 			else
-			{
-				lNew = 0;
-				jpJ = j - 1;
+			{				
+				if (game.level.tiles[i + 1][j - 1] == JUMP_PAD)
+				{
+					kNew = 0;
+					lNew = 1;
+					jpJ = j;
+				}
+				else
+				{
+					kNew = game.level.tiles[i + 1][j - 2] == EMPTY ||
+						game.level.tiles[i + 1][j - 2] == JUMP_PAD ?
+						maxJumpPadJumpTiles + 1 : 0;
+					lNew = 0;
+					jpJ = j - 1;
+				}
 			}
 			
 			// If the destination cell is the same as the 
