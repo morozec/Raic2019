@@ -422,6 +422,13 @@ void initAStarAction(
 	const auto maxJumpPadJumpTiles = static_cast<int>(game.properties.jumpPadJumpTime * game.properties.jumpPadJumpSpeed);
 	
 	int start_z = 0;
+	
+	if (isJumpPadJumping)
+	{
+		const auto jumpingTime = game.properties.jumpPadJumpTime - me.jumpState.maxTime;
+		start_z = static_cast<int>(jumpingTime * game.properties.jumpPadJumpSpeed);
+	}
+	
 	if (bottomTile == EMPTY || bottomTile == JUMP_PAD)
 	{			   		
 		if (isFalling) start_z = maxJumpPadJumpTiles + 1;
@@ -429,13 +436,6 @@ void initAStarAction(
 		{
 			const auto jumpingTime = game.properties.unitJumpTime - me.jumpState.maxTime;
 			start_z = static_cast<int>(jumpingTime * game.properties.unitJumpSpeed);
-			//if (size_t(me.position.y + jumpTimeLeft * game.properties.unitJumpSpeed) > size_t(me.position.y)) 
-			//	start_z++; //смогу подняться на 1 тайл
-		}
-		else if (isJumpPadJumping)
-		{
-			const auto jumpingTime = game.properties.jumpPadJumpTime - me.jumpState.maxTime;
-			start_z = static_cast<int>(jumpingTime * game.properties.jumpPadJumpSpeed);
 		}
 	}	
 	
@@ -1331,6 +1331,14 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	action.swapWeapon = false;
 	action.plantMine = false;
 	action.shoot = false;
+
+	/*if (game.currentTick < 451)
+	{
+		action.velocity = 0;
+		action.jump = false;
+		action.jumpDown = false;
+		return action;
+	}*/
 
 	//if (unit.weapon == nullptr) {
 	/*	initAStarAction(unit, nearestWeapon->position, action, game, debug);
