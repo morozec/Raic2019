@@ -94,6 +94,37 @@ vector<Pair> tracePath(vector<vector<vector<vector<cell>>>> cellDetails, Pair de
 	return Path;
 }
 
+
+int getJumpPadJ(int startI, int startJ, int targetI, int targetJ, const Game& game)
+{
+	const auto maxCol = game.level.tiles.size();
+	const auto maxRow = game.level.tiles[0].size();
+	if (targetJ == startJ)//движение по горизонтали
+	{
+		if (isValid(targetI, targetJ + 1, maxCol, maxRow) && game.level.tiles[targetI][targetJ + 1] == JUMP_PAD) return targetJ + 1;
+		if (isValid(targetI, targetJ, maxCol, maxRow) && game.level.tiles[targetI][targetJ] == JUMP_PAD) return targetJ;
+	}
+	else if (targetJ < startJ)//движемс€ вниз
+	{
+		if (isValid(targetI, targetJ + 2, maxCol, maxRow) && game.level.tiles[targetI][targetJ + 2] == JUMP_PAD) return targetJ + 2;
+		if (isValid(targetI, targetJ + 1, maxCol, maxRow) && game.level.tiles[targetI][targetJ + 1] == JUMP_PAD) return targetJ + 1;
+		if (isValid(targetI, targetJ, maxCol, maxRow) && game.level.tiles[targetI][targetJ] == JUMP_PAD) return targetJ;
+		if (isValid(startI, targetJ, maxCol, maxRow) && game.level.tiles[startI][targetJ] == JUMP_PAD) return targetJ;
+	}
+	else //движемс€ вверх
+	{
+		if (isValid(targetI, targetJ + 2, maxCol, maxRow) && game.level.tiles[targetI][targetJ + 2] == JUMP_PAD) return targetJ + 2;
+		if (isValid(startI, targetJ + 2, maxCol, maxRow) && startJ != targetJ && game.level.tiles[startI][targetJ + 2] == JUMP_PAD) return targetJ + 2;
+		if (isValid(targetI, targetJ + 1, maxCol, maxRow) && game.level.tiles[targetI][targetJ + 1] == JUMP_PAD) return targetJ + 1;
+		if (isValid(startI, targetJ + 1, maxCol, maxRow) && startJ != targetJ && game.level.tiles[startI][targetJ + 1] == JUMP_PAD) return targetJ + 1;
+		if (isValid(targetI, targetJ, maxCol, maxRow) && game.level.tiles[targetI][targetJ] == JUMP_PAD) return targetJ;
+		if (isValid(startI, targetJ, maxCol, maxRow) && startJ != targetJ && game.level.tiles[startI][targetJ] == JUMP_PAD) return targetJ;
+		if (isValid(targetI, startJ, maxCol, maxRow) && game.level.tiles[targetI][startJ] == JUMP_PAD) return startJ;
+	}
+	
+	return -1;
+}
+
 // A Function to find the shortest path between 
 // a given source cell to a destination cell according 
 // to A* Search Algorithm 
@@ -250,10 +281,12 @@ vector<Pair> aStarSearch(
 			game.level.tiles[i - 1][j - 1] != JUMP_PAD)
 		{
 			kNew = 0;
-			if (game.level.tiles[i - 1][j] == JUMP_PAD)
+			const auto jumpPadJ = getJumpPadJ(i, j, i - 1, j, game);
+			
+			if (jumpPadJ != -1)
 			{
 				lNew = 1;
-				jpJ = j + 1;
+				jpJ = jumpPadJ + 1;
 			}
 			else
 			{
@@ -319,10 +352,12 @@ vector<Pair> aStarSearch(
 			game.level.tiles[i + 1][j - 1] != JUMP_PAD)
 		{
 			kNew = 0;
-			if (game.level.tiles[i + 1][j] == JUMP_PAD)
+			const auto jumpPadJ = getJumpPadJ(i, j, i + 1, j, game);
+			
+			if (jumpPadJ != -1)
 			{
 				lNew = 1;
-				jpJ = j + 1;
+				jpJ = jumpPadJ + 1;
 			}
 			else
 			{
@@ -387,8 +422,21 @@ vector<Pair> aStarSearch(
 				l == 1 && kValue < maxJumpPadJumpTiles) &&
 			isUnBlocked(grid, i, j + addNorth) == true)
 		{
-			kNew = k+addNorth;
-			lNew = l;
+			const auto jumpPadJ = getJumpPadJ(i, j, i, j + addNorth, game);
+			if (jumpPadJ != -1)
+			{
+				kNew = 0;
+				lNew = 1;
+				jpJ = jumpPadJ + 1;
+			}
+			else
+			{
+				kNew = k + addNorth;
+				lNew = l;
+				jpJ = j + addNorth;
+			}
+			
+			
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i, j + addNorth, dest) == true)
@@ -449,10 +497,11 @@ vector<Pair> aStarSearch(
 			(game.level.tiles[i][j + addNorth - 1] == PLATFORM || game.level.tiles[i][j + addNorth - 1] == LADDER))
 		{
 			kNew = 0;
-			if (game.level.tiles[i][j + addNorth] == JUMP_PAD)
+			const auto jumpPadJ = getJumpPadJ(i, j, i, j + addNorth, game);
+			if (jumpPadJ != -1)
 			{
 				lNew = 1;
-				jpJ = j + addNorth + 1;
+				jpJ = jumpPadJ + 1;
 			}
 			else
 			{
@@ -521,27 +570,30 @@ vector<Pair> aStarSearch(
 				l == 1 && kValue < maxJumpPadJumpTiles) &&
 			isUnBlocked(grid, i - 1, j + addNorth) == true &&
 			isUnBlocked(grid, i, j + addNorth) == true)
-		{						
-			if (game.level.tiles[i - 1][j + addNorth - 1] == JUMP_PAD)
+		{
+			const auto jumpPadJ = getJumpPadJ(i, j, i-1, j + addNorth, game);
+			if (jumpPadJ != -1)
 			{
 				kNew = 0;
 				lNew = 1;
+				jpJ = jumpPadJ + 1;
 			}
 			else
 			{
 				kNew = k + addNorth;
 				lNew = l;
+				jpJ = j + addNorth;
 			}
 			
 			// If the destination cell is the same as the 
 			// current successor 
-			if (isDestination(i - 1, j + addNorth, dest) == true)
+			if (isDestination(i - 1, jpJ, dest) == true)
 			{
 				// Set the Parent of the destination cell 
-				cellDetails[i - 1][j + addNorth][kNew][lNew].parent_i = i;
-				cellDetails[i - 1][j + addNorth][kNew][lNew].parent_j = j;
-				cellDetails[i - 1][j + addNorth][kNew][lNew].parent_k = k;
-				cellDetails[i - 1][j + addNorth][kNew][lNew].parent_l = l;
+				cellDetails[i - 1][jpJ][kNew][lNew].parent_i = i;
+				cellDetails[i - 1][jpJ][kNew][lNew].parent_j = j;
+				cellDetails[i - 1][jpJ][kNew][lNew].parent_k = k;
+				cellDetails[i - 1][jpJ][kNew][lNew].parent_l = l;
 				foundDest = true;
 				foundDestK = kNew;
 				foundDestL = lNew;
@@ -551,11 +603,11 @@ vector<Pair> aStarSearch(
 			// If the successor is already on the closed 
 			// list or if it is blocked, then ignore it. 
 			// Else do the following 
-			else if (closedList[i - 1][j + addNorth][kNew][lNew] == false &&
-				isUnBlocked(grid, i - 1, j + addNorth) == true)
+			else if (closedList[i - 1][jpJ][kNew][lNew] == false &&
+				isUnBlocked(grid, i - 1, jpJ) == true)
 			{
 				gNew = cellDetails[i][j][k][l].g + 1.0 + diagonalAddWeight;
-				hNew = calculateHValue(i - 1, j + addNorth, dest);
+				hNew = calculateHValue(i - 1, jpJ, dest);
 				fNew = gNew + hNew;
 
 				// If it isnТt on the open list, add it to 
@@ -566,20 +618,20 @@ vector<Pair> aStarSearch(
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i - 1][j + addNorth][kNew][lNew].f == INT_MAX ||
-					cellDetails[i - 1][j + addNorth][kNew][lNew].f > fNew)
+				if (cellDetails[i - 1][jpJ][kNew][lNew].f == INT_MAX ||
+					cellDetails[i - 1][jpJ][kNew][lNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
-						make_tuple(i - 1, j + addNorth, kNew, lNew)));
+						make_tuple(i - 1, jpJ, kNew, lNew)));
 
 					// Update the details of this cell 
-					cellDetails[i - 1][j + addNorth][kNew][lNew].f = fNew;
-					cellDetails[i - 1][j + addNorth][kNew][lNew].g = gNew;
-					cellDetails[i - 1][j + addNorth][kNew][lNew].h = hNew;
-					cellDetails[i - 1][j + addNorth][kNew][lNew].parent_i = i;
-					cellDetails[i - 1][j + addNorth][kNew][lNew].parent_j = j;
-					cellDetails[i - 1][j + addNorth][kNew][lNew].parent_k = k;
-					cellDetails[i - 1][j + addNorth][kNew][lNew].parent_l = l;
+					cellDetails[i - 1][jpJ][kNew][lNew].f = fNew;
+					cellDetails[i - 1][jpJ][kNew][lNew].g = gNew;
+					cellDetails[i - 1][jpJ][kNew][lNew].h = hNew;
+					cellDetails[i - 1][jpJ][kNew][lNew].parent_i = i;
+					cellDetails[i - 1][jpJ][kNew][lNew].parent_j = j;
+					cellDetails[i - 1][jpJ][kNew][lNew].parent_k = k;
+					cellDetails[i - 1][jpJ][kNew][lNew].parent_l = l;
 				}
 			}
 		}
@@ -595,16 +647,19 @@ vector<Pair> aStarSearch(
 			(game.level.tiles[i - 1][j + addNorth - 1] == PLATFORM || game.level.tiles[i - 1][j + addNorth - 1] == LADDER || game.level.tiles[i - 1][j + addNorth - 1] == WALL))
 		{
 			kNew = 0;
-			if (game.level.tiles[i - 1][j + addNorth] == JUMP_PAD)
+
+			const auto jumpPadJ = getJumpPadJ(i, j,  i - 1, j + addNorth, game);
+			if (jumpPadJ != -1)
 			{
 				lNew = 1;
-				jpJ = j + addNorth + 1;
-			}
+				jpJ = jumpPadJ + 1;
+			}		
 			else
 			{
 				lNew = 0;
 				jpJ = j + addNorth;
 			}
+			
 			// If the destination cell is the same as the 
 			// current successor 
 			if (isDestination(i - 1, jpJ, dest) == true)
@@ -668,26 +723,29 @@ vector<Pair> aStarSearch(
 			isUnBlocked(grid, i + 1, j + addNorth) == true &&
 			isUnBlocked(grid, i, j + addNorth) == true)
 		{
-			if (game.level.tiles[i + 1][j + addNorth - 1] == JUMP_PAD)
+			const auto jumpPadJ = getJumpPadJ(i, j, i+1, j + addNorth, game);
+			if (jumpPadJ != -1)
 			{
 				kNew = 0;
 				lNew = 1;
+				jpJ = jumpPadJ + 1;
 			}
 			else
 			{
 				kNew = k + addNorth;
 				lNew = l;
+				jpJ = j + addNorth;
 			}			
 		
 			// If the destination cell is the same as the 
 			// current successor 
-			if (isDestination(i + 1, j + addNorth, dest) == true)
+			if (isDestination(i + 1, jpJ, dest) == true)
 			{
 				// Set the Parent of the destination cell 
-				cellDetails[i + 1][j + addNorth][kNew][lNew].parent_i = i;
-				cellDetails[i + 1][j + addNorth][kNew][lNew].parent_j = j;
-				cellDetails[i + 1][j + addNorth][kNew][lNew].parent_k = k;
-				cellDetails[i + 1][j + addNorth][kNew][lNew].parent_l = l;
+				cellDetails[i + 1][jpJ][kNew][lNew].parent_i = i;
+				cellDetails[i + 1][jpJ][kNew][lNew].parent_j = j;
+				cellDetails[i + 1][jpJ][kNew][lNew].parent_k = k;
+				cellDetails[i + 1][jpJ][kNew][lNew].parent_l = l;
 				foundDest = true;
 				foundDestK = kNew;
 				foundDestL = lNew;
@@ -697,11 +755,11 @@ vector<Pair> aStarSearch(
 			// If the successor is already on the closed 
 			// list or if it is blocked, then ignore it. 
 			// Else do the following 
-			else if (closedList[i + 1][j + addNorth][kNew][lNew] == false &&
-				isUnBlocked(grid, i + 1, j + addNorth) == true)
+			else if (closedList[i + 1][jpJ][kNew][lNew] == false &&
+				isUnBlocked(grid, i + 1, jpJ) == true)
 			{
 				gNew = cellDetails[i][j][k][l].g + 1.0 + diagonalAddWeight;
-				hNew = calculateHValue(i + 1, j + addNorth, dest);
+				hNew = calculateHValue(i + 1, jpJ, dest);
 				fNew = gNew + hNew;
 
 				// If it isnТt on the open list, add it to 
@@ -712,20 +770,20 @@ vector<Pair> aStarSearch(
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i + 1][j + addNorth][kNew][lNew].f == INT_MAX ||
-					cellDetails[i + 1][j + addNorth][kNew][lNew].f > fNew)
+				if (cellDetails[i + 1][jpJ][kNew][lNew].f == INT_MAX ||
+					cellDetails[i + 1][jpJ][kNew][lNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
-						make_tuple(i + 1, j + addNorth, kNew, lNew)));
+						make_tuple(i + 1, jpJ, kNew, lNew)));
 
 					// Update the details of this cell 
-					cellDetails[i + 1][j + addNorth][kNew][lNew].f = fNew;
-					cellDetails[i + 1][j + addNorth][kNew][lNew].g = gNew;
-					cellDetails[i + 1][j + addNorth][kNew][lNew].h = hNew;
-					cellDetails[i + 1][j + addNorth][kNew][lNew].parent_i = i;
-					cellDetails[i + 1][j + addNorth][kNew][lNew].parent_j = j;
-					cellDetails[i + 1][j + addNorth][kNew][lNew].parent_k = k;
-					cellDetails[i + 1][j + addNorth][kNew][lNew].parent_l = l;
+					cellDetails[i + 1][jpJ][kNew][lNew].f = fNew;
+					cellDetails[i + 1][jpJ][kNew][lNew].g = gNew;
+					cellDetails[i + 1][jpJ][kNew][lNew].h = hNew;
+					cellDetails[i + 1][jpJ][kNew][lNew].parent_i = i;
+					cellDetails[i + 1][jpJ][kNew][lNew].parent_j = j;
+					cellDetails[i + 1][jpJ][kNew][lNew].parent_k = k;
+					cellDetails[i + 1][jpJ][kNew][lNew].parent_l = l;
 				}
 			}
 		}
@@ -742,16 +800,18 @@ vector<Pair> aStarSearch(
 		{
 			kNew = 0;
 
-			if (game.level.tiles[i + 1][j + addNorth] == JUMP_PAD)
+			const auto jumpPadJ = getJumpPadJ(i, j, i + 1, j + addNorth, game);
+			if (jumpPadJ != -1)
 			{
 				lNew = 1;
-				jpJ = j + addNorth + 1;
+				jpJ = jumpPadJ + 1;
 			}
 			else
 			{
 				lNew = 0;
 				jpJ = j + addNorth;
-			}
+			}	
+			
 
 			// If the destination cell is the same as the 
 			// current successor 
@@ -816,17 +876,19 @@ vector<Pair> aStarSearch(
 			(l == 0 || l == 1 && kValue == maxJumpPadJumpTiles) &&
 			isUnBlocked(grid, i, j - 1) == true)
 		{
-			kNew = game.level.tiles[i][j - 2] == EMPTY ||
-				game.level.tiles[i][j - 2] == JUMP_PAD ?
-				maxJumpPadJumpTiles + 1 : 0;
-
-			if (game.level.tiles[i][j - 1] == JUMP_PAD)
+			
+			const auto jumpPadJ = getJumpPadJ(i, j, i, j - 1, game);
+			if (jumpPadJ != -1)
 			{
+				kNew = 0;
 				lNew = 1;
-				jpJ = j;
+				jpJ = jumpPadJ + 1;				
 			}
 			else
 			{
+				kNew = game.level.tiles[i][j - 2] == EMPTY ||
+					game.level.tiles[i][j - 2] == JUMP_PAD ?
+					maxJumpPadJumpTiles + 1 : 0;
 				lNew = 0;
 				jpJ = j - 1;
 			}
@@ -892,30 +954,23 @@ vector<Pair> aStarSearch(
 			(l ==0 || l == 1 && kValue == maxJumpPadJumpTiles) &&
 			(kValue != 0 || kValue == 0 && isUnBlocked(grid, i - 1, j)))
 		{
-			if (game.level.tiles[i][j - 1] == JUMP_PAD)
+			const auto jumpPadJ = getJumpPadJ(i, j, i-1, j - 1, game);
+			if (jumpPadJ != -1)
 			{
 				kNew = 0;
 				lNew = 1;
-				jpJ = j;
+				jpJ = jumpPadJ + 1;
 			}
-
+			
 			else
-			{		
-				if (game.level.tiles[i - 1][j - 1] == JUMP_PAD)
-				{
-					kNew = 0;
-					lNew = 1;
-					jpJ = j;
-				}
-				else
-				{
-					kNew = game.level.tiles[i - 1][j - 2] == EMPTY ||
-						game.level.tiles[i - 1][j - 2] == JUMP_PAD ?
-						maxJumpPadJumpTiles + 1 : 0;
-					lNew = 0;
-					jpJ = j - 1;
-				}
+			{
+				kNew = game.level.tiles[i - 1][j - 2] == EMPTY ||
+					game.level.tiles[i - 1][j - 2] == JUMP_PAD ?
+					maxJumpPadJumpTiles + 1 : 0;
+				lNew = 0;
+				jpJ = j - 1;
 			}
+			
 			
 			// If the destination cell is the same as the 
 			// current successor 
@@ -974,30 +1029,22 @@ vector<Pair> aStarSearch(
 			(l == 0 || l == 1 && kValue == maxJumpPadJumpTiles) &&
 			(kValue != 0 || kValue == 0 && isUnBlocked(grid, i + 1, j)))
 		{
-			if (game.level.tiles[i][j - 1] == JUMP_PAD)
+			const auto jumpPadJ = getJumpPadJ(i, j, i+1, j - 1, game);
+			if (jumpPadJ != -1)
 			{
 				kNew = 0;
 				lNew = 1;
-				jpJ = j;
+				jpJ = jumpPadJ + 1;
 			}
-
 			else
-			{				
-				if (game.level.tiles[i + 1][j - 1] == JUMP_PAD)
-				{
-					kNew = 0;
-					lNew = 1;
-					jpJ = j;
-				}
-				else
-				{
-					kNew = game.level.tiles[i + 1][j - 2] == EMPTY ||
-						game.level.tiles[i + 1][j - 2] == JUMP_PAD ?
-						maxJumpPadJumpTiles + 1 : 0;
-					lNew = 0;
-					jpJ = j - 1;
-				}
+			{
+				kNew = game.level.tiles[i + 1][j - 2] == EMPTY ||
+					game.level.tiles[i + 1][j - 2] == JUMP_PAD ?
+					maxJumpPadJumpTiles + 1 : 0;
+				lNew = 0;
+				jpJ = j - 1;
 			}
+			
 			
 			// If the destination cell is the same as the 
 			// current successor 
