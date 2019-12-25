@@ -206,6 +206,7 @@ vector<Vec2Double> getSimplePositions(
 	
 	vector<Vec2Double> positions;
 	positions.emplace_back(unitPosition);
+	//return positions;
 
 	const auto isOnAir = Simulator::isUnitOnAir(unitPosition, unitSize, unitId, game);
 	const auto isFalling = !unitJumpState.canJump && !unitJumpState.canCancel;
@@ -812,8 +813,59 @@ void setShootingAction(
 		action.aim = { 0,0 };
 		return;
 	}
-	
+
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
+
+	const auto centerBottomTile = game.level.tiles[size_t(me.position.x)][size_t(me.position.y - 0.5)];
+	if (me.mines > 0 && !Simulator::isUnitOnAir(me.position, me.size, me.id, game) &&
+		(centerBottomTile ==  WALL || centerBottomTile == PLATFORM) &&
+		(me.weapon->fireTimer == nullptr || *(me.weapon->fireTimer) - tickTime < TOLERANCE))
+	{
+		int meLeftCount = 0;
+		int enemyLeftCount = 0;
+		int meKilledCount = 0;
+		int enemyKilledCount = 0;
+		for (const auto& unit: game.units)
+		{
+			if (unit.playerId == me.playerId) meLeftCount++;
+			else enemyLeftCount++;
+			if (unit.health > game.properties.mineExplosionParams.damage) continue;
+			
+			if (unit.id == me.id)
+			{
+				meKilledCount++;
+				continue;
+			}
+
+			auto xDist = me.position.x > unit.position.x ?
+				me.position.x - game.properties.mineSize.x / 2 - (unit.position.x + unit.size.x / 2) :
+				me.position.x + game.properties.mineSize.x / 2 - (unit.position.x - unit.size.x / 2);
+			
+			auto yDist = me.position.y > unit.position.y ?
+				me.position.y - (unit.position.y + unit.size.y) :
+				me.position.y + game.properties.mineSize.y - unit.position.y;
+
+			if (std::abs(xDist) + game.properties.unitMaxHorizontalSpeed * tickTime < game.properties.mineExplosionParams.radius &&
+				std::abs(yDist) + game.properties.unitJumpSpeed * tickTime < game.properties.mineExplosionParams.radius)
+			{
+				if (unit.playerId == me.playerId) meKilledCount++;
+				else enemyKilledCount++;
+			}			
+		}
+
+		meLeftCount -= meKilledCount;
+		enemyLeftCount -= enemyKilledCount;
+
+		if (enemyKilledCount > 0 && meLeftCount >= enemyLeftCount)
+		{
+			action.plantMine = true;
+			action.aim = { 0, -1 };
+			action.shoot = true;
+			return;
+		}
+	}
+	
+	
 	const auto movingTime = me.weapon->fireTimer != nullptr ? *(me.weapon->fireTimer) - TOLERANCE : 0;
 
 	const auto canShootingTick = static_cast<int>(ceil(movingTime / tickTime));
@@ -1467,6 +1519,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		setShootingAction(unit, mePositions,meSimpleProbabilities, nearestEnemy->size, enemyPositions, game, action);
 
 		strategy_.decreaseStopRunawayTick(unit.id);
+		if (action.plantMine) debug.draw(CustomData::Log("MINE"));
 		return action;
 	}
 
@@ -1669,6 +1722,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			enemyPositions, nearestEnemy->size, startJumpY, jumpingUnitId, isMonkeyMode,
 			attackRunawayAction, meAttackingAction, action, strategy_, game);
 		//cerr << game.currentTick << ": (" << unit.id << "-0) " << action.jump << " " << action.jumpDown << " " << action.velocity << "\n";
+		if (action.plantMine) debug.draw(CustomData::Log("MINE"));
 		return action;			
 	}				
 	
@@ -1719,6 +1773,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			enemyPositions, nearestEnemy->size, startJumpY, jumpingUnitId, isMonkeyMode,
 			attackRunawayAction, meAttackingAction, action, strategy_, game);
 		//cerr << game.currentTick << ": (" << unit.id << "-1) " << action.jump << " " << action.jumpDown << " " << action.velocity << "\n";
+		if (action.plantMine) debug.draw(CustomData::Log("MINE"));
 		return action;
 	}
 
@@ -1796,6 +1851,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	
 	setShootingAction(unit, mePositions, meSimpleProbabilities, nearestEnemy->size, enemyPositions, game, action);
 	//cerr << game.currentTick << ": (" <<unit.id << "-2) " << action.jump << " " << action.jumpDown << " " << action.velocity <<  "\n";
+	if (action.plantMine) debug.draw(CustomData::Log("MINE"));
 	return action;
 }
 
