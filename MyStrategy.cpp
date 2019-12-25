@@ -1298,6 +1298,36 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		}
 		else ++it;
 	}
+
+	UnitAction action;
+	action.aim = Vec2Double(0, 0);
+	action.reload = false;
+	action.swapWeapon = false;
+	action.plantMine = false;
+	action.shoot = false;
+
+	if (game.properties.teamSize == 2 && game.currentTick < 9)
+	{
+		bool isFarUnit = false;
+		for (const auto& u: game.units)
+		{
+			if (u.playerId != unit.playerId) continue;
+			if (u.id == unit.id) continue;
+			if (u.id > unit.id)
+			{
+				isFarUnit = true;
+				break;
+			}
+		}
+		if (isFarUnit)
+		{
+			action.velocity = 0;
+			action.jump = false;
+			action.jumpDown = false;
+			return action;
+		}
+	}
+	
 	
 	
 	/*
@@ -1342,12 +1372,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		}
 	}
 	
-	UnitAction action;
-	action.aim = Vec2Double(0, 0);	
-	action.reload = false;
-	action.swapWeapon = false;
-	action.plantMine = false;
-	action.shoot = false;
+	
 
 	/*if (game.currentTick < 451)
 	{
