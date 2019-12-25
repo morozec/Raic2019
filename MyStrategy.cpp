@@ -1358,20 +1358,6 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			}
 		}
 	}
-	const LootBox* nearestWeapon = nullptr;
-	for (const LootBox& lootBox : game.lootBoxes)
-	{
-		if (std::dynamic_pointer_cast<Item::Weapon>(lootBox.item))
-		{
-			if (nearestWeapon == nullptr ||
-				MathHelper::getVectorLength2(unit.position, lootBox.position) <
-				MathHelper::getVectorLength2(unit.position, nearestWeapon->position))
-			{
-				nearestWeapon = &lootBox;
-			}
-		}
-	}
-	
 	
 
 	/*if (game.currentTick < 451)
@@ -1491,9 +1477,34 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 	if (unit.weapon == nullptr)
 	{
-		/*getHealingData(
-			unit, meAttackingPositions, meAttackingJumpStates,
-			*nearestWeapon, meAttackingAction, startJumpY, jumpingUnitId, game);*/
+		const LootBox* nearestWeapon = nullptr;
+		for (const LootBox& lootBox : game.lootBoxes)
+		{
+			if (std::dynamic_pointer_cast<Item::Weapon>(lootBox.item))
+			{
+				auto isOtherUnitWeapon = false;
+				for (const auto& item : strategy_.weapons_)
+				{
+					if (item.first != unit.id &&
+						std::abs(item.second.x - lootBox.position.x) < TOLERANCE &&
+						std::abs(item.second.y - lootBox.position.y) < TOLERANCE)
+					{
+						isOtherUnitWeapon = true;
+						break;
+					}
+				}
+				if (isOtherUnitWeapon) continue;
+
+				if (nearestWeapon == nullptr ||
+					MathHelper::getVectorLength2(unit.position, lootBox.position) <
+					MathHelper::getVectorLength2(unit.position, nearestWeapon->position))
+				{
+					nearestWeapon = &lootBox;
+				}
+			}
+		}
+		strategy_.weapons_[unit.id] = nearestWeapon->position;
+		
 		initAStarAction(
 			unit, nearestWeapon->position, nearestWeapon->size, 
 			meAttackingPositions, meAttackingJumpStates, meAttackingAction,

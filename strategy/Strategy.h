@@ -73,6 +73,7 @@ public:
 	void setJumpingUnitId(int id);
 
 	std::map<int, Vec2Double> heal_boxes_;
+	std::map<int, Vec2Double> weapons_;
 
 	std::vector<std::vector<int>> grid;
 
