@@ -1331,8 +1331,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	const LootBox* nearestWeapon = nullptr;
 	for (const LootBox& lootBox : game.lootBoxes)
 	{
-		if (std::dynamic_pointer_cast<Item::Weapon>(lootBox.item) &&
-			std::dynamic_pointer_cast<Item::Weapon>(lootBox.item)->weaponType == ROCKET_LAUNCHER)
+		if (std::dynamic_pointer_cast<Item::Weapon>(lootBox.item))
 		{
 			if (nearestWeapon == nullptr ||
 				MathHelper::getVectorLength2(unit.position, lootBox.position) <
@@ -1364,12 +1363,12 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	UnitAction meAttackingAction;
 
 	//if (unit.weapon == nullptr) {
-		initAStarAction(unit, nearestWeapon->position, nearestWeapon->size,
+		/*initAStarAction(unit, nearestWeapon->position, nearestWeapon->size,
 			meAttackingPositions, meAttackingJumpStates, meAttackingAction, strategy_, game, debug);
 		action.velocity = meAttackingAction.velocity;
 		action.jump = meAttackingAction.jump;
 		action.jumpDown = meAttackingAction.jumpDown;
-		return action;
+		return action;*/
 	//}
 
 	if (nearestEnemy == nullptr) return action;	
