@@ -1536,7 +1536,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			if (std::dynamic_pointer_cast<Item::Weapon>(lootBox.item))
 			{
 				auto isOtherUnitWeapon = false;
-				for (const auto& item : strategy_.weapons_)
+				for (const auto& item : strategy_.lootboxes_)
 				{
 					if (item.first != unit.id &&
 						std::abs(item.second.x - lootBox.position.x) < TOLERANCE &&
@@ -1556,7 +1556,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 				}
 			}
 		}
-		strategy_.weapons_[unit.id] = nearestWeapon->position;
+		strategy_.lootboxes_[unit.id] = nearestWeapon->position;
 		
 		initAStarAction(
 			unit, nearestWeapon->position, nearestWeapon->size, 
@@ -1659,7 +1659,44 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 		if (!goodWay)
 		{
-			getAttackingData(
+			const LootBox* nearestMine = nullptr;
+			minMHDist = INT_MAX;
+			for (const LootBox& lootBox : game.lootBoxes)
+			{
+				if (std::dynamic_pointer_cast<Item::Mine>(lootBox.item))
+				{
+					auto isOtherUnitMine = false;
+					for (const auto& item : strategy_.lootboxes_)
+					{
+						if (item.first != unit.id &&
+							std::abs(item.second.x - lootBox.position.x) < TOLERANCE &&
+							std::abs(item.second.y - lootBox.position.y) < TOLERANCE)
+						{
+							isOtherUnitMine = true;
+							break;
+						}
+					}
+					if (isOtherUnitMine) continue;
+
+					if (nearestMine == nullptr ||
+						MathHelper::getVectorLength2(unit.position, lootBox.position) <
+						MathHelper::getVectorLength2(unit.position, nearestMine->position))
+					{
+						nearestMine = &lootBox;
+					}
+				}
+			}
+			if (nearestMine != nullptr)
+			{
+				strategy_.lootboxes_[unit.id] = nearestMine->position;
+				initAStarAction(
+					unit, nearestMine->position, nearestMine->size,
+					meAttackingPositions, meAttackingJumpStates, meAttackingAction,
+					strategy_,
+					game, debug);
+			}
+			else
+				getAttackingData(
 				unit,
 				meAttackingPositions, meAttackingJumpStates,
 				nearestEnemy->size, enemyPositions,
