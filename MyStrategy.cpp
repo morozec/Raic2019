@@ -355,11 +355,11 @@ void initOneStepAction(const Four& myTile, const Four& nextTile, const vector<Fo
 	auto xBorderDist = 0.0;
 	if (nextTileX > myTileX)
 	{
-		xBorderDist = nextTileX - (curPosition.x + unitSize.x / 2);
+		xBorderDist = nextTileX - curPosition.x;
 	}
 	else if (nextTileX < myTileX)
 	{
-		xBorderDist = curPosition.x - unitSize.x / 2 - (nextTileX + 1);
+		xBorderDist = curPosition.x - (nextTileX + 1);
 	}
 	const auto yBorderDist = curPosition.y - myTileY;
 
@@ -447,15 +447,12 @@ void initAStarAction(
 		start_z = static_cast<int>(jumpingTime * game.properties.jumpPadJumpSpeed);
 	}
 	
-	/*if (bottomTile == EMPTY || bottomTile == JUMP_PAD)
-	{	*/		   		
-		if (isFalling) start_z = maxJumpPadJumpTiles + 1;
-		else if (isJumping)
-		{
-			const auto jumpingTime = game.properties.unitJumpTime - me.jumpState.maxTime;
-			start_z = static_cast<int>(jumpingTime * game.properties.unitJumpSpeed);
-		}
-	//}	
+	if (isFalling && (bottomTile == EMPTY || bottomTile == JUMP_PAD)) start_z = maxJumpPadJumpTiles + 1;
+	else if (isJumping)
+	{
+		const auto jumpingTime = game.properties.unitJumpTime - me.jumpState.maxTime;
+		start_z = static_cast<int>(jumpingTime * game.properties.unitJumpSpeed);
+	}
 	
 	const auto startPos =
 		make_tuple(size_t(me.position.x), size_t(me.position.y), start_z, isJumpPadJumping ? 1 : 0);
