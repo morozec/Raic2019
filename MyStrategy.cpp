@@ -14,6 +14,7 @@
 #include "simulation/Simulator.h"
 #include <iostream>
 #include <algorithm>
+#include "common/AStar.h"
 
 using namespace std;
 
@@ -287,6 +288,247 @@ double getSimpleProbability(
 	return count * 1.0/enemyPositions.size();
 }
 
+vector<vector<int>> getGrid(const Game& game)
+{
+	vector<vector<int>> grid;
+
+	for (size_t i = 0; i < game.level.tiles.size(); ++i)
+	{
+		grid.emplace_back(vector<int>());
+		for (size_t j = 0; j < game.level.tiles[i].size(); ++j)
+		{
+			int value = 1;
+			const auto tile = game.level.tiles[i][j];
+			if (
+				tile == WALL ||
+				(j < game.level.tiles[i].size() - 1 && 
+				game.level.tiles[i][j + 1] == WALL))
+			{
+				value = 0;
+			}
+			grid[i].emplace_back(value);
+		}
+	}
+	
+	return grid;
+}
+
+void initOneStepAction(const Four& myTile, const Four& nextTile, const vector<Four>& path,
+	const Vec2Double& curPosition, const Vec2Double& unitSize, const JumpState& curJumpState, int unitId,
+	UnitAction& action, double tickTime, const Game& game)
+{
+	const auto isOnAir = Simulator::isUnitOnAir(curPosition, unitSize, unitId, game);
+	const auto isJumping = isOnAir && curJumpState.canJump && curJumpState.canCancel;
+	const auto isFalling = isOnAir && !curJumpState.canJump && !curJumpState.canCancel;
+
+	const auto myTileX = get<0>(myTile);
+	const auto myTileY = get<1>(myTile);
+
+	const auto nextTileX = get<0>(nextTile);
+	const auto nextTileY = get<1>(nextTile);
+
+	const auto needStopToRelax = nextTileX == myTileX && nextTileY == myTileY && get<2>(nextTile) == 0;
+	if (needStopToRelax)
+	{
+		action.velocity = 0;
+		action.jump = false;
+		action.jumpDown = false;
+		return;
+	}	
+	
+	if (nextTileX > myTileX) action.velocity = INT_MAX;
+	else if (nextTileX < myTileX) action.velocity = -INT_MAX;
+	else
+	{
+		const auto distToCenter = (myTileX + 0.5) - curPosition.x;
+		if (std::abs(distToCenter) < TOLERANCE)
+		{
+			action.velocity = 0;
+		}
+		else
+		{
+			action.velocity = distToCenter / tickTime;
+		}
+	}
+
+	auto xBorderDist = 0.0;
+	if (nextTileX > myTileX)
+	{
+		xBorderDist = nextTileX - (curPosition.x + unitSize.x / 2);
+	}
+	else if (nextTileX < myTileX)
+	{
+		xBorderDist = curPosition.x - unitSize.x / 2 - (nextTileX + 1);
+	}
+	const auto yBorderDist = curPosition.y - myTileY;
+
+	action.jump = false;
+	
+	
+	if (nextTileY > myTileY)
+	{
+		if (nextTileX == myTileX || isOnAir)
+		{
+			action.jump = true;
+		}
+		else
+		{
+			bool isDangerousCorner = false;
+			for (int i = 1; i < path.size() - 1; ++i)
+			{
+				const auto& curStep = path[i];
+				if (nextTileX > myTileX)
+				{
+					if (game.level.tiles[get<0>(path[i]) - 1][get<1>(path[i]) + 2] == WALL &&
+						curPosition.x < myTileX + 0.5 - TOLERANCE)
+					{
+						isDangerousCorner = true;
+						break;
+					}
+				}
+				else if (nextTileX < myTileX)
+				{
+					if (game.level.tiles[get<0>(path[i]) + 1][get<1>(path[i]) + 2] == WALL &&
+						curPosition.x > myTileX + 0.5 + TOLERANCE)
+					{
+						isDangerousCorner = true;
+						break;
+					}
+				}
+
+				const auto& nextStep = path[i + 1];
+				if (get<1>(nextStep) <= get<1>(curStep)) break;
+				if (nextTileX - myTileX != get<0>(nextStep) - get<0>(curStep)) break;
+			}
+
+			action.jump = !isDangerousCorner;
+		}
+	}
+	else if (nextTileY <= myTileY && isJumping &&
+		(game.level.tiles[myTileX][myTileY - 1] == EMPTY || game.level.tiles[myTileX][myTileY - 1] == JUMP_PAD) &&
+		xBorderDist > yBorderDist)
+	{
+		action.jump = true;
+	}
+	
+
+	if (nextTileY < myTileY) action.jumpDown = true;
+	else action.jumpDown = false;
+}
+
+void initAStarAction(
+	const Unit& me, const Vec2Double& targetPos, const Vec2Double& targetSize,
+	vector<Vec2Double>& mePositions,
+	vector<JumpState>& meJumpStates,
+	UnitAction& action,
+	Strategy& strategy,
+	const Game& game, Debug& debug)
+{
+	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
+	
+	const auto endPos =
+		make_pair(size_t(targetPos.x), size_t(targetPos.y));
+
+	const auto isOnAir = Simulator::isUnitOnAir(me.position, me.size, me.id, game);
+	const auto isJumping = me.jumpState.canJump && me.jumpState.canCancel && me.jumpState.maxTime < game.properties.unitJumpTime - TOLERANCE;
+	const auto isFalling = isOnAir && !me.jumpState.canJump && !me.jumpState.canCancel;
+	const auto isJumpPadJumping = me.jumpState.canJump && !me.jumpState.canCancel;
+
+	const auto bottomTile = game.level.tiles[size_t(me.position.x)][size_t(me.position.y - 1)];
+	const auto maxJumpTiles = static_cast<int>(game.properties.unitJumpTime * game.properties.unitJumpSpeed);
+	const auto maxJumpPadJumpTiles = static_cast<int>(game.properties.jumpPadJumpTime * game.properties.jumpPadJumpSpeed);
+	
+	int start_z = 0;
+	
+	if (isJumpPadJumping)
+	{
+		const auto jumpingTime = game.properties.jumpPadJumpTime - me.jumpState.maxTime;
+		start_z = static_cast<int>(jumpingTime * game.properties.jumpPadJumpSpeed);
+	}
+	
+	/*if (bottomTile == EMPTY || bottomTile == JUMP_PAD)
+	{	*/		   		
+		if (isFalling) start_z = maxJumpPadJumpTiles + 1;
+		else if (isJumping)
+		{
+			const auto jumpingTime = game.properties.unitJumpTime - me.jumpState.maxTime;
+			start_z = static_cast<int>(jumpingTime * game.properties.unitJumpSpeed);
+		}
+	//}	
+	
+	const auto startPos =
+		make_tuple(size_t(me.position.x), size_t(me.position.y), start_z, isJumpPadJumping ? 1 : 0);
+
+	const auto path = aStarSearch(
+		strategy.grid, strategy.closedList, strategy.cellDetails, startPos, endPos, 
+		maxJumpTiles, maxJumpPadJumpTiles,
+		game);
+	auto curPosition = me.position;
+	auto curJumpState = me.jumpState;
+	mePositions.emplace_back(curPosition);
+	meJumpStates.emplace_back(curJumpState);
+
+	if (path.empty()) //уже в нужном тайле
+	{
+		UnitAction curAction;
+		const auto dx = targetPos.x - me.position.x;
+		if (std::abs(dx) < TOLERANCE) curAction.velocity = 0;
+		else if (dx > 0) curAction.velocity = INT_MAX;
+		else curAction.velocity = -INT_MAX;
+
+		const auto dy = targetPos.y - me.position.y;
+		if (std::abs(dy) < TOLERANCE)
+		{
+			curAction.jump = false;
+			curAction.jumpDown = false;
+		}
+		else if (dy > 0)
+		{
+			curAction.jump = true;
+			curAction.jumpDown = false;
+		}
+		else
+		{
+			curAction.jump = false;
+			curAction.jumpDown = true;
+		}
+		
+		curPosition = Simulator::getUnitInTimePosition(curPosition, me.size, me.id, curAction, tickTime, curJumpState, game);
+
+		action = curAction;
+		mePositions.emplace_back(curPosition);
+		meJumpStates.emplace_back(curJumpState);
+		
+		return;
+	}
+
+	for (int i = 0; i < path.size() - 1; ++i)
+	{
+		const auto& myTile = path[i];
+		const auto& nextTile = path[i + 1];
+
+		UnitAction curAction;
+		initOneStepAction(myTile, nextTile, path, curPosition, me.size, curJumpState, me.id, curAction, tickTime, game);
+		curPosition = Simulator::getUnitInTimePosition(curPosition, me.size, me.id, curAction, tickTime, curJumpState, game);
+
+		mePositions.emplace_back(curPosition);
+		meJumpStates.emplace_back(curJumpState);
+
+		if (i == 0) action = curAction;
+
+		const auto isCross = Simulator::areRectsCross(
+			curPosition, me.size, targetPos, targetSize);
+		if (isCross) return;
+		
+		debug.draw(CustomData::Rect(
+			vec2DoubleToVec2Float({ static_cast<double>(get<0>(myTile)), static_cast<double>(get<1>(myTile)) }),
+			{ 1, 1 },
+			ColorFloat(255, 255, 255, 0.2)
+		));
+	}
+
+}
+
 void getHealingData(
 	const Unit& me,
 	vector<Vec2Double>& mePositions,
@@ -298,6 +540,7 @@ void getHealingData(
 	const Game& game
 )
 {
+	
 	const auto tickTime = 1 / game.properties.ticksPerSecond;
 
 	auto lastMePosition = me.position;
@@ -1029,6 +1272,21 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		}
 		strategy_.isInit = true;
 		strategy_.setJumpingUnitId(-1);
+		strategy_.grid = getGrid(game);
+
+		const auto maxJumpTiles = static_cast<int>(game.properties.jumpPadJumpTime * game.properties.jumpPadJumpSpeed);
+		const auto Z_SIZE = maxJumpTiles + 2; //+1 - на падение, +1 - на стояние
+		const auto PAD_JUMP_STATE_SIZE = 2;
+		
+		strategy_.closedList = vector<vector<vector<vector<bool>>>> (
+			strategy_.grid.size(), vector<vector<vector<bool>>>(
+				strategy_.grid[0].size(), vector<vector<bool>>(
+					Z_SIZE, vector<bool>(PAD_JUMP_STATE_SIZE, false))));
+		
+		strategy_.cellDetails = vector<vector<vector<vector<cell>>>> (
+			strategy_.grid.size(), vector<vector<vector<cell>>>(
+				strategy_.grid[0].size(), vector<vector<cell>>(
+					Z_SIZE, vector<cell>(PAD_JUMP_STATE_SIZE))));
 	}
 	
 
@@ -1040,6 +1298,36 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		}
 		else ++it;
 	}
+
+	UnitAction action;
+	action.aim = Vec2Double(0, 0);
+	action.reload = false;
+	action.swapWeapon = false;
+	action.plantMine = false;
+	action.shoot = false;
+
+	if (game.properties.teamSize == 2 && game.currentTick < 9)
+	{
+		bool isFarUnit = false;
+		for (const auto& u: game.units)
+		{
+			if (u.playerId != unit.playerId) continue;
+			if (u.id == unit.id) continue;
+			if (u.id > unit.id)
+			{
+				isFarUnit = true;
+				break;
+			}
+		}
+		if (isFarUnit)
+		{
+			action.velocity = 0;
+			action.jump = false;
+			action.jumpDown = false;
+			return action;
+		}
+	}
+	
 	
 	
 	/*
@@ -1070,30 +1358,31 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			}
 		}
 	}
-	const LootBox* nearestWeapon = nullptr;
-	for (const LootBox& lootBox : game.lootBoxes)
-	{
-		if (std::dynamic_pointer_cast<Item::Weapon>(lootBox.item))
-		{
-			if (nearestWeapon == nullptr ||
-				MathHelper::getVectorLength2(unit.position, lootBox.position) <
-				MathHelper::getVectorLength2(unit.position, nearestWeapon->position))
-			{
-				nearestWeapon = &lootBox;
-			}
-		}
-	}
 	
-	UnitAction action;
-	action.aim = Vec2Double(0, 0);	
-	action.reload = false;
-	action.swapWeapon = false;
-	action.plantMine = false;
-	action.shoot = false;
-		
 
-	if (nearestEnemy == nullptr) return action;
-	
+	/*if (game.currentTick < 451)
+	{
+		action.velocity = 0;
+		action.jump = false;
+		action.jumpDown = false;
+		return action;
+	}*/
+
+
+	vector<Vec2Double> meAttackingPositions;
+	vector<JumpState> meAttackingJumpStates;
+	UnitAction meAttackingAction;
+
+	//if (unit.weapon == nullptr) {
+		/*initAStarAction(unit, nearestWeapon->position, nearestWeapon->size,
+			meAttackingPositions, meAttackingJumpStates, meAttackingAction, strategy_, game, debug);
+		action.velocity = meAttackingAction.velocity;
+		action.jump = meAttackingAction.jump;
+		action.jumpDown = meAttackingAction.jumpDown;
+		return action;*/
+	//}
+
+	if (nearestEnemy == nullptr) return action;	
 
 	double enemyFireTimer = INT_MAX;
 	if (nearestEnemy->weapon != nullptr)
@@ -1182,17 +1471,45 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 
 	//setMoveToEnemyAction(unit, nearestEnemy->position, needGo, game, action, strategy_);
-	vector<Vec2Double> meAttackingPositions;
-	vector<JumpState> meAttackingJumpStates;
-	UnitAction meAttackingAction;
+	
 	auto startJumpY = strategy_.getStartedJumpY(unit.id);
 	auto jumpingUnitId = strategy_.getJumpingUnitId();
 
 	if (unit.weapon == nullptr)
 	{
-		getHealingData(
-			unit, meAttackingPositions, meAttackingJumpStates,
-			*nearestWeapon, meAttackingAction, startJumpY, jumpingUnitId, game);
+		const LootBox* nearestWeapon = nullptr;
+		for (const LootBox& lootBox : game.lootBoxes)
+		{
+			if (std::dynamic_pointer_cast<Item::Weapon>(lootBox.item))
+			{
+				auto isOtherUnitWeapon = false;
+				for (const auto& item : strategy_.weapons_)
+				{
+					if (item.first != unit.id &&
+						std::abs(item.second.x - lootBox.position.x) < TOLERANCE &&
+						std::abs(item.second.y - lootBox.position.y) < TOLERANCE)
+					{
+						isOtherUnitWeapon = true;
+						break;
+					}
+				}
+				if (isOtherUnitWeapon) continue;
+
+				if (nearestWeapon == nullptr ||
+					MathHelper::getVectorLength2(unit.position, lootBox.position) <
+					MathHelper::getVectorLength2(unit.position, nearestWeapon->position))
+				{
+					nearestWeapon = &lootBox;
+				}
+			}
+		}
+		strategy_.weapons_[unit.id] = nearestWeapon->position;
+		
+		initAStarAction(
+			unit, nearestWeapon->position, nearestWeapon->size, 
+			meAttackingPositions, meAttackingJumpStates, meAttackingAction,
+			strategy_,
+			game, debug);
 	}
 	else
 	{
@@ -1215,6 +1532,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 		if (needHeal)
 		{
+			
 			for (const auto& lb : game.lootBoxes)
 			{
 				if (std::dynamic_pointer_cast<Item::HealthPack>(lb.item))
@@ -1232,49 +1550,61 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 					if (isGot) continue;
 					
 					const auto dist = MathHelper::getMHDist(unit.position, lb.position);
-					if (dist > minMHDist) continue;
-
-					vector<Vec2Double> curMeAttackingPositions;
-					vector<JumpState> curMeAttackingJumpStates;
-					UnitAction curMeAttackingAction;
-					size_t curStartJumpY = startJumpY;
-					int curJumpingUnitId = jumpingUnitId;
-					getHealingData(
-						unit, curMeAttackingPositions, curMeAttackingJumpStates,
-						lb, curMeAttackingAction, curStartJumpY, curJumpingUnitId, game);
-
-					auto goodWay = true;
-					for (const auto& pos : curMeAttackingPositions)
-					{
-						for (const auto& enemyUnit : game.units)
-						{
-							if (enemyUnit.playerId == unit.playerId) continue;
-							if (Simulator::areRectsTouch(pos, unit.size, enemyUnit.position, enemyUnit.size))
-							{
-								goodWay = false;
-								break;
-							}
-						}
-						if (!goodWay) break;
-					}
-
-					if (goodWay)
+					if (dist < minMHDist)
 					{
 						minMHDist = dist;
 						nearestHPLootBox = &lb;
-						meAttackingPositions = curMeAttackingPositions;
-						meAttackingJumpStates = curMeAttackingJumpStates;
-						meAttackingAction = curMeAttackingAction;
-						startJumpY = curStartJumpY;
-						jumpingUnitId = curJumpingUnitId;
-
-						strategy_.heal_boxes_[unit.id] = lb.position;
-					}
+					}				
 				}
 			}
 		}
 
-		if (nearestHPLootBox == nullptr)
+		auto goodWay = false;
+		if (nearestHPLootBox != nullptr)
+		{
+			goodWay = true;
+			vector<Vec2Double> curMeAttackingPositions;
+			vector<JumpState> curMeAttackingJumpStates;
+			UnitAction curMeAttackingAction;
+			size_t curStartJumpY = startJumpY;
+			int curJumpingUnitId = jumpingUnitId;
+			/*getHealingData(
+				unit, curMeAttackingPositions, curMeAttackingJumpStates,
+				lb, curMeAttackingAction, curStartJumpY, curJumpingUnitId, game);*/
+			initAStarAction(
+				unit,  nearestHPLootBox->position, nearestHPLootBox->size,
+				curMeAttackingPositions, curMeAttackingJumpStates, curMeAttackingAction,
+				strategy_,
+				game, debug);
+						
+			for (size_t i = 1; i < curMeAttackingPositions.size(); ++i)
+			{
+				const auto& pos = curMeAttackingPositions[i];
+				for (const auto& enemyUnit : game.units)
+				{
+					if (enemyUnit.playerId == unit.playerId) continue;
+					if (Simulator::areRectsTouch(pos, unit.size, enemyUnit.position, enemyUnit.size))
+					{
+						goodWay = false;
+						break;
+					}
+				}
+				if (!goodWay) break;
+			}
+
+			if (goodWay)
+			{
+				meAttackingPositions = curMeAttackingPositions;
+				meAttackingJumpStates = curMeAttackingJumpStates;
+				meAttackingAction = curMeAttackingAction;
+				startJumpY = curStartJumpY;
+				jumpingUnitId = curJumpingUnitId;
+
+				strategy_.heal_boxes_[unit.id] = nearestHPLootBox->position;
+			}
+		}
+
+		if (!goodWay)
 		{
 			getAttackingData(
 				unit,

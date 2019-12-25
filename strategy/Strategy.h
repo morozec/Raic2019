@@ -7,6 +7,7 @@
 #include "../model/UnitAction.hpp"
 #include "../simulation/BulletSimulation.h"
 #include <set>
+#include "../common/AStar.h"
 
 
 class Strategy
@@ -72,6 +73,19 @@ public:
 	void setJumpingUnitId(int id);
 
 	std::map<int, Vec2Double> heal_boxes_;
+	std::map<int, Vec2Double> weapons_;
+
+	std::vector<std::vector<int>> grid;
+
+	// Create a closed list and initialise it to false which means 
+	// that no cell has been included yet 
+	// This closed list is implemented as a boolean 2D array
+
+	std::vector<std::vector<std::vector<std::vector<bool>>>> closedList;
+
+	// Declare a 2D array of structure to hold the details 
+	//of that cell
+	std::vector<std::vector<std::vector<std::vector<cell>>>> cellDetails;
 
 private:
 	std::map<int, int> stop_runaway_ticks_;

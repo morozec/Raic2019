@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_map>
 #include "mathcalc/MathHelper.h"
+#include "common/AStar.h"
 
 class Runner {
 public:
@@ -49,9 +50,15 @@ int main(int argc, char *argv[]) {
   int port = argc < 3 ? 31003 : atoi(argv[2]);
   std::string token = argc < 4 ? "0000000000000000" : argv[3];
   Runner(host, port, token).run();
+  
 	/*Vec2Double start = { 24.016666666679747, 23.000000999999848  };
 	Vec2Double end = { 1, 22.999998870798812 };
 	const auto squares = MathHelper::getLineSquares2(start, end);*/
+
+	/*std::vector<std::vector<int>> grid(5, std::vector<int>(5, 1));
+	grid[2][0] = 0;
+	aStarSearch(grid, std::make_pair(4, 0), std::make_pair(0, 0));*/
+	
 	
   return 0;
 }
