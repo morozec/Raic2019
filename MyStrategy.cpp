@@ -802,7 +802,7 @@ bool isSafeShoot(const Unit& me, const Game& game)
 void setShootingAction(
 	const Unit& me, const vector<Vec2Double>& mePositions, const vector<double>& meSimpleProbabilities,
 	const Vec2Double& enemySize, const vector<vector<Vec2Double>>& enemyPositions,
-	const Game& game, UnitAction& action)
+	const Game& game, UnitAction& action, bool isHealing)
 {
 	if (me.weapon == nullptr)
 	{
@@ -814,8 +814,9 @@ void setShootingAction(
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 
 	const auto centerBottomTile = game.level.tiles[size_t(me.position.x)][size_t(me.position.y - 0.5)];
-	if (me.mines > 0 && !Simulator::isUnitOnAir(me.position, me.size, me.id, game) &&
-		(centerBottomTile ==  WALL || centerBottomTile == PLATFORM) &&
+	const auto canPlantMine = me.mines > 0 && !Simulator::isUnitOnAir(me.position, me.size, me.id, game) &&
+		(centerBottomTile == WALL || centerBottomTile == PLATFORM);
+	if (canPlantMine &&
 		(me.weapon->fireTimer == nullptr || *(me.weapon->fireTimer) - tickTime < TOLERANCE))
 	{
 		int meLeftCount = 0;
@@ -859,6 +860,21 @@ void setShootingAction(
 			action.aim = { 0, -1 };
 			action.shoot = true;
 			return;
+		}
+	}
+
+	if (isHealing && canPlantMine)
+	{
+		double minMineDist = INT_MAX;
+		for (const auto& mine : game.mines)
+		{
+			const auto dist = MathHelper::getMHDist(mine.position, me.position);
+			if (dist < minMineDist) minMineDist = dist;
+		}
+
+		if (minMineDist > MIN_SET_MINE_DIST)
+		{
+			action.plantMine = true;
 		}
 	}
 	
@@ -1231,7 +1247,8 @@ void initAttackAction(
 	const vector<vector<Vec2Double>>& enemyPositions, const Vec2Double& enemySize,
 	int startJumpY, int jumpingUnitId, bool isMonkeyMode,
 	tuple<RunawayDirection, int, int, int> runawayAction,
-	const UnitAction& meAttackingAction, UnitAction& action, Strategy& strategy, const Game& game)
+	const UnitAction& meAttackingAction, UnitAction& action, Strategy& strategy, const Game& game,
+	bool isHealing)
 {
 	const auto runawayDirection = std::get<0>(runawayAction);
 	const auto runawayStartTick = std::get<1>(runawayAction);
@@ -1301,7 +1318,7 @@ void initAttackAction(
 		meSimpleProbabilities.emplace_back(sp);
 	}
 
-	setShootingAction(unit, meAttackingPositions, meSimpleProbabilities, enemySize, enemyPositions, game, action);
+	setShootingAction(unit, meAttackingPositions, meSimpleProbabilities, enemySize, enemyPositions, game, action, isHealing);
 	strategy.setStartedJumpY(unit.id, startJumpY);
 	strategy.setJumpingUnitId(jumpingUnitId);
 	strategy.setIsMonkeyMode(unit.id, isMonkeyMode);
@@ -1420,7 +1437,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 	vector<Vec2Double> meAttackingPositions;
 	vector<JumpState> meAttackingJumpStates;
-	UnitAction meAttackingAction;
+	UnitAction meAttackingAction;	
 
 	//if (unit.weapon == nullptr) {
 		/*initAStarAction(unit, nearestWeapon->position, nearestWeapon->size,
@@ -1513,7 +1530,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			const auto sp = getSimpleProbability(mePosition, unit.size, curEnemyPositions, nearestEnemy->size, game);
 			meSimpleProbabilities.emplace_back(sp);
 		}
-		setShootingAction(unit, mePositions,meSimpleProbabilities, nearestEnemy->size, enemyPositions, game, action);
+		setShootingAction(unit, mePositions,meSimpleProbabilities, nearestEnemy->size, enemyPositions, game, action, false);
 
 		strategy_.decreaseStopRunawayTick(unit.id);
 		if (action.plantMine) debug.draw(CustomData::Log("MINE"));
@@ -1524,6 +1541,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	
 	auto startJumpY = strategy_.getStartedJumpY(unit.id);
 	auto jumpingUnitId = strategy_.getJumpingUnitId();
+
+	auto isHealing = false;
 
 	if (unit.weapon == nullptr)
 	{
@@ -1608,11 +1627,10 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 				}
 			}
 		}
-
-		auto goodWay = false;
+		
 		if (nearestHPLootBox != nullptr)
 		{
-			goodWay = true;
+			isHealing = true;
 			vector<Vec2Double> curMeAttackingPositions;
 			vector<JumpState> curMeAttackingJumpStates;
 			UnitAction curMeAttackingAction;
@@ -1635,14 +1653,14 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 					if (enemyUnit.playerId == unit.playerId) continue;
 					if (Simulator::areRectsTouch(pos, unit.size, enemyUnit.position, enemyUnit.size))
 					{
-						goodWay = false;
+						isHealing = false;
 						break;
 					}
 				}
-				if (!goodWay) break;
+				if (!isHealing) break;
 			}
 
-			if (goodWay)
+			if (isHealing)
 			{
 				meAttackingPositions = curMeAttackingPositions;
 				meAttackingJumpStates = curMeAttackingJumpStates;
@@ -1651,10 +1669,11 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 				jumpingUnitId = curJumpingUnitId;
 
 				strategy_.heal_boxes_[unit.id] = nearestHPLootBox->position;
+				
 			}
 		}
 
-		if (!goodWay)
+		if (!isHealing)
 		{
 			const Unit* noWeaponEnemyUnit = nullptr;
 			minMHDist = INT_MAX;
@@ -1780,7 +1799,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		initAttackAction(unit, meAttackingPositions, meAttackingJumpStates,
 			nextTickMeAttackingJumpState, nextTickMeAttackPosition, meSimpleProbabilities,
 			enemyPositions, nearestEnemy->size, startJumpY, jumpingUnitId, isMonkeyMode,
-			attackRunawayAction, meAttackingAction, action, strategy_, game);
+			attackRunawayAction, meAttackingAction, action, strategy_, game, isHealing);
 		//cerr << game.currentTick << ": (" << unit.id << "-0) " << action.jump << " " << action.jumpDown << " " << action.velocity << "\n";
 		if (action.plantMine) debug.draw(CustomData::Log("MINE"));
 		return action;			
@@ -1831,7 +1850,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		initAttackAction(unit, meAttackingPositions, meAttackingJumpStates,
 			nextTickMeAttackingJumpState, nextTickMeAttackPosition, meSimpleProbabilities,
 			enemyPositions, nearestEnemy->size, startJumpY, jumpingUnitId, isMonkeyMode,
-			attackRunawayAction, meAttackingAction, action, strategy_, game);
+			attackRunawayAction, meAttackingAction, action, strategy_, game, isHealing);
 		//cerr << game.currentTick << ": (" << unit.id << "-1) " << action.jump << " " << action.jumpDown << " " << action.velocity << "\n";
 		if (action.plantMine) debug.draw(CustomData::Log("MINE"));
 		return action;
@@ -1909,7 +1928,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		meSimpleProbabilities.emplace_back(sp);
 	}
 	
-	setShootingAction(unit, mePositions, meSimpleProbabilities, nearestEnemy->size, enemyPositions, game, action);
+	setShootingAction(unit, mePositions, meSimpleProbabilities, nearestEnemy->size, enemyPositions, game, action, false);
 	//cerr << game.currentTick << ": (" <<unit.id << "-2) " << action.jump << " " << action.jumpDown << " " << action.velocity <<  "\n";
 	if (action.plantMine) debug.draw(CustomData::Log("MINE"));
 	return action;

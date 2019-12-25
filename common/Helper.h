@@ -20,5 +20,7 @@ const double SAFE_ROCKET_PROBABILITY = 0.1;
 const double SAFE_ROCKET_DISTANCE1 = 1.0;
 const double SAFE_ROCKET_DISTANCE2 = 1.0;
 
+const auto MIN_SET_MINE_DIST = 7.0;
+
 Vec2Float vec2DoubleToVec2Float(const Vec2Double& vec2Double);
 //inline bool operator<(const Bullet& lhs, const Bullet& rhs);
