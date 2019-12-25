@@ -1003,10 +1003,14 @@ bool Strategy::isBulletExplosionShootUnit(
 	const auto unitBottom = unitPosition.y;
 	const auto unitTop = unitPosition.y + unitSize.y;
 
-	if (std::abs(bulletCrossWallCenter.x - unitLeft) <= radius && std::abs(bulletCrossWallCenter.y - unitBottom) <= radius) return true;
-	if (std::abs(bulletCrossWallCenter.x - unitLeft) <= radius && std::abs(bulletCrossWallCenter.y - unitTop) <= radius) return true;
-	if (std::abs(bulletCrossWallCenter.x - unitRight) <= radius && std::abs(bulletCrossWallCenter.y - unitTop) <= radius) return true;
-	if (std::abs(bulletCrossWallCenter.x - unitRight) <= radius && std::abs(bulletCrossWallCenter.y - unitBottom) <= radius) return true;
+	if (std::abs(bulletCrossWallCenter.x - unitLeft) <= radius + TOLERANCE && 
+		std::abs(bulletCrossWallCenter.y - unitBottom) <= radius + TOLERANCE) return true;
+	if (std::abs(bulletCrossWallCenter.x - unitLeft) <= radius + TOLERANCE && 
+		std::abs(bulletCrossWallCenter.y - unitTop) <= radius + TOLERANCE) return true;
+	if (std::abs(bulletCrossWallCenter.x - unitRight) <= radius + TOLERANCE && 
+		std::abs(bulletCrossWallCenter.y - unitTop) <= radius + TOLERANCE) return true;
+	if (std::abs(bulletCrossWallCenter.x - unitRight) <= radius + TOLERANCE && 
+		std::abs(bulletCrossWallCenter.y - unitBottom) <= radius + TOLERANCE) return true;
 	return false;
 }
 
