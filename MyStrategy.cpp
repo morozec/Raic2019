@@ -424,7 +424,7 @@ void initAStarAction(
 	vector<JumpState>& meJumpStates,
 	UnitAction& action,
 	Strategy& strategy,
-	const Game& game, Debug& debug)
+	const Game& game, Debug& debug, bool& isWayFound)
 {
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	
@@ -462,7 +462,9 @@ void initAStarAction(
 		strategy.grid, game.level.tiles.size(), game.level.tiles[0].size(),
 		strategy.closedList, strategy.cellDetails, startPos, endPos, 
 		maxJumpTiles, maxJumpPadJumpTiles,
-		game);
+		game, isWayFound);
+	if (!isWayFound) return;
+	
 	auto curPosition = me.position;
 	auto curJumpState = me.jumpState;
 	mePositions.emplace_back(curPosition);
@@ -606,6 +608,195 @@ bool needMonkeyMode(const Vec2Double& mePosition, const Vec2Double& enemyPositio
 		hasWeaponEnemy && mePosition.y >= enemyPosition.y - TOLERANCE &&
 		enemyFireTick < MONKEY_FIRE_TICK &&
 		MathHelper::getMHDist(mePosition, enemyPosition) < MONKEY_DIST;
+}
+
+void getAttackingData2(
+	const Unit& me,
+	vector<Vec2Double>& mePositions,
+	vector<JumpState>& meJumpStates,
+	UnitAction& meAction,
+	const Unit& enemy,
+	Strategy& strategy,
+	const Game& game,
+	Debug& debug)
+{
+	const auto distToEnemy = MathHelper::getMHDist(me.position, enemy.position);
+
+	if (me.weapon == nullptr) throw runtime_error("no weapon my unit in getAttackingData2");
+	if (enemy.weapon == nullptr) throw runtime_error("no weapon enemy unit in getAttackingData2");
+
+	const auto myFireTimer = me.weapon->fireTimer != nullptr ? *(me.weapon->fireTimer) : 0.0;
+	const auto enemyFireTime = enemy.weapon->fireTimer != nullptr ? *(enemy.weapon->fireTimer) : 0.0;
+
+	bool isWayFound;
+	if (distToEnemy > SAFE_ATTACK_DIST ||
+		myFireTimer < enemyFireTime - TOLERANCE)
+	{
+		initAStarAction(me, enemy.position, enemy.size, mePositions, meJumpStates, meAction, strategy, game, debug, isWayFound);
+		if (!isWayFound) throw runtime_error("Failed to find the Destination Cell from" +
+			to_string(me.position.x) + ", " + to_string(me.position.y) + " to " +
+			to_string(enemy.position.x) + ", " + to_string(enemy.position.y));
+		return;
+	}
+
+	vector<pair<int, int>> unitWalls;
+	for (const auto& unit: game.units)
+	{
+		if (unit.playerId == me.playerId) continue;
+		const int x = static_cast<int>(unit.position.x);
+		const int y = static_cast<int>(unit.position.x);
+		if (strategy.grid[x][y] == 1) {
+			strategy.grid[x][y] = 0;
+			unitWalls.emplace_back(make_pair(x, y));
+		}
+		if (strategy.grid[x][y + 1] == 1)
+		{
+			strategy.grid[x][y + 1] = 0;
+			unitWalls.emplace_back(make_pair(x, y + 1));
+		}
+
+		const bool isHigh = unit.position.y + unit.size.y > y + 2;
+		
+		if (isHigh && strategy.grid[x][y + 2] == 1)
+		{
+			strategy.grid[x][y + 2] = 0;
+			unitWalls.emplace_back(make_pair(x, y + 2));
+		}
+		
+		if (unit.position.x - unit.size.x/2 < x)
+		{
+			if (strategy.grid[x - 1][y] == 1) {
+				strategy.grid[x - 1][y] = 0;
+				unitWalls.emplace_back(make_pair(x - 1, y));
+			}
+			if (strategy.grid[x - 1][y + 1] == 1)
+			{
+				strategy.grid[x - 1][y + 1] = 0;
+				unitWalls.emplace_back(make_pair(x - 1, y + 1));
+			}
+			if (isHigh && strategy.grid[x - 1][y + 2] == 1)
+			{
+				strategy.grid[x - 1][y + 2] = 0;
+				unitWalls.emplace_back(make_pair(x - 1, y + 2));
+			}
+		}
+
+		if (unit.position.x + unit.size.x / 2 > x + 1)
+		{
+			if (strategy.grid[x + 1][y] == 1) {
+				strategy.grid[x + 1][y] = 0;
+				unitWalls.emplace_back(make_pair(x + 1, y));
+			}
+			if (strategy.grid[x + 1][y + 1] == 1)
+			{
+				strategy.grid[x + 1][y + 1] = 0;
+				unitWalls.emplace_back(make_pair(x + 1, y + 1));
+			}
+			if (isHigh && strategy.grid[x + 1][y + 2] == 1)
+			{
+				strategy.grid[x + 1][y + 2] = 0;
+				unitWalls.emplace_back(make_pair(x + 1, y + 2));
+			}
+		}
+	}
+
+
+	double runawayX;
+	int dx = 0;
+	int coeff = enemy.position.x <= me.position.x ? 1 : -1;
+	int intRunawayY = static_cast<int>(me.position.y);
+	auto isOkRunaway = false;
+
+	while (!isOkRunaway)
+	{
+		runawayX = enemy.position.x + (SAFE_ATTACK_DIST + dx)* coeff;
+		if (runawayX > game.level.tiles.size() - SAFE_DIST_TO_BORDER || 
+			runawayX < SAFE_DIST_TO_BORDER)
+		{
+			coeff *= -1;
+			dx = 0;
+			runawayX = enemy.position.x + (SAFE_ATTACK_DIST + dx) * coeff;
+		}		
+
+		const int intRunawayX = static_cast<int>(runawayX);		
+
+		while (intRunawayY < game.level.tiles[0].size())
+		{
+			const auto thisTile = game.level.tiles[intRunawayX][intRunawayY];
+			const auto bottomTile = game.level.tiles[intRunawayX][intRunawayY - 1];
+			if (strategy.grid[intRunawayX][intRunawayY] == 1 &&
+				(thisTile == EMPTY || thisTile == LADDER) &&
+				(bottomTile != EMPTY && bottomTile != JUMP_PAD))
+			{
+				isOkRunaway = true;
+				break;
+			}
+			intRunawayY++;
+		}
+
+		if (!isOkRunaway)
+		{
+			intRunawayY = static_cast<int>(me.position.y) - 1;
+			while (intRunawayY > 1)
+			{
+				const auto thisTile = game.level.tiles[intRunawayX][intRunawayY];
+				const auto bottomTile = game.level.tiles[intRunawayX][intRunawayY - 1];
+				if (strategy.grid[intRunawayX][intRunawayY] == 1 &&
+					(thisTile == EMPTY || thisTile == LADDER) &&
+					(bottomTile != EMPTY && bottomTile != JUMP_PAD))
+				{
+					isOkRunaway = true;
+					break;
+				}
+				intRunawayY--;
+			}
+		}
+		dx++;
+	}
+
+	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
+	if (isOkRunaway)
+	{
+		const Vec2Double runawayPos = { runawayX, intRunawayY + 0.5 };
+
+		initAStarAction(me, runawayPos, { 1, 1 }, mePositions, meJumpStates, meAction, strategy, game, debug, isWayFound);
+		if (!isWayFound)
+		{
+			//TODO: перебрать другие точки отхода
+			mePositions.emplace_back(me.position);		
+			meJumpStates.emplace_back(me.jumpState);
+			meAction.velocity = 0;
+			meAction.jump = false;
+			meAction.jumpDown = false;
+
+			auto nextTickMeJumpState = me.jumpState;
+			const auto nextTickMePosition = Simulator::getUnitInTimePosition(me.position, me.size, me.id,
+				meAction, tickTime, nextTickMeJumpState, game);
+
+			mePositions.emplace_back(nextTickMePosition);
+			meJumpStates.emplace_back(nextTickMeJumpState);
+		}
+	}
+	else
+	{
+		mePositions.emplace_back(me.position);
+		meJumpStates.emplace_back(me.jumpState);
+		meAction.velocity = 0;
+		meAction.jump = false;
+		meAction.jumpDown = false;
+
+		auto nextTickMeJumpState = me.jumpState;
+		const auto nextTickMePosition = Simulator::getUnitInTimePosition(me.position, me.size, me.id,
+			meAction, tickTime, nextTickMeJumpState, game);
+
+		mePositions.emplace_back(nextTickMePosition);
+		meJumpStates.emplace_back(nextTickMeJumpState);
+	}
+
+	for (const auto& uw : unitWalls)
+	{
+		strategy.grid[uw.first][uw.second] = 1;
+	}	
 }
 
 
@@ -1677,6 +1868,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	auto jumpingUnitId = strategy_.getJumpingUnitId();
 
 	auto isHealing = false;
+	bool isWayFound;
 
 	if (unit.weapon == nullptr)
 	{
@@ -1712,7 +1904,11 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			unit, nearestWeapon->position, nearestWeapon->size, 
 			meAttackingPositions, meAttackingJumpStates, meAttackingAction,
 			strategy_,
-			game, debug);
+			game, debug, isWayFound);
+
+		if (!isWayFound) throw runtime_error("Failed to find the Destination Cell from" +
+			to_string(unit.position.x) + ", " + to_string(unit.position.y) + " to " +
+			to_string(nearestWeapon->position.x) + ", " + to_string(nearestWeapon->position.y));
 	}
 	else
 	{
@@ -1777,7 +1973,10 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 				unit,  nearestHPLootBox->position, nearestHPLootBox->size,
 				curMeAttackingPositions, curMeAttackingJumpStates, curMeAttackingAction,
 				strategy_,
-				game, debug);
+				game, debug, isWayFound);
+			if (!isWayFound) throw runtime_error("Failed to find the Destination Cell from" +
+				to_string(unit.position.x) + ", " + to_string(unit.position.y) + " to " +
+				to_string(nearestHPLootBox->position.x) + ", " + to_string(nearestHPLootBox->position.y));
 						
 			for (size_t i = 1; i < curMeAttackingPositions.size(); ++i)
 			{
@@ -1829,12 +2028,16 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 					unit, noWeaponEnemyUnit->position, noWeaponEnemyUnit->size,
 					meAttackingPositions, meAttackingJumpStates, meAttackingAction,
 					strategy_,
-					game, debug);
+					game, debug, isWayFound);
+				if (!isWayFound) throw runtime_error("Failed to find the Destination Cell from" +
+					to_string(unit.position.x) + ", " + to_string(unit.position.y) + " to " +
+					to_string(noWeaponEnemyUnit->position.x) + ", " + to_string(noWeaponEnemyUnit->position.y));
+
 			}
 			else
 			{
 
-				const LootBox* nearestMine = nullptr;
+				/*const LootBox* nearestMine = nullptr;
 				minMHDist = INT_MAX;
 				for (const LootBox& lootBox : game.lootBoxes)
 				{
@@ -1868,15 +2071,17 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 						unit, nearestMine->position, nearestMine->size,
 						meAttackingPositions, meAttackingJumpStates, meAttackingAction,
 						strategy_,
-						game, debug);
+						game, debug, isWayFound);
+
+					if (!isWayFound) throw runtime_error("Failed to find the Destination Cell from" +
+						to_string(unit.position.x) + ", " + to_string(unit.position.y) + " to " +
+						to_string(nearestMine->position.x) + ", " + to_string(nearestMine->position.y));
 				}
-				else
-					getAttackingData(
-						unit,
-						meAttackingPositions, meAttackingJumpStates,
-						nearestEnemy->size, enemyPositions,
-						enemyFireTimer,
-						meAttackingAction, startJumpY, jumpingUnitId, isMonkeyMode, game);
+				else				
+				{*/
+					getAttackingData2(
+						unit, meAttackingPositions, meAttackingJumpStates, meAttackingAction, *nearestEnemy, strategy_, game, debug);
+				//}
 			}
 		}
 	}
