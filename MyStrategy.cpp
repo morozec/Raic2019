@@ -835,16 +835,11 @@ void setShootingAction(
 				continue;
 			}
 
-			auto xDist = me.position.x > unit.position.x ?
-				me.position.x - game.properties.mineSize.x / 2 - (unit.position.x + unit.size.x / 2) :
-				me.position.x + game.properties.mineSize.x / 2 - (unit.position.x - unit.size.x / 2);
-			
-			auto yDist = me.position.y > unit.position.y ?
-				me.position.y - (unit.position.y + unit.size.y) :
-				me.position.y + game.properties.mineSize.y - unit.position.y;
+			const auto isShootUnit = Strategy::isMineExplosionShootUnit(me.position, game.properties.mineSize, game.properties.mineExplosionParams.radius,
+				unit.position, unit.size,
+				game.properties.unitMaxHorizontalSpeed * tickTime, game.properties.unitJumpSpeed * tickTime);		
 
-			if (std::abs(xDist) + game.properties.unitMaxHorizontalSpeed * tickTime < game.properties.mineExplosionParams.radius &&
-				std::abs(yDist) + game.properties.unitJumpSpeed * tickTime < game.properties.mineExplosionParams.radius)
+			if (isShootUnit)
 			{
 				if (unit.playerId == me.playerId) meKilledCount++;
 				else enemyKilledCount++;

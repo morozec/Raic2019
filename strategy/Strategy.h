@@ -56,6 +56,10 @@ public:
 		const std::shared_ptr<ExplosionParams>& explosionParams, const Vec2Double& bulletCrossWallCenter,
 		const Vec2Double& unitPosition, const Vec2Double& unitSize);
 
+	static bool isMineExplosionShootUnit(const Vec2Double& minePosition, const Vec2Double& mineSize,
+		double minExplosionRadius, const Vec2Double& unitPosition, const Vec2Double& unitSize,
+		double xRunDist, double yRunDist);
+
 	int getRunawayDirection(int id) const;
 	int getStopRunawayTick(int id) const;
 	void setRunaway(int id, RunawayDirection runaway_direction, int srt);

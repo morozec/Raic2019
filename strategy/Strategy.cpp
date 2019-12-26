@@ -222,7 +222,31 @@ std::map<Bullet, BulletSimulation> Strategy::getEnemyBulletsSimulation(const Gam
 				simulation.bulletCrossCorner = bulletCorner;
 				simulation.targetCrossTime = MathHelper::getVectorLength(bulletCorner, crossPoint) /
 					MathHelper::getVectorLength(bullet.velocity);
+				simulation.bulletTarget = EnemyUnit;
 			}
+		}
+
+		//проверим, что пуля попадет в мину
+		for (const auto& mine: game.mines)
+		{
+			Vec2Double crossPoint;
+			Vec2Double bulletCorner;
+			const auto isShooting = Simulator::getBulletRectangleFirstCrossPoint(
+				bullet.position, bullet.velocity, bullet.size / 2,
+				mine.position.x - mine.size.x / 2, mine.position.y, mine.position.x + mine.size.x / 2, mine.position.y + mine.size.y,
+				crossPoint, bulletCorner);
+			if (!isShooting) continue;
+
+			if (MathHelper::getVectorLength2(bulletCorner, crossPoint) >
+				MathHelper::getVectorLength2(simulation.bulletCrossCorner, simulation.targetCrossPoint))
+				continue; //пуля раньше ударится в стену или в юнита
+
+			simulation.targetCrossPoint = crossPoint;
+			simulation.bulletCrossCorner = bulletCorner;
+			simulation.targetCrossTime = MathHelper::getVectorLength(bulletCorner, crossPoint) /
+				MathHelper::getVectorLength(bullet.velocity);
+			simulation.bulletTarget = GameMine;
+			simulation.minePosition = mine.position;
 		}
 		
 		simulation.bulletPositions = Simulator::getBulletPositions(bullet.position, bullet.velocity, simulation.targetCrossTime, game);
@@ -322,6 +346,18 @@ std::vector<std::pair<int, int>> Strategy::getShootMeBullets(
 					break;
 				}
 
+				int damage = 0;
+
+				if (bulletSimulation.bulletTarget == GameMine)
+				{
+					const auto isMineShoot = isMineExplosionShootUnit(bulletSimulation.minePosition, game.properties.mineSize,
+						game.properties.mineExplosionParams.radius, unitInTimePosition, meSize, 0.0, 0.0);
+					if (isMineShoot)
+					{
+						damage += game.properties.mineExplosionParams.damage;
+					}
+				}
+				
 				if (bullet.explosionParams != nullptr)
 				{
 					const auto bulletCrossWallCenter = Vec2Double(
@@ -329,11 +365,17 @@ std::vector<std::pair<int, int>> Strategy::getShootMeBullets(
 						bullet.position.y + bullet.velocity.y * bulletSimulation.targetCrossTime);
 					if (isBulletExplosionShootUnit(bullet.explosionParams, bulletCrossWallCenter, unitInTimePosition, meSize))
 					{
-						int damage = bullet.explosionParams->damage;
-						shootMeBullets.emplace_back(std::make_pair(tick, damage));
+						damage += bullet.explosionParams->damage;						
 						break;
-					}					
-				}					
+					}
+				}
+
+				if (damage > 0)
+				{
+					shootMeBullets.emplace_back(std::make_pair(tick, damage));
+					break;
+				}
+				
 			}			
 		}
 				
@@ -679,13 +721,24 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 								if (bullet.explosionParams != nullptr) thisTickUpDamage += bullet.explosionParams->damage;								
 								gotUpBullets[bullet] = true;
 							}
-							else if (!bulletExists && 
-								isBulletExplosionShootUnit(
-									bullet.explosionParams, bulletCrossWallCenter, newJumpUnitPosition, unitSize))
+							else if (!bulletExists)
 							{
-								thisTickUpDamage += bullet.explosionParams->damage;
-								gotUpBullets[bullet] = true;
-							}							
+								if (isBulletExplosionShootUnit(
+									bullet.explosionParams, bulletCrossWallCenter, newJumpUnitPosition, unitSize))
+								{
+									thisTickUpDamage += bullet.explosionParams->damage;
+									gotUpBullets[bullet] = true;
+								}
+								if (bulletSimulation.bulletTarget == GameMine &&
+									isMineExplosionShootUnit(
+										bulletSimulation.minePosition, game.properties.mineSize, game.properties.mineExplosionParams.radius,
+										newJumpUnitPosition, unitSize, 0,0))
+								{
+									thisTickUpDamage += game.properties.mineExplosionParams.damage;
+									gotUpBullets[bullet] = true;
+								}
+							}						
+											
 						}
 
 
@@ -725,12 +778,22 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 								if (bullet.explosionParams != nullptr) thisTickDownDamage += bullet.explosionParams->damage;
 								gotDownBullets[bullet] = true;
 							}
-							else if (!bulletExists && 
-								isBulletExplosionShootUnit(
-									bullet.explosionParams, bulletCrossWallCenter, newFallUnitPosition, unitSize))
+							else if (!bulletExists)
 							{
-								thisTickDownDamage += bullet.explosionParams->damage;
-								gotDownBullets[bullet] = true;
+								if (isBulletExplosionShootUnit(
+									bullet.explosionParams, bulletCrossWallCenter, newFallUnitPosition, unitSize))
+								{
+									thisTickDownDamage += bullet.explosionParams->damage;
+									gotDownBullets[bullet] = true;
+								}
+								if (bulletSimulation.bulletTarget == GameMine &&
+									isMineExplosionShootUnit(
+										bulletSimulation.minePosition, game.properties.mineSize, game.properties.mineExplosionParams.radius,
+										newFallUnitPosition, unitSize, 0, 0))
+								{
+									thisTickDownDamage += game.properties.mineExplosionParams.damage;
+									gotDownBullets[bullet] = true;
+								}
 							}
 						}
 
@@ -771,12 +834,22 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 								if (bullet.explosionParams != nullptr) thisTickLeftDamage += bullet.explosionParams->damage;
 								gotLeftBullets[bullet] = true;
 							}
-							else if (!bulletExists && 
-								isBulletExplosionShootUnit(
-									bullet.explosionParams, bulletCrossWallCenter, newGoLeftUnitPosition, unitSize))
+							else if (!bulletExists)
 							{
-								thisTickLeftDamage += bullet.explosionParams->damage;
-								gotLeftBullets[bullet] = true;
+								if (isBulletExplosionShootUnit(
+									bullet.explosionParams, bulletCrossWallCenter, newGoLeftUnitPosition, unitSize))
+								{
+									thisTickLeftDamage += bullet.explosionParams->damage;
+									gotLeftBullets[bullet] = true;
+								}
+								if (bulletSimulation.bulletTarget == GameMine &&
+									isMineExplosionShootUnit(
+										bulletSimulation.minePosition, game.properties.mineSize, game.properties.mineExplosionParams.radius,
+										newGoLeftUnitPosition, unitSize, 0, 0))
+								{
+									thisTickLeftDamage += game.properties.mineExplosionParams.damage;
+									gotLeftBullets[bullet] = true;
+								}
 							}
 						}
 
@@ -817,12 +890,22 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 								if (bullet.explosionParams != nullptr) thisTickRightDamage += bullet.explosionParams->damage;
 								gotRightBullets[bullet] = true;
 							}
-							else if (!bulletExists && 
-								isBulletExplosionShootUnit(
-									bullet.explosionParams, bulletCrossWallCenter, newGoRightUnitPosition, unitSize))
+							else if (!bulletExists)
 							{
-								thisTickRightDamage += bullet.explosionParams->damage;
-								gotRightBullets[bullet] = true;
+								if (isBulletExplosionShootUnit(
+									bullet.explosionParams, bulletCrossWallCenter, newGoRightUnitPosition, unitSize))
+								{
+									thisTickRightDamage += bullet.explosionParams->damage;
+									gotRightBullets[bullet] = true;
+								}
+								if (bulletSimulation.bulletTarget == GameMine &&
+									isMineExplosionShootUnit(
+										bulletSimulation.minePosition, game.properties.mineSize, game.properties.mineExplosionParams.radius,
+										newGoRightUnitPosition, unitSize, 0, 0))
+								{
+									thisTickRightDamage += game.properties.mineExplosionParams.damage;
+									gotRightBullets[bullet] = true;
+								}
 							}
 						}
 
@@ -1012,6 +1095,23 @@ bool Strategy::isBulletExplosionShootUnit(
 	if (std::abs(bulletCrossWallCenter.x - unitRight) <= radius + TOLERANCE && 
 		std::abs(bulletCrossWallCenter.y - unitBottom) <= radius + TOLERANCE) return true;
 	return false;
+}
+
+bool Strategy::isMineExplosionShootUnit(const Vec2Double& minePosition, const Vec2Double& mineSize,
+	double minExplosionRadius, const Vec2Double& unitPosition, const Vec2Double& unitSize,
+	double xRunDist, double yRunDist)
+{
+	double xDist;
+	if (minePosition.x - mineSize.x / 2 > unitPosition.x + unitSize.x / 2) xDist = minePosition.x - mineSize.x / 2 - (unitPosition.x + unitSize.x / 2);
+	else if (minePosition.x + mineSize.x / 2 < unitPosition.x - unitSize.x / 2) xDist = unitPosition.x - unitSize.x / 2 - (minePosition.x + mineSize.x / 2);
+	else xDist = 0.0;
+	
+	double yDist;
+	if (minePosition.y > unitPosition.y + unitSize.y) yDist = minePosition.y - unitPosition.y + unitSize.y;
+	else if (minePosition.y + mineSize.y < unitPosition.y) yDist = unitPosition.y - (minePosition.y + mineSize.y);
+	else yDist = 0.0;
+
+	return xDist + xRunDist <= minExplosionRadius + TOLERANCE && yDist + yRunDist <= minExplosionRadius + TOLERANCE;
 }
 
 
