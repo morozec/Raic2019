@@ -135,7 +135,7 @@ vector<Four> aStarSearch(
 	vector<vector<vector<vector<cell>>>>& cellDetails,
 	const Four& src, const Pair& dest,
 	int maxJumpTiles, int maxJumpPadJumpTiles,
-	const Game& game)
+	const Game& game, bool& isWayFound)
 {
 	// z-index:
 	// -1 - falling
@@ -1148,8 +1148,13 @@ vector<Four> aStarSearch(
 	// list is empty, then we conclude that we failed to 
 	// reach the destiantion cell. This may happen when the 
 	// there is no way to destination cell (due to blockages) 
-	if (!foundDest) throw runtime_error("Failed to find the Destination Cell\n");
-	
+	if (!foundDest)
+	{
+		isWayFound = false;
+		return vector<Four>();
+	}
+
+	isWayFound = true;
 	return tracePath(cellDetails, dest, foundDestK, foundDestL);
 }
 

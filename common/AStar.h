@@ -22,4 +22,4 @@ std::vector<Four> aStarSearch(
 	std::vector<std::vector<std::vector<std::vector<cell>>>>& cellDetails,
 	const Four& src, const Pair& dest,
 	int maxJumpTiles, int maxJumpPadJumpTiles,
-	const Game& game);
+	const Game& game, bool& isWayFound);
