@@ -255,6 +255,30 @@ std::map<Bullet, BulletSimulation> Strategy::getEnemyBulletsSimulation(const Gam
 	return simulations;
 }
 
+
+std::vector<std::pair<int, int>> Strategy::getShootMeMines(const Vec2Double& mePosition, const Vec2Double& meSize, 
+	int addTicks,
+	const Game& game)
+{
+	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
+	std::vector<std::pair<int, int>> shootMeMines;
+	for (const auto& mine:game.mines)
+	{
+		if (mine.state != TRIGGERED) continue;
+		if (addTicks == 1 && mine.timer != nullptr && *mine.timer < tickTime) continue; //мина взорволась в тик 0-1. ее мы учли заранее
+		const auto shoot = isMineExplosionShootUnit(mine.position, mine.size, mine.explosionParams.radius,
+			mePosition, meSize, 0, 0);
+				
+		if (shoot)
+		{
+			const auto tick = static_cast<int>(ceil(*mine.timer / tickTime)) - addTicks;
+			shootMeMines.emplace_back(tick, mine.explosionParams.damage);
+		}
+	}
+	return shootMeMines;
+}
+
+
 std::vector<std::pair<int, int>> Strategy::getShootMeBullets(
 	const Vec2Double& mePosition, const Vec2Double& meSize, const JumpState& meJumpState, int mePlayerId, int meUnitId,
 	const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, int addTicks,
@@ -456,13 +480,14 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 	const Vec2Double& unitPosition, const Vec2Double& unitSize, int unitPlayerId, int unitId,
 	const JumpState& jumpState,
 	const std::vector<std::pair<int, int>>& shootingMeBullets,	
+	const std::vector<std::pair<int, int>>& shootMeMines,	
 	const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, int addTicks,
 	bool checkUp, bool checkDown, bool checkLeft, bool checkRight,
 	const Game& game) const
 {
 	//if (addTicks != 0 && addTicks != 1) throw std::runtime_error("addTicks is not 0 or 1");
 	
-	if (shootingMeBullets.empty())
+	if (shootingMeBullets.empty() && shootMeMines.empty())
 	{
 		return std::make_tuple(GoNONE, -1, -1, 0);
 	}
@@ -475,6 +500,12 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 		if (item.first < maxFirstShootMeTick) maxFirstShootMeTick = item.first;
 		minShootMeDamage += item.second;		
 	}
+	for (const auto& item:shootMeMines)
+	{
+		if (item.first < maxFirstShootMeTick) maxFirstShootMeTick = item.first;
+		minShootMeDamage += item.second;
+	}
+	
 
 	auto bestRunAwayDirection = GoNONE;
 	auto bestStartGoTick = -1;
@@ -490,6 +521,13 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 			minShootMeTick = smb.first;
 		}
 	}
+	for (const auto& smm : shootMeMines)
+	{
+		if (smm.first < minShootMeTick)
+		{
+			minShootMeTick = smm.first;
+		}
+	}
 	
 
 	double maxShootWallTime = 0;
@@ -499,9 +537,22 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 		{
 			maxShootWallTime = item.second.targetCrossTime;
 		}
-	}
+	}	
 	int maxShootWallTick = static_cast<int>(ceil(maxShootWallTime * game.properties.ticksPerSecond));
-	maxShootWallTick -= addTicks;
+
+	double maxMineExplosionTime = 0;
+	for (const auto& mine:game.mines)
+	{
+		if (mine.state != TRIGGERED) continue;
+		if (mine.timer == nullptr) continue;
+		if (*mine.timer > maxMineExplosionTime) maxMineExplosionTime = *mine.timer;
+	}
+
+	int maxMineExplosionTick = static_cast<int>(ceil(maxMineExplosionTime * game.properties.ticksPerSecond));
+
+	int finalBulletMineTick = std::max(maxShootWallTick, maxMineExplosionTick);
+	
+	finalBulletMineTick -= addTicks;
 
 	
 	UnitAction action;
@@ -523,7 +574,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 	for (int startGoTick = minShootMeTick - 1; startGoTick >= 0; startGoTick--)
 	{	
 		
-		for (int stopGoTick = startGoTick + 1; stopGoTick < maxShootWallTick; ++stopGoTick)
+		for (int stopGoTick = startGoTick + 1; stopGoTick < finalBulletMineTick; ++stopGoTick)
 		{			
 			auto canGoUp = checkUp;
 			auto upDamage = 0;
@@ -569,7 +620,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 				gotRightBullets[bullet] = false;
 			}
 
-			for (int tick = 1; tick <= maxShootWallTick; ++tick)
+			for (int tick = 1; tick <= finalBulletMineTick; ++tick)
 			{
 				auto thisTickUpDamage = 0;
 				auto thisTickDownDamage = 0;
@@ -910,6 +961,90 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 						}
 
 					}
+
+				//цикл по минам
+				for (const auto& mine:game.mines)
+				{
+					if (mine.state != TRIGGERED) continue;
+					const auto isExplodingMine = mine.timer != nullptr &&
+						*mine.timer > (tick + addTicks - 1) * tickTime && *mine.timer <= (tick + addTicks) * tickTime;
+
+					if (!isExplodingMine) continue;
+					const auto time = *mine.timer - (tick + addTicks - 1) / game.properties.ticksPerSecond;
+
+					auto newGoUpJumpState = goUpJumpState;
+					const auto newJumpUnitPosition =
+						Simulator::getUnitInTimePosition(
+							jumpUnitPosition,
+							unitSize,
+							unitId,
+							action,
+							time,
+							newGoUpJumpState,
+							game);
+
+					if (isMineExplosionShootUnit(mine.position, mine.size, mine.explosionParams.radius,
+						newJumpUnitPosition, unitSize, 0 ,0))
+					{
+						thisTickUpDamage += mine.explosionParams.damage;
+					}
+					
+
+					auto newGoDownJumpState = goDownJumpState;
+					const auto newFallUnitPosition =
+						Simulator::getUnitInTimePosition(
+							fallUnitPosition,
+							unitSize,
+							unitId,
+							action,
+							time,
+							newGoDownJumpState,
+							game);
+
+					if (isMineExplosionShootUnit(mine.position, mine.size, mine.explosionParams.radius,
+						newFallUnitPosition, unitSize, 0, 0))
+					{
+						thisTickDownDamage += mine.explosionParams.damage;
+					}
+					
+
+					auto newGoLeftJumpState = goLeftJumpState;
+					const auto newGoLeftUnitPosition = 
+						Simulator::getUnitInTimePosition(
+							goLeftUnitPosition,
+							unitSize,
+							unitId,
+							action,
+							time,
+							newGoLeftJumpState,
+							game);
+
+					if (isMineExplosionShootUnit(mine.position, mine.size, mine.explosionParams.radius,
+						newGoLeftUnitPosition, unitSize, 0, 0))
+					{
+						thisTickLeftDamage += mine.explosionParams.damage;
+					}
+
+
+					auto newGoRightJumpState = goRightJumpState;
+					const auto newGoRightUnitPosition =
+						Simulator::getUnitInTimePosition(
+							goRightUnitPosition,
+							unitSize,
+							unitId,
+							action,
+							time,
+							newGoRightJumpState,
+							game);
+
+					if (isMineExplosionShootUnit(mine.position, mine.size, mine.explosionParams.radius,
+						newGoRightUnitPosition, unitSize, 0, 0))
+					{
+						thisTickRightDamage += mine.explosionParams.damage;
+					}
+				}
+										
+				
 					//if (tick <= startGoTick) {
 					//	beforeStartGoUpDamage[tick] = thisTickUpDamage;
 					//	//beforeStartGoDownDamage[tick] = thisTickDownDamage;
@@ -1022,8 +1157,11 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 
 
 std::map<Bullet, int> Strategy::isSafeMove(
-	const Unit& unit, const UnitAction& action, const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, const Game& game)
+	const Unit& unit, const UnitAction& action, const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, const Game& game,
+	int& minesDamage)
 {
+	minesDamage = 0;
+	
 	std::map<Bullet, int> thisTickShootMeBullets;
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	for (const auto& item : enemyBulletsSimulations)
@@ -1058,18 +1196,50 @@ std::map<Bullet, int> Strategy::isSafeMove(
 			thisTickShootMeBullets[bullet] = damage;
 			continue;
 		}
-		if (!exists && bullet.explosionParams != nullptr)
+		if (!exists)
 		{
-			const auto bulletCrossWallCenter = Vec2Double(
-				bullet.position.x + bullet.velocity.x * bulletSimulation.targetCrossTime,
-				bullet.position.y + bullet.velocity.y * bulletSimulation.targetCrossTime);
-			if (isBulletExplosionShootUnit(bullet.explosionParams, bulletCrossWallCenter, unitInTimePosition, unit.size))
+			int damage = 0;
+			if (bulletSimulation.bulletTarget == GameMine)
 			{
-				thisTickShootMeBullets[bullet] = bullet.explosionParams->damage; 
-				continue;
+				const auto isMineShoot = isMineExplosionShootUnit(bulletSimulation.minePosition, game.properties.mineSize,
+					game.properties.mineExplosionParams.radius, unitInTimePosition, unit.size, 0.0, 0.0);
+				if (isMineShoot)
+				{
+					damage += game.properties.mineExplosionParams.damage;
+				}
 			}
+			
+			if (bullet.explosionParams != nullptr)
+			{
+				const auto bulletCrossWallCenter = Vec2Double(
+					bullet.position.x + bullet.velocity.x * bulletSimulation.targetCrossTime,
+					bullet.position.y + bullet.velocity.y * bulletSimulation.targetCrossTime);
+				if (isBulletExplosionShootUnit(bullet.explosionParams, bulletCrossWallCenter, unitInTimePosition, unit.size))
+				{
+					damage += bullet.explosionParams->damage;					
+				}
+			}
+
+			if (damage > 0) thisTickShootMeBullets[bullet] = damage;
 		}
 	}
+
+	for (const auto& mine:game.mines)
+	{
+		if(mine.state != TRIGGERED) continue;
+		if (mine.timer == nullptr || *mine.timer > tickTime) continue;
+
+		auto jumpState = unit.jumpState;
+		const auto unitInTimePosition = Simulator::getUnitInTimePosition(
+			unit.position, unit.size, unit.id, action, *mine.timer, jumpState, game);
+
+		if (isMineExplosionShootUnit(mine.position, mine.size, mine.explosionParams.radius, 
+			unitInTimePosition, unit.size, 0, 0))
+		{
+			minesDamage += mine.explosionParams.damage;
+		}
+	}
+	
 	return thisTickShootMeBullets;
 }
 
@@ -1098,7 +1268,7 @@ bool Strategy::isBulletExplosionShootUnit(
 }
 
 bool Strategy::isMineExplosionShootUnit(const Vec2Double& minePosition, const Vec2Double& mineSize,
-	double minExplosionRadius, const Vec2Double& unitPosition, const Vec2Double& unitSize,
+	double mineExplosionRadius, const Vec2Double& unitPosition, const Vec2Double& unitSize,
 	double xRunDist, double yRunDist)
 {
 	double xDist;
@@ -1111,7 +1281,7 @@ bool Strategy::isMineExplosionShootUnit(const Vec2Double& minePosition, const Ve
 	else if (minePosition.y + mineSize.y < unitPosition.y) yDist = unitPosition.y - (minePosition.y + mineSize.y);
 	else yDist = 0.0;
 
-	return xDist + xRunDist <= minExplosionRadius + TOLERANCE && yDist + yRunDist <= minExplosionRadius + TOLERANCE;
+	return xDist + xRunDist <= mineExplosionRadius + TOLERANCE && yDist + yRunDist <= mineExplosionRadius + TOLERANCE;
 }
 
 
