@@ -817,20 +817,77 @@ void setShootingAction(
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 
 	const auto centerBottomTile = game.level.tiles[size_t(me.position.x)][size_t(me.position.y - 0.5)];
-	const auto canPlantMine = me.mines > 0 && !Simulator::isUnitOnAir(me.position, me.size, me.id, game) &&
+	const auto isGoodMinePos = 
+		!Simulator::isUnitOnAir(me.position, me.size, me.id, game) &&
 		(centerBottomTile == WALL || centerBottomTile == PLATFORM);
-	if (canPlantMine &&
-		(me.weapon->fireTimer == nullptr || *(me.weapon->fireTimer) - tickTime < 0))
+
+	auto areSamePosMines = false;
+	for (const auto& mine : game.mines)
+	{
+		if (std::abs(mine.position.x - me.position.x) < TOLERANCE && std::abs(mine.position.y - me.position.y) < TOLERANCE)
+		{
+			areSamePosMines = true;
+			break;
+		}
+	}
+
+	if (isGoodMinePos && !areSamePosMines && me.mines >= 2 &&
+		(me.weapon->fireTimer == nullptr || *(me.weapon->fireTimer) - 2 * tickTime < 0))
 	{
 		int meLeftCount = 0;
 		int enemyLeftCount = 0;
 		int meKilledCount = 0;
 		int enemyKilledCount = 0;
+		for (const auto& unit : game.units)
+		{
+			if (unit.playerId == me.playerId) meLeftCount++;
+			else enemyLeftCount++;
+
+			if (unit.id == me.id)
+			{
+				meKilledCount++;
+				continue;
+			}
+
+			if (unit.playerId != me.playerId && unit.weapon == nullptr) continue;//не подрываем безоружных
+
+			const auto isShootUnit = Strategy::isMineExplosionShootUnit(me.position, game.properties.mineSize, game.properties.mineExplosionParams.radius,
+				unit.position, unit.size,
+				game.properties.unitMaxHorizontalSpeed * 2 * tickTime, game.properties.unitJumpSpeed *  2 * tickTime);
+
+			if (isShootUnit)
+			{
+				if (unit.playerId == me.playerId) meKilledCount++;
+				else enemyKilledCount++;
+			}
+		}
+
+		meLeftCount -= meKilledCount;
+		enemyLeftCount -= enemyKilledCount;
+
+		if (enemyKilledCount > 0 && meLeftCount >= enemyLeftCount)
+		{
+			action.plantMine = true;
+			action.aim = { 0, -1 };
+			action.shoot = false;
+			return;
+		}
+	}
+	
+	
+	if (isGoodMinePos && me.mines > 0 &&
+		(me.weapon->fireTimer == nullptr || *(me.weapon->fireTimer) - tickTime < 0))
+	{
+		int meLeftCount = 0;
+		int enemyLeftCount = 0;
+		int meKilledCount = 0;
+		int enemyKilledCount = 0;		
+		
 		for (const auto& unit: game.units)
 		{
 			if (unit.playerId == me.playerId) meLeftCount++;
 			else enemyLeftCount++;
-			if (unit.health > game.properties.mineExplosionParams.damage) continue;			
+			if (!areSamePosMines && unit.health > game.properties.mineExplosionParams.damage) continue;			
 			
 			if (unit.id == me.id)
 			{
@@ -863,7 +920,7 @@ void setShootingAction(
 		}
 	}	
 
-	if (canPlantMine && isHealing)
+	if (isGoodMinePos && me.mines > 0 && isHealing)
 	{
 		double myOtherUnitDist = INT_MAX;
 		for (const auto& unit : game.units)
