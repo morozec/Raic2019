@@ -136,7 +136,7 @@ vector<Four> aStarSearch(
 	cell****& cellDetails,
 	const Four& src, const Pair& dest,
 	int maxJumpTiles, int maxJumpPadJumpTiles,
-	const Game& game, bool& isWayFound)
+	const Game& game)
 {
 	// z-index:
 	// -1 - falling
@@ -173,7 +173,6 @@ vector<Four> aStarSearch(
 	// If the destination cell is the same as source cell 
 	if (isDestination(start_x, start_y, dest) == true)
 	{
-		isWayFound = true;
 		return vector<Four>(0);
 	}	
 
@@ -1290,11 +1289,9 @@ vector<Four> aStarSearch(
 	// there is no way to destination cell (due to blockages) 
 	if (!foundDest)
 	{
-		isWayFound = false;
 		return vector<Four>();
 	}
 
-	isWayFound = true;
 	return tracePath(cellDetails, dest, foundDestK, foundDestL);
 }
 

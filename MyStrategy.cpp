@@ -424,7 +424,7 @@ void initAStarAction(
 	vector<JumpState>& meJumpStates,
 	UnitAction& action,
 	Strategy& strategy,
-	const Game& game, Debug& debug, bool& isWayFound)
+	const Game& game, Debug& debug)
 {
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	
@@ -462,8 +462,7 @@ void initAStarAction(
 		strategy.grid, game.level.tiles.size(), game.level.tiles[0].size(),
 		strategy.closedList, strategy.cellDetails, startPos, endPos, 
 		maxJumpTiles, maxJumpPadJumpTiles,
-		game, isWayFound);
-	if (!isWayFound) return;
+		game);
 	
 	auto curPosition = me.position;
 	auto curJumpState = me.jumpState;
@@ -653,10 +652,8 @@ void getAttackingData2(
 	const auto canRunaway = isEnoughTimeToRunaway(me, enemy, tickTime, game.properties.unitMaxHorizontalSpeed);
 	if (canRunaway)
 	{
-		initAStarAction(me, enemy.position, enemy.size, mePositions, meJumpStates, meAction, strategy, game, debug, isWayFound);
-		if (!isWayFound) throw runtime_error("Failed to find the Destination Cell from" +
-			to_string(me.position.x) + ", " + to_string(me.position.y) + " to " +
-			to_string(enemy.position.x) + ", " + to_string(enemy.position.y));
+		initAStarAction(
+			me, enemy.position, enemy.size, mePositions, meJumpStates, meAction, strategy, game, debug);
 		return;
 	}
 
@@ -859,22 +856,8 @@ void getAttackingData2(
 	{
 		const Vec2Double runawayPos = { runawayX, runawayY };
 
-		initAStarAction(me, runawayPos, { 1, 1 }, mePositions, meJumpStates, meAction, strategy, game, debug, isWayFound);
-		if (!isWayFound)
-		{
-			mePositions.emplace_back(me.position);		
-			meJumpStates.emplace_back(me.jumpState);
-			meAction.velocity = 0;
-			meAction.jump = false;
-			meAction.jumpDown = false;
-
-			auto nextTickMeJumpState = me.jumpState;
-			const auto nextTickMePosition = Simulator::getUnitInTimePosition(me.position, me.size, me.id,
-				meAction, tickTime, nextTickMeJumpState, game);
-
-			mePositions.emplace_back(nextTickMePosition);
-			meJumpStates.emplace_back(nextTickMeJumpState);
-		}
+		initAStarAction(
+			me, runawayPos, { 1, 1 }, mePositions, meJumpStates, meAction, strategy, game, debug);		
 	}
 	else
 	{
@@ -1985,7 +1968,6 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	auto jumpingUnitId = strategy_.getJumpingUnitId();
 
 	auto isHealing = false;
-	bool isWayFound;
 
 	if (unit.weapon == nullptr)
 	{
@@ -2021,11 +2003,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			unit, nearestWeapon->position, nearestWeapon->size, 
 			meAttackingPositions, meAttackingJumpStates, meAttackingAction,
 			strategy_,
-			game, debug, isWayFound);
+			game, debug);
 
-		if (!isWayFound) throw runtime_error("Failed to find the Destination Cell from" +
-			to_string(unit.position.x) + ", " + to_string(unit.position.y) + " to " +
-			to_string(nearestWeapon->position.x) + ", " + to_string(nearestWeapon->position.y));
 	}
 	else
 	{
@@ -2090,10 +2069,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 				unit,  nearestHPLootBox->position, nearestHPLootBox->size,
 				curMeAttackingPositions, curMeAttackingJumpStates, curMeAttackingAction,
 				strategy_,
-				game, debug, isWayFound);
-			if (!isWayFound) throw runtime_error("Failed to find the Destination Cell from" +
-				to_string(unit.position.x) + ", " + to_string(unit.position.y) + " to " +
-				to_string(nearestHPLootBox->position.x) + ", " + to_string(nearestHPLootBox->position.y));
+				game, debug);
 						
 			for (size_t i = 1; i < curMeAttackingPositions.size(); ++i)
 			{
@@ -2145,10 +2121,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 					unit, noWeaponEnemyUnit->position, noWeaponEnemyUnit->size,
 					meAttackingPositions, meAttackingJumpStates, meAttackingAction,
 					strategy_,
-					game, debug, isWayFound);
-				if (!isWayFound) throw runtime_error("Failed to find the Destination Cell from" +
-					to_string(unit.position.x) + ", " + to_string(unit.position.y) + " to " +
-					to_string(noWeaponEnemyUnit->position.x) + ", " + to_string(noWeaponEnemyUnit->position.y));
+					game, debug);
 
 			}
 			else
