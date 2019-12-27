@@ -830,13 +830,15 @@ void setShootingAction(
 		{
 			if (unit.playerId == me.playerId) meLeftCount++;
 			else enemyLeftCount++;
-			if (unit.health > game.properties.mineExplosionParams.damage) continue;
+			if (unit.health > game.properties.mineExplosionParams.damage) continue;			
 			
 			if (unit.id == me.id)
 			{
 				meKilledCount++;
 				continue;
 			}
+
+			if (unit.playerId != me.playerId && unit.weapon == nullptr) continue;//не подрываем безоружных
 
 			const auto isShootUnit = Strategy::isMineExplosionShootUnit(me.position, game.properties.mineSize, game.properties.mineExplosionParams.radius,
 				unit.position, unit.size,
