@@ -660,7 +660,7 @@ void getAttackingData2(
 	{
 		if (unit.playerId == me.playerId) continue;
 		const int x = static_cast<int>(unit.position.x);
-		const int y = static_cast<int>(unit.position.x);
+		const int y = static_cast<int>(unit.position.y);
 		if (strategy.grid[x][y] == 1) {
 			strategy.grid[x][y] = 0;
 			unitWalls.emplace_back(make_pair(x, y));
