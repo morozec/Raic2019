@@ -65,7 +65,7 @@ int calculateHValue(int col, int row, Pair dest)
 
 // A Utility Function to trace the path from the source 
 // to destination 
-vector<Four> tracePath(vector<vector<vector<vector<cell>>>> cellDetails, Pair dest, int foundDestK, int foundDestL)
+vector<Four> tracePath(cell****& cellDetails, Pair dest, int foundDestK, int foundDestL)
 {
 	int col = dest.first;
 	int row = dest.second;
@@ -132,8 +132,8 @@ int getJumpPadJ(int startI, int startJ, int targetI, int targetJ, const Game& ga
 // to A* Search Algorithm 
 vector<Four> aStarSearch(
 	int**& grid, int COL, int ROW,
-	vector<vector<vector<vector<bool>>>>& closedList,
-	vector<vector<vector<vector<cell>>>>& cellDetails,
+	bool****& closedList,
+	cell****& cellDetails,
 	const Four& src, const Pair& dest,
 	int maxJumpTiles, int maxJumpPadJumpTiles,
 	const Game& game)

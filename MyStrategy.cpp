@@ -1383,16 +1383,31 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		const auto maxJumpTiles = static_cast<int>(game.properties.jumpPadJumpTime * game.properties.jumpPadJumpSpeed);
 		const auto Z_SIZE = maxJumpTiles + 2; //+1 - на падение, +1 - на стояние
 		const auto PAD_JUMP_STATE_SIZE = 2;
+
+		bool**** closedList = new bool***[cols];
+		cell**** cellDetails = new cell***[cols];
 		
-		strategy_.closedList = vector<vector<vector<vector<bool>>>> (
-			cols, vector<vector<vector<bool>>>(
-				rows, vector<vector<bool>>(
-					Z_SIZE, vector<bool>(PAD_JUMP_STATE_SIZE, false))));
-		
-		strategy_.cellDetails = vector<vector<vector<vector<cell>>>> (
-			cols, vector<vector<vector<cell>>>(
-				rows, vector<vector<cell>>(
-					Z_SIZE, vector<cell>(PAD_JUMP_STATE_SIZE))));
+		for (int i = 0; i < cols; ++i)
+		{
+			closedList[i] = new bool**[rows];
+			cellDetails[i] = new cell**[rows];
+			for (int j = 0; j < rows; ++j)
+			{
+				closedList[i][j] = new bool*[Z_SIZE];
+				cellDetails[i][j] = new cell*[Z_SIZE];
+				for (int k = 0; k < Z_SIZE; ++k)
+				{
+					closedList[i][j][k] = new bool[PAD_JUMP_STATE_SIZE];
+					cellDetails[i][j][k] = new cell[PAD_JUMP_STATE_SIZE];
+					for (int l = 0; l < PAD_JUMP_STATE_SIZE; ++l)
+					{
+						closedList[i][j][k][l] = false;
+					}
+				}
+			}
+		}		
+		strategy_.closedList = closedList;
+		strategy_.cellDetails = cellDetails;
 	}
 	
 

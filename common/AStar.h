@@ -19,8 +19,8 @@ struct cell
 
 std::vector<Four> aStarSearch(
 	int**& grid, int COL, int ROW,
-	std::vector<std::vector<std::vector<std::vector<bool>>>>& closedList,
-	std::vector<std::vector<std::vector<std::vector<cell>>>>& cellDetails,
+	bool****& closedList,
+	cell****& cellDetails,
 	const Four& src, const Pair& dest,
 	int maxJumpTiles, int maxJumpPadJumpTiles,
 	const Game& game);

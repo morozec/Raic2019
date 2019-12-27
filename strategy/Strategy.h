@@ -92,11 +92,11 @@ public:
 	// that no cell has been included yet 
 	// This closed list is implemented as a boolean 2D array
 
-	std::vector<std::vector<std::vector<std::vector<bool>>>> closedList;
+	bool**** closedList;
 
 	// Declare a 2D array of structure to hold the details 
 	//of that cell
-	std::vector<std::vector<std::vector<std::vector<cell>>>> cellDetails;
+	cell**** cellDetails;
 
 private:
 	std::map<int, int> stop_runaway_ticks_;
