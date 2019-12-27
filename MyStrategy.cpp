@@ -1205,11 +1205,16 @@ void setShootingAction(
 	else meShootingPosition = mePositions[1];
 
 	const auto meToEnemyDist = MathHelper::getVectorLength(mePositions[1], enemyPositions[1][0]);
-	const auto runawayTime = enemy.weapon->fireTimer != nullptr || *(enemy.weapon->fireTimer) >= tickTime ?
-		*(enemy.weapon->fireTimer) - tickTime :
-		0;
-	const auto canRunaway = meToEnemyDist + runawayTime * game.properties.unitMaxHorizontalSpeed > SAFE_ATTACK_DIST;
-	
+	bool canRunaway;
+	if (enemy.weapon == nullptr) canRunaway = true;
+	else
+	{
+		const auto runawayTick = enemy.weapon->fireTimer == nullptr ?
+			0 :
+			static_cast<int>(floor(*(enemy.weapon->fireTimer) / tickTime));		
+		const auto runawayTime = runawayTick * tickTime;
+		canRunaway = meToEnemyDist + runawayTime * game.properties.unitMaxHorizontalSpeed > SAFE_ATTACK_DIST;
+	}	
 
 	const auto enemyShootingPositionsIndex = static_cast<int>(round(movingTime / tickTime));
 	const auto enemyShootingPositions = enemyPositions[enemyShootingPositionsIndex]; //позиции врага, начиная с тика выстрела
@@ -2271,9 +2276,17 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	
 
 	JumpState jumpState = unit.jumpState;
-	auto mePositions = runawayDirection == GoNONE ?
-		vector<Vec2Double>{ unit.position } :
-		getActionPositions(unit.position, unit.size, unit.id, runawayUnitAction, startRunawayTick, stopRunawayTick, jumpState, game);
+	vector<Vec2Double> mePositions;
+	if (runawayDirection == GoNONE)
+	{
+		mePositions.emplace_back(unit.position);
+		auto nextJumpState = unit.jumpState;
+		const auto nextPosition = Simulator::getUnitInTimePosition(unit.position, unit.size, unit.id, action, tickTime, jumpState, game);
+		mePositions.emplace_back(nextPosition);
+	}
+	else
+		mePositions = getActionPositions(unit.position, unit.size, unit.id, runawayUnitAction, startRunawayTick, stopRunawayTick, jumpState, game);
+		
 	
 	prolongatePositions(mePositions, unit.size, unit.id, jumpState, game);
 	

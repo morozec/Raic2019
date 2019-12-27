@@ -173,7 +173,7 @@ vector<Four> aStarSearch(
 	// If the destination cell is the same as source cell 
 	if (isDestination(start_x, start_y, dest) == true)
 	{
-		isWayFound = false;
+		isWayFound = true;
 		return vector<Four>(0);
 	}	
 
