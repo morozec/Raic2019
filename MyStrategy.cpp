@@ -820,7 +820,7 @@ void setShootingAction(
 	const auto canPlantMine = me.mines > 0 && !Simulator::isUnitOnAir(me.position, me.size, me.id, game) &&
 		(centerBottomTile == WALL || centerBottomTile == PLATFORM);
 	if (canPlantMine &&
-		(me.weapon->fireTimer == nullptr || *(me.weapon->fireTimer) - tickTime < TOLERANCE))
+		(me.weapon->fireTimer == nullptr || *(me.weapon->fireTimer) - tickTime < 0))
 	{
 		int meLeftCount = 0;
 		int enemyLeftCount = 0;
