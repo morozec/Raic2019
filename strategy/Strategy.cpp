@@ -257,18 +257,37 @@ std::map<Bullet, BulletSimulation> Strategy::getEnemyBulletsSimulation(const Gam
 }
 
 
-std::vector<std::pair<int, int>> Strategy::getShootMeMines(const Vec2Double& mePosition, const Vec2Double& meSize, 
+std::vector<std::pair<int, int>> Strategy::getShootMeMines(
+	const Vec2Double& mePosition, const Vec2Double& meSize, const JumpState& meJumpState, int meId,
 	int addTicks,
 	const Game& game)
 {
+	UnitAction action;
+	action.velocity = 0;
+	action.jump = false;
+	action.jumpDown = false;
+	
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	std::vector<std::pair<int, int>> shootMeMines;
 	for (const auto& mine:game.mines)
 	{
 		if (mine.state != TRIGGERED) continue;
 		if (addTicks == 1 && mine.timer != nullptr && *mine.timer < tickTime) continue; //мина взорволась в тик 0-1. ее мы учли заранее
+
+		auto expTick = static_cast<int>((*mine.timer) / tickTime);
+		expTick -= addTicks;
+		auto jumpState = meJumpState;
+		auto pos = mePosition;
+		
+		for (int i = 0; i < expTick; ++i)
+		{
+			pos = Simulator::getUnitInTimePosition(pos, meSize, meId, action, tickTime, jumpState, game);
+		}
+		const auto leftTime = (*mine.timer) - addTicks * tickTime - expTick * tickTime;
+		pos = Simulator::getUnitInTimePosition(pos, meSize, meId, action, leftTime, jumpState, game);
+
 		const auto shoot = isMineExplosionShootUnit(mine.position, mine.size, mine.explosionParams.radius,
-			mePosition, meSize, 0, 0);
+			pos, meSize, 0, 0);
 				
 		if (shoot)
 		{
