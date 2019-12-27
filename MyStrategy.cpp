@@ -2127,7 +2127,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			else
 			{
 
-				/*const LootBox* nearestMine = nullptr;
+				const LootBox* nearestMine = nullptr;
 				minMHDist = INT_MAX;
 				for (const LootBox& lootBox : game.lootBoxes)
 				{
@@ -2161,17 +2161,13 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 						unit, nearestMine->position, nearestMine->size,
 						meAttackingPositions, meAttackingJumpStates, meAttackingAction,
 						strategy_,
-						game, debug, isWayFound);
-
-					if (!isWayFound) throw runtime_error("Failed to find the Destination Cell from" +
-						to_string(unit.position.x) + ", " + to_string(unit.position.y) + " to " +
-						to_string(nearestMine->position.x) + ", " + to_string(nearestMine->position.y));
+						game, debug);					
 				}
 				else				
-				{*/
+				{
 					getAttackingData2(
 						unit, meAttackingPositions, meAttackingJumpStates, meAttackingAction, *nearestEnemy, strategy_, game, debug);
-				//}
+				}
 			}
 		}
 	}
