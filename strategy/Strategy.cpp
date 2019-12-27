@@ -390,7 +390,6 @@ std::vector<std::pair<int, int>> Strategy::getShootMeBullets(
 					if (isBulletExplosionShootUnit(bullet.explosionParams, bulletCrossWallCenter, unitInTimePosition, meSize))
 					{
 						damage += bullet.explosionParams->damage;						
-						break;
 					}
 				}
 
