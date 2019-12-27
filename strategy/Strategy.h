@@ -60,7 +60,7 @@ public:
 		int& minesDamage);
 
 	static bool isBulletExplosionShootUnit(
-		const std::shared_ptr<ExplosionParams>& explosionParams, const Vec2Double& bulletCrossWallCenter,
+		const std::shared_ptr<ExplosionParams>& explosionParams, const Vec2Double& bulletCrossWallCenter, double halfBulletSize,
 		const Vec2Double& unitPosition, const Vec2Double& unitSize);
 
 	static bool isMineExplosionShootUnit(const Vec2Double& minePosition, const Vec2Double& mineSize,
