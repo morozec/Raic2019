@@ -1393,13 +1393,12 @@ void setShootingAction(
 		{
 			action.shoot = false;
 		}
+		action.aim = Vec2Double(cos(okShootingAngle), sin(okShootingAngle));
 	}
 	else
 		action.shoot = false;
 
-	action.aim = maxProbability > TOLERANCE ?
-		Vec2Double(cos(okShootingAngle), sin(okShootingAngle)) :
-		enemyShootingPositions[0] - meShootingPosition;		
+	action.aim = enemyShootingPositions[0] - meShootingPosition;		
 
 		
 	
