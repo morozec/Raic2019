@@ -660,6 +660,34 @@ void getAttackingData2(
 		return;
 	}
 
+	const LootBox* nearestMySideLootBox = nullptr;
+	double minMHDist = INT_MAX;
+	for (const auto& lb : game.lootBoxes)
+	{
+		if (std::dynamic_pointer_cast<Item::HealthPack>(lb.item))
+		{
+			bool isGot = false;
+			for (const auto& item : strategy.heal_boxes_)
+			{
+				if (std::abs(item.second.x - lb.position.x) < TOLERANCE &&
+					std::abs(item.second.y - lb.position.y) < TOLERANCE)
+				{
+					isGot = true;
+					break;
+				}
+			}
+			if (isGot) continue;
+			if ((lb.position.x - enemy.position.x) * (me.position.x - enemy.position.x) < 0) continue;
+
+			const auto dist = MathHelper::getMHDist(me.position, lb.position);
+			if (dist < minMHDist)
+			{
+				minMHDist = dist;
+				nearestMySideLootBox = &lb;
+			}
+		}
+	}
+
 	vector<pair<int, int>> unitWalls;
 	const auto meX = static_cast<int>(me.position.x);
 	const auto meY = static_cast<int>(me.position.y);
@@ -751,44 +779,39 @@ void getAttackingData2(
 		}
 	}
 
-
+	bool isOkRunaway;
 	double runawayX;
-	int dx = 0;
-	int coeff = enemy.position.x <= me.position.x ? 1 : -1;
-	int intRunawayY = static_cast<int>(me.position.y);
-	auto isOkRunaway = false;
+	double runawayY;
 
-	while (!isOkRunaway)
+	if (nearestMySideLootBox != nullptr)
 	{
-		runawayX = enemy.position.x + (SAFE_ATTACK_DIST + dx)* coeff;
-		if (runawayX > game.level.tiles.size() - SAFE_DIST_TO_BORDER || 
-			runawayX < SAFE_DIST_TO_BORDER)
+		isOkRunaway = true;
+		runawayX = nearestMySideLootBox->position.x;
+		runawayY = nearestMySideLootBox->position.y;
+	}
+	else
+	{
+
+		int dx = 0;
+		int coeff = enemy.position.x <= me.position.x ? 1 : -1;
+		runawayX = me.position.x;
+		int intRunawayY = static_cast<int>(me.position.y);
+		isOkRunaway = false;
+
+		while (!isOkRunaway)
 		{
-			coeff *= -1;
-			dx = 0;
 			runawayX = enemy.position.x + (SAFE_ATTACK_DIST + dx) * coeff;
-		}		
-
-		const int intRunawayX = static_cast<int>(runawayX);		
-
-		while (intRunawayY < game.level.tiles[0].size())
-		{
-			const auto thisTile = game.level.tiles[intRunawayX][intRunawayY];
-			const auto bottomTile = game.level.tiles[intRunawayX][intRunawayY - 1];
-			if (strategy.grid[intRunawayX][intRunawayY] == 1 &&
-				(thisTile == EMPTY || thisTile == LADDER) &&
-				(bottomTile != EMPTY && bottomTile != JUMP_PAD))
+			if (runawayX > game.level.tiles.size() - SAFE_DIST_TO_BORDER ||
+				runawayX < SAFE_DIST_TO_BORDER)
 			{
-				isOkRunaway = true;
-				break;
+				coeff *= -1;
+				dx = 0;
+				runawayX = enemy.position.x + (SAFE_ATTACK_DIST + dx) * coeff;
 			}
-			intRunawayY++;
-		}
 
-		if (!isOkRunaway)
-		{
-			intRunawayY = static_cast<int>(me.position.y) - 1;
-			while (intRunawayY > 1)
+			const int intRunawayX = static_cast<int>(runawayX);
+
+			while (intRunawayY < game.level.tiles[0].size())
 			{
 				const auto thisTile = game.level.tiles[intRunawayX][intRunawayY];
 				const auto bottomTile = game.level.tiles[intRunawayX][intRunawayY - 1];
@@ -799,21 +822,39 @@ void getAttackingData2(
 					isOkRunaway = true;
 					break;
 				}
-				intRunawayY--;
+				intRunawayY++;
 			}
+
+			if (!isOkRunaway)
+			{
+				intRunawayY = static_cast<int>(me.position.y) - 1;
+				while (intRunawayY > 1)
+				{
+					const auto thisTile = game.level.tiles[intRunawayX][intRunawayY];
+					const auto bottomTile = game.level.tiles[intRunawayX][intRunawayY - 1];
+					if (strategy.grid[intRunawayX][intRunawayY] == 1 &&
+						(thisTile == EMPTY || thisTile == LADDER) &&
+						(bottomTile != EMPTY && bottomTile != JUMP_PAD))
+					{
+						isOkRunaway = true;
+						break;
+					}
+					intRunawayY--;
+				}
+			}
+			dx++;
 		}
-		dx++;
+		runawayY = intRunawayY + 0.5;
 	}
 
 	
 	if (isOkRunaway)
 	{
-		const Vec2Double runawayPos = { runawayX, intRunawayY + 0.5 };
+		const Vec2Double runawayPos = { runawayX, runawayY };
 
 		initAStarAction(me, runawayPos, { 1, 1 }, mePositions, meJumpStates, meAction, strategy, game, debug, isWayFound);
 		if (!isWayFound)
 		{
-			//TODO: перебрать другие точки отхода
 			mePositions.emplace_back(me.position);		
 			meJumpStates.emplace_back(me.jumpState);
 			meAction.velocity = 0;
