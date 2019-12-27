@@ -1281,7 +1281,7 @@ bool Strategy::isMineExplosionShootUnit(const Vec2Double& minePosition, const Ve
 	else if (minePosition.y + mineSize.y < unitPosition.y) yDist = unitPosition.y - (minePosition.y + mineSize.y);
 	else yDist = 0.0;
 
-	return xDist + xRunDist <= mineExplosionRadius + TOLERANCE && yDist + yRunDist <= mineExplosionRadius + TOLERANCE;
+	return xDist + xRunDist <= mineExplosionRadius - TOLERANCE && yDist + yRunDist <= mineExplosionRadius - TOLERANCE;
 }
 
 
