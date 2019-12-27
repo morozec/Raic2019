@@ -86,7 +86,7 @@ public:
 	std::map<int, Vec2Double> heal_boxes_;
 	std::map<int, Vec2Double> lootboxes_;
 
-	std::vector<std::vector<int>> grid;
+	int** grid;
 
 	// Create a closed list and initialise it to false which means 
 	// that no cell has been included yet 

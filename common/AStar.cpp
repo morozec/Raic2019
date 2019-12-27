@@ -37,7 +37,7 @@ bool isValid(int col, int row, int COL, int ROW)
 
 // A Utility Function to check whether the given cell is 
 // blocked or not 
-bool isUnBlocked(vector<vector<int>> grid, int col, int row)
+bool isUnBlocked(int**& grid, int col, int row)
 {
 	// Returns true if the cell is not blocked else false 
 	if (grid[col][row] == 1)
@@ -131,7 +131,8 @@ int getJumpPadJ(int startI, int startJ, int targetI, int targetJ, const Game& ga
 // a given source cell to a destination cell according 
 // to A* Search Algorithm 
 vector<Four> aStarSearch(
-	const std::vector<std::vector<int>>& grid, vector<vector<vector<vector<bool>>>>& closedList,
+	int**& grid, int COL, int ROW,
+	vector<vector<vector<vector<bool>>>>& closedList,
 	vector<vector<vector<vector<cell>>>>& cellDetails,
 	const Four& src, const Pair& dest,
 	int maxJumpTiles, int maxJumpPadJumpTiles,
@@ -142,8 +143,6 @@ vector<Four> aStarSearch(
 	//  0 - standing
 	// >0 - jumping
 	
-	const auto ROW = grid.size();
-	const auto COL = grid[0].size();
 	const auto Z_SIZE = maxJumpPadJumpTiles + 2; //+1 - на падение, +1 - на стояние
 	const auto PAD_JUMP_STATE_SIZE = 2;
 
@@ -153,13 +152,13 @@ vector<Four> aStarSearch(
 	const auto start_pad_jump_state = get<3>(src);
 	
 	// If the source is out of range 
-	if (isValid(start_x, start_y, ROW, COL) == false)
+	if (isValid(start_x, start_y, COL, ROW) == false)
 	{
 		throw runtime_error("Source is invalid\n");
 	}
 
 	// If the destination is out of range 
-	if (isValid(dest.first, dest.second, ROW, COL) == false)
+	if (isValid(dest.first, dest.second, COL, ROW) == false)
 	{
 		throw runtime_error("Destination is invalid\n");
 	}
@@ -179,9 +178,9 @@ vector<Four> aStarSearch(
 
 	int i, j, k, l;
 
-	for (i = 0; i < ROW; i++)
+	for (i = 0; i < COL; i++)
 	{
-		for (j = 0; j < COL; j++)
+		for (j = 0; j < ROW; j++)
 		{
 			for (k = 0; k < Z_SIZE; ++k) {
 				for (l = 0; l < PAD_JUMP_STATE_SIZE; ++l) {
@@ -320,7 +319,7 @@ vector<Four> aStarSearch(
 		//----------- 1st Successor (WEST) ------------ 
 
 		// Only process this cell if this is a valid one 
-		if (isValid(i - 1, j, ROW, COL) == true &&
+		if (isValid(i - 1, j, COL, ROW) == true &&
 			isUnBlocked(grid, i - 1, j) == true &&
 			(l ==0 || l == 1 && kValue == maxJumpPadJumpTiles) &&
 			game.level.tiles[i - 1][j - 1] != EMPTY &&
@@ -404,7 +403,7 @@ vector<Four> aStarSearch(
 		//----------- 2nd Successor (EAST) ------------ 
 
 		// Only process this cell if this is a valid one 
-		if (isValid(i + 1, j, ROW, COL) == true &&
+		if (isValid(i + 1, j, COL, ROW) == true &&
 			isUnBlocked(grid, i + 1, j) == true &&
 			(l ==0 || l == 1 && kValue == maxJumpPadJumpTiles) &&
 			game.level.tiles[i + 1][j - 1] != EMPTY &&
@@ -488,7 +487,7 @@ vector<Four> aStarSearch(
 		//----------- 3.0 Successor (NORTH-2) ------------ 
 
 		// Only process this cell if this is a valid one 
-		if (isValid(i, j + addNorth, ROW, COL) == true &&
+		if (isValid(i, j + addNorth, COL, ROW) == true &&
 			kValue >= 0 &&
 			(l == 0 && kValue < maxJumpTiles ||
 				l == 1 && kValue < maxJumpPadJumpTiles) &&
@@ -575,7 +574,7 @@ vector<Four> aStarSearch(
 		//----------- 3rd Successor (NORTH-0) ------------ 
 
 		// Only process this cell if this is a valid one 
-		if (isValid(i, j + addNorth, ROW, COL) == true &&
+		if (isValid(i, j + addNorth, COL, ROW) == true &&
 			(l == 0 && kValue >=0 && kValue < maxJumpTiles ||
 				l == 1 && kValue == maxJumpPadJumpTiles - addNorth) &&
 			isUnBlocked(grid, i, j + addNorth) == true &&
@@ -662,7 +661,7 @@ vector<Four> aStarSearch(
 		//----------- 7th Successor (NORTH-WEST-2) ------------ 
 
 	// Only process this cell if this is a valid one 
-		if (isValid(i - 1, j + addNorth, ROW, COL) == true &&
+		if (isValid(i - 1, j + addNorth, COL, ROW) == true &&
 			kValue >= 0 && 
 			(l ==0 && kValue < maxJumpTiles ||
 				l == 1 && kValue < maxJumpPadJumpTiles) &&
@@ -750,7 +749,7 @@ vector<Four> aStarSearch(
 		//----------- 7th Successor (NORTH-WEST-0) ------------ 
 
 	// Only process this cell if this is a valid one 
-		if (isValid(i - 1, j + addNorth, ROW, COL) == true &&
+		if (isValid(i - 1, j + addNorth, COL, ROW) == true &&
 			(l == 0 && kValue >= 0 && kValue < maxJumpTiles ||
 			l == 1 && kValue == maxJumpPadJumpTiles - addNorth) &&
 			isUnBlocked(grid, i - 1, j + addNorth) == true &&
@@ -840,7 +839,7 @@ vector<Four> aStarSearch(
 		//----------- 8th Successor (NORTH-EAST-2) ------------ 
 
 		// Only process this cell if this is a valid one 
-		if (isValid(i + 1, j + addNorth, ROW, COL) == true &&
+		if (isValid(i + 1, j + addNorth, COL, ROW) == true &&
 			kValue >= 0 && 
 			(l == 0 && kValue < maxJumpTiles ||
 				l == 1 && kValue < maxJumpPadJumpTiles) &&
@@ -928,7 +927,7 @@ vector<Four> aStarSearch(
 		//----------- 8th Successor (NORTH-EAST-0) ------------ 
 
 		// Only process this cell if this is a valid one 
-		if (isValid(i + 1, j + addNorth, ROW, COL) == true &&
+		if (isValid(i + 1, j + addNorth, COL, ROW) == true &&
 			(l == 0 && kValue >= 0 && kValue < maxJumpTiles ||
 				l == 1 && kValue == maxJumpPadJumpTiles - addNorth) &&
 			isUnBlocked(grid, i + 1, j + addNorth) == true &&
@@ -1020,7 +1019,7 @@ vector<Four> aStarSearch(
 		//----------- 4th Successor (SOUTH) ------------ 
 
 		// Only process this cell if this is a valid one 
-		if (isValid(i, j - 1, ROW, COL) == true &&
+		if (isValid(i, j - 1, COL, ROW) == true &&
 			kValue != 0 &&
 			(l == 0 || l == 1 && kValue == maxJumpPadJumpTiles) &&
 			isUnBlocked(grid, i, j - 1) == true)
@@ -1111,7 +1110,7 @@ vector<Four> aStarSearch(
 		//----------- 5th Successor (SOUTH-WEST) ------------ 
 
 		// Only process this cell if this is a valid one 
-		if (isValid(i - 1, j - 1, ROW, COL) == true &&
+		if (isValid(i - 1, j - 1, COL, ROW) == true &&
 			isUnBlocked(grid, i - 1, j - 1) == true &&
 			(l ==0 || l == 1 && kValue == maxJumpPadJumpTiles) &&
 			(kValue != 0 || kValue == 0 && isUnBlocked(grid, i - 1, j)))
@@ -1199,7 +1198,7 @@ vector<Four> aStarSearch(
 		//----------- 6th Successor (SOUTH-EAST) ------------ 
 
 		// Only process this cell if this is a valid one 
-		if (isValid(i + 1, j - 1, ROW, COL) == true &&
+		if (isValid(i + 1, j - 1, COL, ROW) == true &&
 			isUnBlocked(grid, i + 1, j - 1) == true &&
 			(l == 0 || l == 1 && kValue == maxJumpPadJumpTiles) &&
 			(kValue != 0 || kValue == 0 && isUnBlocked(grid, i + 1, j)))

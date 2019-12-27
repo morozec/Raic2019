@@ -289,14 +289,14 @@ double getSimpleProbability(
 	return count * 1.0/enemyPositions.size();
 }
 
-vector<vector<int>> getGrid(const Game& game)
+int** getGrid(const Game& game, int cols, int rows)
 {
-	vector<vector<int>> grid;
+	int** grid = new int*[cols];	
 
-	for (size_t i = 0; i < game.level.tiles.size(); ++i)
+	for (size_t i = 0; i < cols; ++i)
 	{
-		grid.emplace_back(vector<int>());
-		for (size_t j = 0; j < game.level.tiles[i].size(); ++j)
+		int* col = new int[rows];
+		for (size_t j = 0; j < rows; ++j)
 		{
 			int value = 1;
 			const auto tile = game.level.tiles[i][j];
@@ -307,8 +307,9 @@ vector<vector<int>> getGrid(const Game& game)
 			{
 				value = 0;
 			}
-			grid[i].emplace_back(value);
+			col[j] = value;
 		}
+		grid[i] = col;
 	}
 	
 	return grid;
@@ -458,7 +459,8 @@ void initAStarAction(
 		make_tuple(size_t(me.position.x), size_t(me.position.y), start_z, isJumpPadJumping ? 1 : 0);
 
 	const auto path = aStarSearch(
-		strategy.grid, strategy.closedList, strategy.cellDetails, startPos, endPos, 
+		strategy.grid, game.level.tiles.size(), game.level.tiles[0].size(),
+		strategy.closedList, strategy.cellDetails, startPos, endPos, 
 		maxJumpTiles, maxJumpPadJumpTiles,
 		game);
 	auto curPosition = me.position;
@@ -1374,20 +1376,22 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		}
 		strategy_.isInit = true;
 		strategy_.setJumpingUnitId(-1);
-		strategy_.grid = getGrid(game);
+		const auto cols = game.level.tiles.size();
+		const auto rows = game.level.tiles[0].size();
+		strategy_.grid = getGrid(game, cols, rows);
 
 		const auto maxJumpTiles = static_cast<int>(game.properties.jumpPadJumpTime * game.properties.jumpPadJumpSpeed);
 		const auto Z_SIZE = maxJumpTiles + 2; //+1 - на падение, +1 - на стояние
 		const auto PAD_JUMP_STATE_SIZE = 2;
 		
 		strategy_.closedList = vector<vector<vector<vector<bool>>>> (
-			strategy_.grid.size(), vector<vector<vector<bool>>>(
-				strategy_.grid[0].size(), vector<vector<bool>>(
+			cols, vector<vector<vector<bool>>>(
+				rows, vector<vector<bool>>(
 					Z_SIZE, vector<bool>(PAD_JUMP_STATE_SIZE, false))));
 		
 		strategy_.cellDetails = vector<vector<vector<vector<cell>>>> (
-			strategy_.grid.size(), vector<vector<vector<cell>>>(
-				strategy_.grid[0].size(), vector<vector<cell>>(
+			cols, vector<vector<vector<cell>>>(
+				rows, vector<vector<cell>>(
 					Z_SIZE, vector<cell>(PAD_JUMP_STATE_SIZE))));
 	}
 	
