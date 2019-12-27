@@ -1291,17 +1291,17 @@ bool Strategy::isMineExplosionShootUnit(const Vec2Double& minePosition, const Ve
 	double xRunDist, double yRunDist)
 {
 	double xDist;
-	if (minePosition.x - mineSize.x / 2 > unitPosition.x + unitSize.x / 2) 
-		xDist = minePosition.x - mineSize.x / 2 - (unitPosition.x + unitSize.x / 2);
-	else if (minePosition.x + mineSize.x / 2 < unitPosition.x - unitSize.x / 2) 
-		xDist = unitPosition.x - unitSize.x / 2 - (minePosition.x + mineSize.x / 2);
+	if (minePosition.x > unitPosition.x + unitSize.x / 2) 
+		xDist = minePosition.x - (unitPosition.x + unitSize.x / 2);
+	else if (minePosition.x < unitPosition.x - unitSize.x / 2) 
+		xDist = unitPosition.x - (minePosition.x + mineSize.x / 2);
 	else xDist = 0.0;
 	
 	double yDist;
-	if (minePosition.y > unitPosition.y + unitSize.y) 
-		yDist = minePosition.y - (unitPosition.y + unitSize.y);
-	else if (minePosition.y + mineSize.y < unitPosition.y) 
-		yDist = unitPosition.y - (minePosition.y + mineSize.y);
+	if (minePosition.y + mineSize.y/2.0 > unitPosition.y + unitSize.y) 
+		yDist = minePosition.y + mineSize.y / 2.0 - (unitPosition.y + unitSize.y);
+	else if (minePosition.y + mineSize.y/2.0 < unitPosition.y) 
+		yDist = unitPosition.y - (minePosition.y + mineSize.y/2.0);
 	else yDist = 0.0;
 
 	return xDist + xRunDist <= mineExplosionRadius - TOLERANCE && yDist + yRunDist <= mineExplosionRadius - TOLERANCE;
