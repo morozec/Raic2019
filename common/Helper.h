@@ -24,7 +24,7 @@ const auto MIN_SET_MINE_DIST = 7.0;
 
 const auto SAFE_OTHER_UNIT_PLANT_MINE_DIST = 5.0;
 
-const auto SAFE_ATTACK_DIST = 5.0;
+const auto SAFE_ATTACK_DIST = 7.0;
 const auto SAFE_DIST_TO_BORDER = 5.0;
 
 Vec2Float vec2DoubleToVec2Float(const Vec2Double& vec2Double);
