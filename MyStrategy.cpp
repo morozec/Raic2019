@@ -776,7 +776,7 @@ void getAttackingData2(
 			}
 			if (isGot) continue;
 			if ((static_cast<int>(lb.position.x) - static_cast<int>(enemy.position.x)) *
-				(static_cast<int>(me.position.x) - enemy.position.x) < 0) continue;
+				(static_cast<int>(me.position.x) - static_cast<int>(enemy.position.x)) < 0) continue;
 
 			const auto dist = MathHelper::getMHDist(me.position, lb.position);
 			if (dist < minMHDist)
