@@ -1181,7 +1181,7 @@ vector<Four> aStarSearch(
 					cellDetails[i - 1][jpJ][kNew][lNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
-						make_tuple(i - 1, j - 1, kNew, lNew)));
+						make_tuple(i - 1, jpJ, kNew, lNew)));
 					// Update the details of this cell 
 					cellDetails[i - 1][jpJ][kNew][lNew].f = fNew;
 					cellDetails[i - 1][jpJ][kNew][lNew].g = gNew;
