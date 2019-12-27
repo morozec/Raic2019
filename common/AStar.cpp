@@ -154,20 +154,23 @@ vector<Four> aStarSearch(
 	// If the source is out of range 
 	if (isValid(start_x, start_y, COL, ROW) == false)
 	{
-		throw runtime_error("Source is invalid\n");
+		//throw runtime_error("Source is invalid\n");
+		return vector<Four>(0);
 	}
 
 	// If the destination is out of range 
 	if (isValid(dest.first, dest.second, COL, ROW) == false)
 	{
-		throw runtime_error("Destination is invalid\n");
+		//throw runtime_error("Destination is invalid\n");
+		return vector<Four>(0);
 	}
 
 	// Either the source or the destination is blocked 
 	if (isUnBlocked(grid, start_x, start_y) == false ||
 		isUnBlocked(grid, dest.first, dest.second) == false)
 	{
-		throw runtime_error("Source or the destination is blocked\n");
+		//throw runtime_error("Source or the destination is blocked\n");
+		return vector<Four>(0);
 	}
 
 	// If the destination cell is the same as source cell 
@@ -1287,7 +1290,9 @@ vector<Four> aStarSearch(
 	// list is empty, then we conclude that we failed to 
 	// reach the destiantion cell. This may happen when the 
 	// there is no way to destination cell (due to blockages) 
-	if (!foundDest) throw runtime_error("Failed to find the Destination Cell\n");
+	if (!foundDest) 
+		//throw runtime_error("Failed to find the Destination Cell\n");
+		return vector<Four>(0);
 	
 	return tracePath(cellDetails, dest, foundDestK, foundDestL);
 }
