@@ -610,6 +610,20 @@ bool needMonkeyMode(const Vec2Double& mePosition, const Vec2Double& enemyPositio
 		MathHelper::getMHDist(mePosition, enemyPosition) < MONKEY_DIST;
 }
 
+bool isEnoughTimeToRunaway(const Unit& me, const Unit& enemy, double tickTime, double speed)
+{
+	if (enemy.weapon == nullptr) return true;
+
+	const auto meToEnemyDist = MathHelper::getVectorLength(me.position, enemy.position);
+	const auto runawayTick = enemy.weapon->fireTimer == nullptr ?
+		0 :
+		static_cast<int>(floor(*(enemy.weapon->fireTimer) / tickTime));
+
+	const auto runawayTime = runawayTick * tickTime;
+	return meToEnemyDist + runawayTime * speed > SAFE_ATTACK_DIST;
+
+}
+
 void getAttackingData2(
 	const Unit& me,
 	vector<Vec2Double>& mePositions,
@@ -628,9 +642,11 @@ void getAttackingData2(
 	const auto myFireTimer = me.weapon->fireTimer != nullptr ? *(me.weapon->fireTimer) : 0.0;
 	const auto enemyFireTime = enemy.weapon->fireTimer != nullptr ? *(enemy.weapon->fireTimer) : 0.0;
 
+	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
+
 	bool isWayFound;
-	if (distToEnemy > SAFE_ATTACK_DIST ||
-		myFireTimer < enemyFireTime - TOLERANCE)
+	const auto canRunaway = isEnoughTimeToRunaway(me, enemy, tickTime, game.properties.unitMaxHorizontalSpeed);
+	if (canRunaway)
 	{
 		initAStarAction(me, enemy.position, enemy.size, mePositions, meJumpStates, meAction, strategy, game, debug, isWayFound);
 		if (!isWayFound) throw runtime_error("Failed to find the Destination Cell from" +
@@ -754,7 +770,7 @@ void getAttackingData2(
 		dx++;
 	}
 
-	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
+	
 	if (isOkRunaway)
 	{
 		const Vec2Double runawayPos = { runawayX, intRunawayY + 0.5 };
@@ -992,6 +1008,8 @@ bool isSafeShoot(const Unit& me, const Game& game)
 
 
 
+
+
 void setShootingAction(
 	const Unit& me, const vector<Vec2Double>& mePositions, const vector<double>& meSimpleProbabilities,
 	const Unit& enemy, const vector<vector<Vec2Double>>& enemyPositions,
@@ -1204,18 +1222,8 @@ void setShootingAction(
 	}
 	else meShootingPosition = mePositions[1];
 
-	const auto meToEnemyDist = MathHelper::getVectorLength(mePositions[1], enemyPositions[1][0]);
-	bool canRunaway;
-	if (enemy.weapon == nullptr) canRunaway = true;
-	else
-	{
-		const auto runawayTick = enemy.weapon->fireTimer == nullptr ?
-			0 :
-			static_cast<int>(floor(*(enemy.weapon->fireTimer) / tickTime));		
-		const auto runawayTime = runawayTick * tickTime;
-		canRunaway = meToEnemyDist + runawayTime * game.properties.unitMaxHorizontalSpeed > SAFE_ATTACK_DIST;
-	}	
-
+	bool canRunaway = isEnoughTimeToRunaway(me, enemy, tickTime, game.properties.unitMaxHorizontalSpeed);
+	
 	const auto enemyShootingPositionsIndex = static_cast<int>(round(movingTime / tickTime));
 	const auto enemyShootingPositions = enemyPositions[enemyShootingPositionsIndex]; //позиции врага, начиная с тика выстрела
 		
