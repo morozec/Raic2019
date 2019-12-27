@@ -1857,7 +1857,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	
 
-	/*if (game.currentTick < 451)
+	/*if (game.currentTick < 1055)
 	{
 		action.velocity = 0;
 		action.jump = false;
@@ -2238,7 +2238,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		unit.playerId,
 		unit.id,
 		nextTickEnemyBulletsSimulation, 1, game);
-	const auto nextTickShootMeMines = strategy_.getShootMeMines(nextTickMeAttackPosition, unit.size, 1, game);
+	const auto nextTickShootMeMines = strategy_.getShootMeMines(
+		nextTickMeAttackPosition, unit.size, nextTickMeAttackingJumpState, unit.id, 1, game);
 	
 	
 	attackRunawayAction = strategy_.getRunawayAction(
@@ -2292,7 +2293,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		unit.position, unit.size, unit.jumpState, unit.playerId, unit.id,
 		enemyBulletsSimulation, 0, game);
 	const auto shootMeMines = strategy_.getShootMeMines(
-		unit.position, unit.size,0, game);
+		unit.position, unit.size,unit.jumpState, unit.id, 0, game);
 	
 	const auto noAttackRunawayAction = strategy_.getRunawayAction(
 		unit.position, unit.size, unit.playerId, unit.id, unit.jumpState,
