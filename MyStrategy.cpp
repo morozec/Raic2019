@@ -1245,22 +1245,31 @@ void setShootingAction(
 	double maxProbability = 0.0;
 	double okShootingAngle = 0.0;
 	double okShootingSpread = 0.0;
+	const auto shootingPositionsIndex = static_cast<int>(round(movingTime / tickTime));
 
 	Vec2Double meShootingPosition;
-
-	if (movingTime < tickTime)
+	if (mePositions.size() == 1)
+	{
+		meShootingPosition = mePositions[0];
+	}
+	else if (movingTime < tickTime)
 	{
 		const auto part = movingTime / tickTime;
 		auto x = mePositions[0].x + (mePositions[1].x - mePositions[0].x) * part;
 		auto y = mePositions[0].y + (mePositions[1].y - mePositions[0].y) * part;
 		meShootingPosition = Vec2Double(x, y);//позиция, откуда произойдет выстрел
 	}
-	else meShootingPosition = mePositions[1];
+	else
+	{
+		
+		meShootingPosition = shootingPositionsIndex < mePositions.size() ?
+			mePositions[shootingPositionsIndex] :
+			mePositions.back();
+	}
 
 	bool canRunaway = isEnoughTimeToRunaway(me, enemy, tickTime, game.properties.unitMaxHorizontalSpeed);
 	
-	const auto enemyShootingPositionsIndex = static_cast<int>(round(movingTime / tickTime));
-	const auto enemyShootingPositions = enemyPositions[enemyShootingPositionsIndex]; //позиции врага, начиная с тика выстрела
+	const auto enemyShootingPositions = enemyPositions[shootingPositionsIndex]; //позиции врага, начиная с тика выстрела
 		
 	const auto isCloseToEnemy =
 		Simulator::areRectsTouch(meShootingPosition, me.size, enemyShootingPositions[0], enemy.size) ||
@@ -1358,7 +1367,7 @@ void setShootingAction(
 
 	action.aim = maxProbability > TOLERANCE ?
 		Vec2Double(cos(okShootingAngle), sin(okShootingAngle)) :
-		enemyPositions[1][0] - mePositions[1];		
+		enemyShootingPositions[0] - meShootingPosition;		
 
 		
 	
@@ -2319,17 +2328,9 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	
 
 	JumpState jumpState = unit.jumpState;
-	vector<Vec2Double> mePositions;
-	if (runawayDirection == GoNONE)
-	{
-		mePositions.emplace_back(unit.position);
-		auto nextJumpState = unit.jumpState;
-		const auto nextPosition = Simulator::getUnitInTimePosition(unit.position, unit.size, unit.id, action, tickTime, jumpState, game);
-		mePositions.emplace_back(nextPosition);
-	}
-	else
-		mePositions = getActionPositions(unit.position, unit.size, unit.id, runawayUnitAction, startRunawayTick, stopRunawayTick, jumpState, game);
-		
+	auto mePositions = runawayDirection == GoNONE ?
+		vector<Vec2Double>{ unit.position } :
+		getActionPositions(unit.position, unit.size, unit.id, runawayUnitAction, startRunawayTick, stopRunawayTick, jumpState, game);
 	
 	prolongatePositions(mePositions, unit.size, unit.id, jumpState, game);
 	
