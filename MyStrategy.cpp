@@ -61,6 +61,107 @@ inline bool operator<(const Bullet& lhs, const Bullet& rhs)
 	return lhs.position.x < rhs.position.x;
 }
 
+
+bool isMyCell(int meX, int meY, int x, int y)
+{
+	return x == meX && (y == meY || y == meY + 1);
+}
+
+vector<pair<int,int>> getUnitWalls(const Unit& me, Strategy& strategy, const Game& game)
+{
+	vector<pair<int, int>> unitWalls;
+	const auto meX = static_cast<int>(me.position.x);
+	const auto meY = static_cast<int>(me.position.y);
+	for (const auto& unit : game.units)
+	{
+		if (unit.playerId == me.playerId) continue;
+		const int x = static_cast<int>(unit.position.x);
+		const int y = static_cast<int>(unit.position.y);
+		if (!isMyCell(meX, meY, x, y) &&
+			strategy.grid[x][y] == 1) {
+			strategy.grid[x][y] = 0;
+			unitWalls.emplace_back(make_pair(x, y));
+		}
+		if (!isMyCell(meX, meY, x, y + 1) &&
+			strategy.grid[x][y + 1] == 1)
+		{
+			strategy.grid[x][y + 1] = 0;
+			unitWalls.emplace_back(make_pair(x, y + 1));
+		}
+
+		if (!isMyCell(meX, meY, x - 1, y + 1) &&
+			strategy.grid[x - 1][y + 1] == 1)
+		{
+			strategy.grid[x - 1][y + 1] = 0;
+			unitWalls.emplace_back(make_pair(x - 1, y + 1));
+		}
+
+		const bool isHigh = unit.position.y + unit.size.y > y + 2;
+
+		if (!isMyCell(meX, meY, x, y + 2) &&
+			isHigh && strategy.grid[x][y + 2] == 1)
+		{
+			strategy.grid[x][y + 2] = 0;
+			unitWalls.emplace_back(make_pair(x, y + 2));
+		}
+
+		if (unit.position.x - unit.size.x / 2 < x)
+		{
+			if (!isMyCell(meX, meY, x - 1, y) &&
+				strategy.grid[x - 1][y] == 1) {
+				strategy.grid[x - 1][y] = 0;
+				unitWalls.emplace_back(make_pair(x - 1, y));
+			}
+			if (!isMyCell(meX, meY, x - 1, y + 1) &&
+				strategy.grid[x - 1][y + 1] == 1)
+			{
+				strategy.grid[x - 1][y + 1] = 0;
+				unitWalls.emplace_back(make_pair(x - 1, y + 1));
+			}
+			if (!isMyCell(meX, meY, x - 1, y - 1) &&
+				strategy.grid[x - 1][y - 1] == 1) {
+				strategy.grid[x - 1][y - 1] = 0;
+				unitWalls.emplace_back(make_pair(x - 1, y - 1));
+			}
+
+			if (!isMyCell(meX, meY, x - 1, y + 2) &&
+				isHigh && strategy.grid[x - 1][y + 2] == 1)
+			{
+				strategy.grid[x - 1][y + 2] = 0;
+				unitWalls.emplace_back(make_pair(x - 1, y + 2));
+			}
+		}
+
+		if (unit.position.x + unit.size.x / 2 > x + 1)
+		{
+			if (!isMyCell(meX, meY, x + 1, y) &&
+				strategy.grid[x + 1][y] == 1) {
+				strategy.grid[x + 1][y] = 0;
+				unitWalls.emplace_back(make_pair(x + 1, y));
+			}
+			if (!isMyCell(meX, meY, x + 1, y + 1) &&
+				strategy.grid[x + 1][y + 1] == 1)
+			{
+				strategy.grid[x + 1][y + 1] = 0;
+				unitWalls.emplace_back(make_pair(x + 1, y + 1));
+			}
+			if (!isMyCell(meX, meY, x + 1, y - 1) &&
+				strategy.grid[x + 1][y - 1] == 1)
+			{
+				strategy.grid[x + 1][y - 1] = 0;
+				unitWalls.emplace_back(make_pair(x + 1, y - 1));
+			}
+			if (!isMyCell(meX, meY, x + 1, y + 2) &&
+				isHigh && strategy.grid[x + 1][y + 2] == 1)
+			{
+				strategy.grid[x + 1][y + 2] = 0;
+				unitWalls.emplace_back(make_pair(x + 1, y + 2));
+			}
+		}
+	}
+	return unitWalls;
+}
+
 vector<Vec2Double> getActionPositions(
 	const Vec2Double& unitPosition, const Vec2Double& unitSize, int unitId,
 	const UnitAction& action, int startTick, int stopTick, JumpState& jumpState, const Game& game)
@@ -623,10 +724,6 @@ bool isEnoughTimeToRunaway(const Unit& me, const Unit& enemy, double tickTime, d
 
 }
 
-bool isMyCell(int meX, int meY, int x, int y)
-{
-	return x == meX && (y == meY || y == meY + 1);
-}
 
 void getAttackingData2(
 	const Unit& me,
@@ -657,99 +754,8 @@ void getAttackingData2(
 		return;
 	}
 
-
-
-	vector<pair<int, int>> unitWalls;
-	const auto meX = static_cast<int>(me.position.x);
-	const auto meY = static_cast<int>(me.position.y);
-	for (const auto& unit: game.units)
-	{
-		if (unit.playerId == me.playerId) continue;
-		const int x = static_cast<int>(unit.position.x);
-		const int y = static_cast<int>(unit.position.y);
-		if (!isMyCell(meX, meY, x, y) &&			
-			strategy.grid[x][y] == 1) {
-			strategy.grid[x][y] = 0;
-			unitWalls.emplace_back(make_pair(x, y));
-		}
-		if (!isMyCell(meX, meY, x, y + 1) &&
-			strategy.grid[x][y + 1] == 1)
-		{
-			strategy.grid[x][y + 1] = 0;
-			unitWalls.emplace_back(make_pair(x, y + 1));
-		}
-
-		if (!isMyCell(meX, meY, x-1, y + 1) &&
-			strategy.grid[x-1][y + 1] == 1)
-		{
-			strategy.grid[x-1][y + 1] = 0;
-			unitWalls.emplace_back(make_pair(x-1, y + 1));
-		}
-
-		const bool isHigh = unit.position.y + unit.size.y > y + 2;
-		
-		if (!isMyCell(meX, meY, x, y + 2) &&
-			isHigh && strategy.grid[x][y + 2] == 1)
-		{
-			strategy.grid[x][y + 2] = 0;
-			unitWalls.emplace_back(make_pair(x, y + 2));
-		}
-		
-		if (unit.position.x - unit.size.x/2 < x)
-		{
-			if (!isMyCell(meX, meY, x-1, y) &&
-				strategy.grid[x - 1][y] == 1) {
-				strategy.grid[x - 1][y] = 0;
-				unitWalls.emplace_back(make_pair(x - 1, y));
-			}
-			if (!isMyCell(meX, meY, x-1, y+1) &&
-				strategy.grid[x - 1][y + 1] == 1)
-			{
-				strategy.grid[x - 1][y + 1] = 0;
-				unitWalls.emplace_back(make_pair(x - 1, y + 1));
-			}
-			if (!isMyCell(meX, meY, x - 1, y-1) &&
-				strategy.grid[x - 1][y-1] == 1) {
-				strategy.grid[x - 1][y-1] = 0;
-				unitWalls.emplace_back(make_pair(x - 1, y-1));
-			}
-			
-			if (!isMyCell(meX, meY, x-1, y+2) &&
-				isHigh && strategy.grid[x - 1][y + 2] == 1)
-			{
-				strategy.grid[x - 1][y + 2] = 0;
-				unitWalls.emplace_back(make_pair(x - 1, y + 2));
-			}
-		}
-
-		if (unit.position.x + unit.size.x / 2 > x + 1)
-		{
-			if (!isMyCell(meX, meY, x+1, y) &&
-				strategy.grid[x + 1][y] == 1) {
-				strategy.grid[x + 1][y] = 0;
-				unitWalls.emplace_back(make_pair(x + 1, y));
-			}
-			if (!isMyCell(meX, meY, x+1, y+1) &&
-				strategy.grid[x + 1][y + 1] == 1)
-			{
-				strategy.grid[x + 1][y + 1] = 0;
-				unitWalls.emplace_back(make_pair(x + 1, y + 1));
-			}
-			if (!isMyCell(meX, meY, x + 1, y - 1) &&
-				strategy.grid[x + 1][y - 1] == 1)
-			{
-				strategy.grid[x + 1][y - 1] = 0;
-				unitWalls.emplace_back(make_pair(x + 1, y - 1));
-			}
-			if (!isMyCell(meX, meY, x+1, y+2) &&
-				isHigh && strategy.grid[x + 1][y + 2] == 1)
-			{
-				strategy.grid[x + 1][y + 2] = 0;
-				unitWalls.emplace_back(make_pair(x + 1, y + 2));
-			}
-		}
-	}
-
+	const auto unitWalls = getUnitWalls(me, strategy, game);
+	   
 	
 	bool isOkRunaway;
 	double runawayX;
@@ -2022,6 +2028,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			}
 		}
 
+		auto unitWalls = getUnitWalls(unit, strategy_, game);
+
 		const LootBox* nearestHPLootBox = nullptr;
 		double minMHDist = INT_MAX;
 
@@ -2032,6 +2040,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			{
 				if (std::dynamic_pointer_cast<Item::HealthPack>(lb.item))
 				{
+					if (strategy_.grid[static_cast<int>(lb.position.x)][static_cast<int>(lb.position.y)] == 0) continue;
+					
 					bool isGot = false;
 					for (const auto& item: strategy_.heal_boxes_)
 					{
@@ -2053,6 +2063,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 				}
 			}
 		}
+
+		
 		
 		if (nearestHPLootBox != nullptr)
 		{
@@ -2065,11 +2077,14 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			/*getHealingData(
 				unit, curMeAttackingPositions, curMeAttackingJumpStates,
 				lb, curMeAttackingAction, curStartJumpY, curJumpingUnitId, game);*/
+
+			
+			
 			initAStarAction(
 				unit,  nearestHPLootBox->position, nearestHPLootBox->size,
 				curMeAttackingPositions, curMeAttackingJumpStates, curMeAttackingAction,
 				strategy_,
-				game, debug);
+				game, debug);			
 						
 			for (size_t i = 1; i < curMeAttackingPositions.size(); ++i)
 			{
@@ -2097,6 +2112,11 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 				strategy_.heal_boxes_[unit.id] = nearestHPLootBox->position;
 				
 			}
+		}
+
+		for (auto& uw : unitWalls)
+		{
+			strategy_.grid[uw.first][uw.second] = 1;
 		}
 
 		if (!isHealing)
@@ -2127,10 +2147,14 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			else
 			{
 
+				unitWalls = getUnitWalls(unit, strategy_, game);
+				
 				const LootBox* nearestMine = nullptr;
 				minMHDist = INT_MAX;
 				for (const LootBox& lootBox : game.lootBoxes)
 				{
+					if(strategy_.grid[static_cast<int>(lootBox.position.x)][static_cast<int>(lootBox.position.y)] == 0) continue;
+					
 					if (std::dynamic_pointer_cast<Item::Mine>(lootBox.item))
 					{
 						auto isOtherUnitMine = false;
@@ -2156,15 +2180,28 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 				}
 				if (nearestMine != nullptr)
 				{
+					
 					strategy_.lootboxes_[unit.id] = nearestMine->position;
 					initAStarAction(
 						unit, nearestMine->position, nearestMine->size,
 						meAttackingPositions, meAttackingJumpStates, meAttackingAction,
 						strategy_,
-						game, debug);					
+						game, debug);
+
+					for (auto& uw : unitWalls)
+					{
+						strategy_.grid[uw.first][uw.second] = 1;
+					}				
 				}
+				
+				
 				else				
 				{
+					for (auto& uw : unitWalls)
+					{
+						strategy_.grid[uw.first][uw.second] = 1;
+					}
+					
 					getAttackingData2(
 						unit, meAttackingPositions, meAttackingJumpStates, meAttackingAction, *nearestEnemy, strategy_, game, debug);
 				}
