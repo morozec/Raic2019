@@ -745,12 +745,67 @@ void getAttackingData2(
 
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 
-	bool isWayFound;
 	const auto canRunaway = isEnoughTimeToRunaway(me, enemy, tickTime, game.properties.unitMaxHorizontalSpeed);
 	if (canRunaway)
 	{
-		initAStarAction(
-			me, enemy.position, enemy.size, mePositions, meJumpStates, meAction, strategy, game, debug);
+		const auto meToEnemyDist = MathHelper::getVectorLength(me.position, enemy.position);
+
+		const LootBox* nearestMine = nullptr;
+		if (meToEnemyDist > SAFE_ATTACK_DIST)
+		{
+			const auto unitWalls = getUnitWalls(me, strategy, game);
+			
+			for (const LootBox& lootBox : game.lootBoxes)
+			{
+				if (strategy.grid[static_cast<int>(lootBox.position.x)][static_cast<int>(lootBox.position.y)] == 0) continue;
+
+				if (std::dynamic_pointer_cast<Item::Mine>(lootBox.item))
+				{
+					auto isOtherUnitMine = false;
+					for (const auto& item : strategy.lootboxes_)
+					{
+						if (item.first != me.id &&
+							std::abs(item.second.x - lootBox.position.x) < TOLERANCE &&
+							std::abs(item.second.y - lootBox.position.y) < TOLERANCE)
+						{
+							isOtherUnitMine = true;
+							break;
+						}
+					}
+					if (isOtherUnitMine) continue;
+
+					if (nearestMine == nullptr ||
+						MathHelper::getVectorLength2(me.position, lootBox.position) <
+						MathHelper::getVectorLength2(me.position, nearestMine->position))
+					{
+						nearestMine = &lootBox;
+					}
+				}
+			}
+			if (nearestMine != nullptr)
+			{
+				strategy.lootboxes_[me.id] = nearestMine->position;
+
+				initAStarAction(
+					me,
+					nearestMine->position,
+					enemy.size, mePositions, meJumpStates, meAction, strategy, game, debug);
+			}			
+			
+			for (auto& uw : unitWalls)
+			{
+				strategy.grid[uw.first][uw.second] = 1;
+			}
+		}
+
+		if (nearestMine == nullptr)
+		{
+			initAStarAction(
+				me,
+				enemy.position,
+				enemy.size, mePositions, meJumpStates, meAction, strategy, game, debug);
+		}
+		
 		return;
 	}
 
@@ -763,9 +818,11 @@ void getAttackingData2(
 
 	const LootBox* nearestMySideLootBox = nullptr;
 	double minMHDist = INT_MAX;
+	const auto needHeel = me.health < game.properties.unitMaxHealth;
 	for (const auto& lb : game.lootBoxes)
 	{
-		if (std::dynamic_pointer_cast<Item::HealthPack>(lb.item))
+		if (needHeel && std::dynamic_pointer_cast<Item::HealthPack>(lb.item) ||
+			!needHeel && std::dynamic_pointer_cast<Item::Mine>(lb.item))
 		{
 			if (strategy.grid[static_cast<int>(lb.position.x)][static_cast<int>(lb.position.y)] == 0) continue;
 			
@@ -2147,64 +2204,12 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			else
 			{
 
-				unitWalls = getUnitWalls(unit, strategy_, game);
+			
 				
-				const LootBox* nearestMine = nullptr;
-				minMHDist = INT_MAX;
-				for (const LootBox& lootBox : game.lootBoxes)
-				{
-					if(strategy_.grid[static_cast<int>(lootBox.position.x)][static_cast<int>(lootBox.position.y)] == 0) continue;
 					
-					if (std::dynamic_pointer_cast<Item::Mine>(lootBox.item))
-					{
-						auto isOtherUnitMine = false;
-						for (const auto& item : strategy_.lootboxes_)
-						{
-							if (item.first != unit.id &&
-								std::abs(item.second.x - lootBox.position.x) < TOLERANCE &&
-								std::abs(item.second.y - lootBox.position.y) < TOLERANCE)
-							{
-								isOtherUnitMine = true;
-								break;
-							}
-						}
-						if (isOtherUnitMine) continue;
-
-						if (nearestMine == nullptr ||
-							MathHelper::getVectorLength2(unit.position, lootBox.position) <
-							MathHelper::getVectorLength2(unit.position, nearestMine->position))
-						{
-							nearestMine = &lootBox;
-						}
-					}
-				}
-				if (nearestMine != nullptr)
-				{
-					
-					strategy_.lootboxes_[unit.id] = nearestMine->position;
-					initAStarAction(
-						unit, nearestMine->position, nearestMine->size,
-						meAttackingPositions, meAttackingJumpStates, meAttackingAction,
-						strategy_,
-						game, debug);
-
-					for (auto& uw : unitWalls)
-					{
-						strategy_.grid[uw.first][uw.second] = 1;
-					}				
-				}
+				getAttackingData2(
+					unit, meAttackingPositions, meAttackingJumpStates, meAttackingAction, *nearestEnemy, strategy_, game, debug);
 				
-				
-				else				
-				{
-					for (auto& uw : unitWalls)
-					{
-						strategy_.grid[uw.first][uw.second] = 1;
-					}
-					
-					getAttackingData2(
-						unit, meAttackingPositions, meAttackingJumpStates, meAttackingAction, *nearestEnemy, strategy_, game, debug);
-				}
 			}
 		}
 	}
