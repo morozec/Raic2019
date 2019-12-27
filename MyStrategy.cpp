@@ -802,6 +802,7 @@ bool isSafeShoot(const Unit& me, const Game& game)
 void setShootingAction(
 	const Unit& me, const vector<Vec2Double>& mePositions, const vector<double>& meSimpleProbabilities,
 	const Vec2Double& enemySize, const vector<vector<Vec2Double>>& enemyPositions,
+	const map<Bullet, BulletSimulation>& enemyBulletsSimulations,
 	const Game& game, UnitAction& action, bool isHealing)
 {
 	if (me.weapon == nullptr)
@@ -856,18 +857,55 @@ void setShootingAction(
 			action.shoot = true;
 			return;
 		}
-	}
+	}	
 
-	if (isHealing && canPlantMine)
+	if (canPlantMine && isHealing)
 	{
-		double minMineDist = INT_MAX;
+		double myOtherUnitDist = INT_MAX;
+		for (const auto& unit : game.units)
+		{
+			if (unit.playerId != me.playerId) continue;
+			if (unit.id == me.id) continue;
+			const auto dist = MathHelper::getMHDist(me.position, unit.position);
+			if (dist < myOtherUnitDist) myOtherUnitDist = dist;
+		}
+		const auto isSafeOtherUnitPlantMine = myOtherUnitDist > SAFE_OTHER_UNIT_PLANT_MINE_DIST;
+
+		bool isSafeBulletsPlantMine = false;
+		const auto& mineSize = game.properties.mineSize;
+		for (const auto& ebs : enemyBulletsSimulations)
+		{
+			const auto& bullet = ebs.first;
+			const auto& simulation = ebs.second;
+
+			Vec2Double crossPoint;
+			Vec2Double bulletCorner;
+			const auto isShooting = Simulator::getBulletRectangleFirstCrossPoint(
+				bullet.position, bullet.velocity, bullet.size / 2,
+				me.position.x - mineSize.x / 2, me.position.y, me.position.x + mineSize.x / 2, me.position.y + mineSize.y,
+				crossPoint, bulletCorner);
+			if (!isShooting) continue;
+
+			if (MathHelper::getVectorLength2(bulletCorner, crossPoint) <=
+				MathHelper::getVectorLength2(simulation.bulletCrossCorner, simulation.targetCrossPoint))
+			{
+				isSafeBulletsPlantMine = false;
+				break;
+			}
+		}
+
+		auto isFarFromOtherMines = true;
 		for (const auto& mine : game.mines)
 		{
 			const auto dist = MathHelper::getMHDist(mine.position, me.position);
-			if (dist < minMineDist) minMineDist = dist;
+			if (dist > MIN_SET_MINE_DIST)
+			{
+				isFarFromOtherMines = false;
+				break;
+			}
 		}
 
-		if (minMineDist > MIN_SET_MINE_DIST)
+		if (isSafeOtherUnitPlantMine && isSafeBulletsPlantMine && isFarFromOtherMines)
 		{
 			action.plantMine = true;
 		}
@@ -1242,7 +1280,9 @@ void initAttackAction(
 	const vector<vector<Vec2Double>>& enemyPositions, const Vec2Double& enemySize,
 	int startJumpY, int jumpingUnitId, bool isMonkeyMode,
 	tuple<RunawayDirection, int, int, int> runawayAction,
-	const UnitAction& meAttackingAction, UnitAction& action, Strategy& strategy, const Game& game,
+	const UnitAction& meAttackingAction, UnitAction& action, Strategy& strategy,
+	const map<Bullet, BulletSimulation>& enemyBulletsSimulations,
+	const Game& game,
 	bool isHealing)
 {
 	const auto runawayDirection = std::get<0>(runawayAction);
@@ -1313,7 +1353,8 @@ void initAttackAction(
 		meSimpleProbabilities.emplace_back(sp);
 	}
 
-	setShootingAction(unit, meAttackingPositions, meSimpleProbabilities, enemySize, enemyPositions, game, action, isHealing);
+	setShootingAction(
+		unit, meAttackingPositions, meSimpleProbabilities, enemySize, enemyPositions, enemyBulletsSimulations, game, action, isHealing);
 	strategy.setStartedJumpY(unit.id, startJumpY);
 	strategy.setJumpingUnitId(jumpingUnitId);
 	strategy.setIsMonkeyMode(unit.id, isMonkeyMode);
@@ -1525,7 +1566,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			const auto sp = getSimpleProbability(mePosition, unit.size, curEnemyPositions, nearestEnemy->size, game);
 			meSimpleProbabilities.emplace_back(sp);
 		}
-		setShootingAction(unit, mePositions,meSimpleProbabilities, nearestEnemy->size, enemyPositions, game, action, false);
+		setShootingAction(unit, mePositions,meSimpleProbabilities, nearestEnemy->size, enemyPositions, enemyBulletsSimulation, game, action, false);
 
 		strategy_.decreaseStopRunawayTick(unit.id);
 		if (action.plantMine) debug.draw(CustomData::Log("MINE"));
@@ -1797,7 +1838,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		initAttackAction(unit, meAttackingPositions, meAttackingJumpStates,
 			nextTickMeAttackingJumpState, nextTickMeAttackPosition, meSimpleProbabilities,
 			enemyPositions, nearestEnemy->size, startJumpY, jumpingUnitId, isMonkeyMode,
-			attackRunawayAction, meAttackingAction, action, strategy_, game, isHealing);
+			attackRunawayAction, meAttackingAction, action, strategy_, enemyBulletsSimulation, game, isHealing);
 		//cerr << game.currentTick << ": (" << unit.id << "-0) " << action.jump << " " << action.jumpDown << " " << action.velocity << "\n";
 		if (action.plantMine) debug.draw(CustomData::Log("MINE"));
 		return action;			
@@ -1851,7 +1892,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		initAttackAction(unit, meAttackingPositions, meAttackingJumpStates,
 			nextTickMeAttackingJumpState, nextTickMeAttackPosition, meSimpleProbabilities,
 			enemyPositions, nearestEnemy->size, startJumpY, jumpingUnitId, isMonkeyMode,
-			attackRunawayAction, meAttackingAction, action, strategy_, game, isHealing);
+			attackRunawayAction, meAttackingAction, action, strategy_, enemyBulletsSimulation, game, isHealing);
 		//cerr << game.currentTick << ": (" << unit.id << "-1) " << action.jump << " " << action.jumpDown << " " << action.velocity << "\n";
 		if (action.plantMine) debug.draw(CustomData::Log("MINE"));
 		return action;
@@ -1929,7 +1970,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		meSimpleProbabilities.emplace_back(sp);
 	}
 	
-	setShootingAction(unit, mePositions, meSimpleProbabilities, nearestEnemy->size, enemyPositions, game, action, false);
+	setShootingAction(unit, mePositions, meSimpleProbabilities, nearestEnemy->size, enemyPositions, enemyBulletsSimulation, game, action, false);
 	//cerr << game.currentTick << ": (" <<unit.id << "-2) " << action.jump << " " << action.jumpDown << " " << action.velocity <<  "\n";
 	if (action.plantMine) debug.draw(CustomData::Log("MINE"));
 	return action;
