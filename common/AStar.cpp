@@ -1020,7 +1020,6 @@ vector<Four> aStarSearch(
 
 		// Only process this cell if this is a valid one 
 		if (isValid(i, j - 1, COL, ROW) == true &&
-			kValue != 0 &&
 			(l == 0 || l == 1 && kValue == maxJumpPadJumpTiles) &&
 			isUnBlocked(grid, i, j - 1) == true)
 		{
