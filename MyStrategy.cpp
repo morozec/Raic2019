@@ -838,6 +838,8 @@ void setShootingAction(
 		int enemyLeftCount = 0;
 		int meKilledCount = 0;
 		int enemyKilledCount = 0;
+		
+		
 		for (const auto& unit : game.units)
 		{
 			if (unit.playerId == me.playerId) meLeftCount++;
@@ -881,17 +883,22 @@ void setShootingAction(
 		int meLeftCount = 0;
 		int enemyLeftCount = 0;
 		int meKilledCount = 0;
-		int enemyKilledCount = 0;		
+		int enemyKilledCount = 0;
+		int meDamagedCount = 0;
+		int enemyDamagedCount = 0;
 		
 		for (const auto& unit: game.units)
 		{
 			if (unit.playerId == me.playerId) meLeftCount++;
 			else enemyLeftCount++;
-			if (!areSamePosMines && unit.health > game.properties.mineExplosionParams.damage) continue;			
+			//if (!areSamePosMines && unit.health > game.properties.mineExplosionParams.damage) continue;			
 			
 			if (unit.id == me.id)
 			{
-				meKilledCount++;
+				if (areSamePosMines || unit.health <= game.properties.mineExplosionParams.damage)
+					meKilledCount++;
+				else
+					meDamagedCount++;
 				continue;
 			}
 
@@ -903,15 +910,28 @@ void setShootingAction(
 
 			if (isShootUnit)
 			{
-				if (unit.playerId == me.playerId) meKilledCount++;
-				else enemyKilledCount++;
+				if (unit.playerId == me.playerId)
+				{
+					if (areSamePosMines || unit.health <= game.properties.mineExplosionParams.damage)
+						meKilledCount++;
+					else
+						meDamagedCount++;
+				}
+				else
+				{
+					if (areSamePosMines || unit.health <= game.properties.mineExplosionParams.damage)
+						enemyKilledCount++;
+					else
+						enemyDamagedCount++;
+				}
 			}			
 		}
 
 		meLeftCount -= meKilledCount;
 		enemyLeftCount -= enemyKilledCount;
 
-		if (enemyKilledCount > 0 && meLeftCount >= enemyLeftCount)
+		if (meLeftCount >= enemyLeftCount &&
+			(enemyKilledCount > 0 || enemyDamagedCount > meDamagedCount))
 		{
 			action.plantMine = true;
 			action.aim = { 0, -1 };
