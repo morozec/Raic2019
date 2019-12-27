@@ -624,6 +624,11 @@ bool isEnoughTimeToRunaway(const Unit& me, const Unit& enemy, double tickTime, d
 
 }
 
+bool isMyCell(int meX, int meY, int x, int y)
+{
+	return x == meX && (y == meY || y == meY + 1);
+}
+
 void getAttackingData2(
 	const Unit& me,
 	vector<Vec2Double>& mePositions,
@@ -656,24 +661,36 @@ void getAttackingData2(
 	}
 
 	vector<pair<int, int>> unitWalls;
+	const auto meX = static_cast<int>(me.position.x);
+	const auto meY = static_cast<int>(me.position.y);
 	for (const auto& unit: game.units)
 	{
 		if (unit.playerId == me.playerId) continue;
 		const int x = static_cast<int>(unit.position.x);
 		const int y = static_cast<int>(unit.position.y);
-		if (strategy.grid[x][y] == 1) {
+		if (!isMyCell(meX, meY, x, y) &&			
+			strategy.grid[x][y] == 1) {
 			strategy.grid[x][y] = 0;
 			unitWalls.emplace_back(make_pair(x, y));
 		}
-		if (strategy.grid[x][y + 1] == 1)
+		if (!isMyCell(meX, meY, x, y + 1) &&
+			strategy.grid[x][y + 1] == 1)
 		{
 			strategy.grid[x][y + 1] = 0;
 			unitWalls.emplace_back(make_pair(x, y + 1));
 		}
 
+		if (!isMyCell(meX, meY, x-1, y + 1) &&
+			strategy.grid[x-1][y + 1] == 1)
+		{
+			strategy.grid[x-1][y + 1] = 0;
+			unitWalls.emplace_back(make_pair(x-1, y + 1));
+		}
+
 		const bool isHigh = unit.position.y + unit.size.y > y + 2;
 		
-		if (isHigh && strategy.grid[x][y + 2] == 1)
+		if (!isMyCell(meX, meY, x, y + 2) &&
+			isHigh && strategy.grid[x][y + 2] == 1)
 		{
 			strategy.grid[x][y + 2] = 0;
 			unitWalls.emplace_back(make_pair(x, y + 2));
@@ -681,16 +698,25 @@ void getAttackingData2(
 		
 		if (unit.position.x - unit.size.x/2 < x)
 		{
-			if (strategy.grid[x - 1][y] == 1) {
+			if (!isMyCell(meX, meY, x-1, y) &&
+				strategy.grid[x - 1][y] == 1) {
 				strategy.grid[x - 1][y] = 0;
 				unitWalls.emplace_back(make_pair(x - 1, y));
 			}
-			if (strategy.grid[x - 1][y + 1] == 1)
+			if (!isMyCell(meX, meY, x-1, y+1) &&
+				strategy.grid[x - 1][y + 1] == 1)
 			{
 				strategy.grid[x - 1][y + 1] = 0;
 				unitWalls.emplace_back(make_pair(x - 1, y + 1));
 			}
-			if (isHigh && strategy.grid[x - 1][y + 2] == 1)
+			if (!isMyCell(meX, meY, x - 1, y-1) &&
+				strategy.grid[x - 1][y-1] == 1) {
+				strategy.grid[x - 1][y-1] = 0;
+				unitWalls.emplace_back(make_pair(x - 1, y-1));
+			}
+			
+			if (!isMyCell(meX, meY, x-1, y+2) &&
+				isHigh && strategy.grid[x - 1][y + 2] == 1)
 			{
 				strategy.grid[x - 1][y + 2] = 0;
 				unitWalls.emplace_back(make_pair(x - 1, y + 2));
@@ -699,16 +725,25 @@ void getAttackingData2(
 
 		if (unit.position.x + unit.size.x / 2 > x + 1)
 		{
-			if (strategy.grid[x + 1][y] == 1) {
+			if (!isMyCell(meX, meY, x+1, y) &&
+				strategy.grid[x + 1][y] == 1) {
 				strategy.grid[x + 1][y] = 0;
 				unitWalls.emplace_back(make_pair(x + 1, y));
 			}
-			if (strategy.grid[x + 1][y + 1] == 1)
+			if (!isMyCell(meX, meY, x+1, y+1) &&
+				strategy.grid[x + 1][y + 1] == 1)
 			{
 				strategy.grid[x + 1][y + 1] = 0;
 				unitWalls.emplace_back(make_pair(x + 1, y + 1));
 			}
-			if (isHigh && strategy.grid[x + 1][y + 2] == 1)
+			if (!isMyCell(meX, meY, x + 1, y - 1) &&
+				strategy.grid[x + 1][y - 1] == 1)
+			{
+				strategy.grid[x + 1][y - 1] = 0;
+				unitWalls.emplace_back(make_pair(x + 1, y - 1));
+			}
+			if (!isMyCell(meX, meY, x+1, y+2) &&
+				isHigh && strategy.grid[x + 1][y + 2] == 1)
 			{
 				strategy.grid[x + 1][y + 2] = 0;
 				unitWalls.emplace_back(make_pair(x + 1, y + 2));
