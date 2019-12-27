@@ -869,6 +869,7 @@ void setShootingAction(
 
 		if (enemyKilledCount > 0 && meLeftCount >= enemyLeftCount)
 		{
+			action.velocity = 0;
 			action.plantMine = true;
 			action.aim = { 0, -1 };
 			action.shoot = false;
