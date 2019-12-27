@@ -957,8 +957,8 @@ bool Simulator::isUnitOnUnit(const Vec2Double& unitPosition, const Vec2Double& u
 	for (const auto& unit: game.units)
 	{
 		if (unitId == unit.id) continue;
-		if (std::abs(unitPosition.y - unit.position.y) < unitSize.y + TOLERANCE &&
-			std::abs(unitPosition.y - unit.position.y) > unitSize.y - TOLERANCE &&
+		if (unitPosition.y - unit.position.y < unit.size.y + TOLERANCE &&
+			unitPosition.y - unit.position.y > unit.size.y - TOLERANCE &&
 			std::abs(unitPosition.x - unit.position.x) < unitSize.x / 2 + unit.size.x/2)
 		{
 			return true;
