@@ -660,34 +660,7 @@ void getAttackingData2(
 		return;
 	}
 
-	const LootBox* nearestMySideLootBox = nullptr;
-	double minMHDist = INT_MAX;
-	for (const auto& lb : game.lootBoxes)
-	{
-		if (std::dynamic_pointer_cast<Item::HealthPack>(lb.item))
-		{
-			bool isGot = false;
-			for (const auto& item : strategy.heal_boxes_)
-			{
-				if (std::abs(item.second.x - lb.position.x) < TOLERANCE &&
-					std::abs(item.second.y - lb.position.y) < TOLERANCE)
-				{
-					isGot = true;
-					break;
-				}
-			}
-			if (isGot) continue;
-			if ((static_cast<int>(lb.position.x) - static_cast<int>(enemy.position.x)) * 
-				(static_cast<int>(me.position.x) - enemy.position.x) < 0) continue;
 
-			const auto dist = MathHelper::getMHDist(me.position, lb.position);
-			if (dist < minMHDist)
-			{
-				minMHDist = dist;
-				nearestMySideLootBox = &lb;
-			}
-		}
-	}
 
 	vector<pair<int, int>> unitWalls;
 	const auto meX = static_cast<int>(me.position.x);
@@ -780,9 +753,42 @@ void getAttackingData2(
 		}
 	}
 
+	
 	bool isOkRunaway;
 	double runawayX;
 	double runawayY;
+
+	const LootBox* nearestMySideLootBox = nullptr;
+	double minMHDist = INT_MAX;
+	for (const auto& lb : game.lootBoxes)
+	{
+		if (std::dynamic_pointer_cast<Item::HealthPack>(lb.item))
+		{
+			if (strategy.grid[static_cast<int>(lb.position.x)][static_cast<int>(lb.position.y)] == 0) continue;
+			
+			bool isGot = false;
+			
+			for (const auto& item : strategy.heal_boxes_)
+			{
+				if (std::abs(item.second.x - lb.position.x) < TOLERANCE &&
+					std::abs(item.second.y - lb.position.y) < TOLERANCE)
+				{
+					isGot = true;
+					break;
+				}
+			}
+			if (isGot) continue;
+			if ((static_cast<int>(lb.position.x) - static_cast<int>(enemy.position.x)) *
+				(static_cast<int>(me.position.x) - enemy.position.x) < 0) continue;
+
+			const auto dist = MathHelper::getMHDist(me.position, lb.position);
+			if (dist < minMHDist)
+			{
+				minMHDist = dist;
+				nearestMySideLootBox = &lb;
+			}
+		}
+	}
 
 	if (nearestMySideLootBox != nullptr)
 	{
