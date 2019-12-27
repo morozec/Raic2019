@@ -873,7 +873,7 @@ void setShootingAction(
 		}
 		const auto isSafeOtherUnitPlantMine = myOtherUnitDist > SAFE_OTHER_UNIT_PLANT_MINE_DIST;
 
-		bool isSafeBulletsPlantMine = false;
+		bool isSafeBulletsPlantMine = true;
 		const auto& mineSize = game.properties.mineSize;
 		for (const auto& ebs : enemyBulletsSimulations)
 		{
@@ -900,7 +900,7 @@ void setShootingAction(
 		for (const auto& mine : game.mines)
 		{
 			const auto dist = MathHelper::getMHDist(mine.position, me.position);
-			if (dist > MIN_SET_MINE_DIST)
+			if (dist < MIN_SET_MINE_DIST)
 			{
 				isFarFromOtherMines = false;
 				break;
