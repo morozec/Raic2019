@@ -332,7 +332,20 @@ vector<Four> aStarSearch(
 			if (jumpPadJ != -1)
 			{
 				lNew = 1;
-				jpJ = jumpPadJ + 1;
+
+				if (game.level.tiles[i - 1][j] == JUMP_PAD && isDestination(i - 1, j, dest))
+				{
+					cellDetails[i - 1][j][kNew][lNew].parent_i = i;
+					cellDetails[i - 1][j][kNew][lNew].parent_j = j;
+					cellDetails[i - 1][j][kNew][lNew].parent_k = k;
+					cellDetails[i - 1][j][kNew][lNew].parent_l = l;
+					foundDest = true;
+					foundDestK = kNew;
+					foundDestL = lNew;
+					break;
+				}
+				
+				jpJ = jumpPadJ + 1;				
 			}
 			else
 			{
@@ -403,6 +416,19 @@ vector<Four> aStarSearch(
 			if (jumpPadJ != -1)
 			{
 				lNew = 1;
+
+				if (game.level.tiles[i + 1][j] == JUMP_PAD && isDestination(i + 1, j, dest))
+				{
+					cellDetails[i + 1][j][kNew][lNew].parent_i = i;
+					cellDetails[i + 1][j][kNew][lNew].parent_j = j;
+					cellDetails[i + 1][j][kNew][lNew].parent_k = k;
+					cellDetails[i + 1][j][kNew][lNew].parent_l = l;
+					foundDest = true;
+					foundDestK = kNew;
+					foundDestL = lNew;
+					break;
+				}
+				
 				jpJ = jumpPadJ + 1;
 			}
 			else
@@ -473,6 +499,19 @@ vector<Four> aStarSearch(
 			{
 				kNew = 0;
 				lNew = 1;
+
+				if (game.level.tiles[i][j + addNorth] == JUMP_PAD && isDestination(i, j + addNorth, dest))
+				{
+					cellDetails[i][j + addNorth][kNew][lNew].parent_i = i;
+					cellDetails[i][j + addNorth][kNew][lNew].parent_j = j;
+					cellDetails[i][j + addNorth][kNew][lNew].parent_k = k;
+					cellDetails[i][j + addNorth][kNew][lNew].parent_l = l;
+					foundDest = true;
+					foundDestK = kNew;
+					foundDestL = lNew;
+					break;
+				}
+				
 				jpJ = jumpPadJ + 1;
 			}
 			else
@@ -485,13 +524,13 @@ vector<Four> aStarSearch(
 			
 			// If the destination cell is the same as the 
 			// current successor 
-			if (isDestination(i, j + addNorth, dest) == true)
+			if (isDestination(i, jpJ, dest) == true)
 			{
 				// Set the Parent of the destination cell 
-				cellDetails[i][j + addNorth][kNew][lNew].parent_i = i;
-				cellDetails[i][j + addNorth][kNew][lNew].parent_j = j;
-				cellDetails[i][j + addNorth][kNew][lNew].parent_k = k;
-				cellDetails[i][j + addNorth][kNew][lNew].parent_l = l;
+				cellDetails[i][jpJ][kNew][lNew].parent_i = i;
+				cellDetails[i][jpJ][kNew][lNew].parent_j = j;
+				cellDetails[i][jpJ][kNew][lNew].parent_k = k;
+				cellDetails[i][jpJ][kNew][lNew].parent_l = l;
 				foundDest = true;
 				foundDestK = kNew;
 				foundDestL = lNew;
@@ -501,10 +540,10 @@ vector<Four> aStarSearch(
 			// If the successor is already on the closed 
 			// list or if it is blocked, then ignore it. 
 			// Else do the following 
-			else if (closedList[i][j + addNorth][kNew][lNew] == false)
+			else if (closedList[i][jpJ][kNew][lNew] == false)
 			{
 				gNew = cellDetails[i][j][k][l].g + 1.0;
-				hNew = calculateHValue(i, j + addNorth, dest);
+				hNew = calculateHValue(i, jpJ, dest);
 				fNew = gNew + hNew;
 
 				// If it isn’t on the open list, add it to 
@@ -515,20 +554,20 @@ vector<Four> aStarSearch(
 				// If it is on the open list already, check 
 				// to see if this path to that square is better, 
 				// using 'f' cost as the measure. 
-				if (cellDetails[i][j + addNorth][kNew][lNew].f == INT_MAX ||
-					cellDetails[i][j + addNorth][kNew][lNew].f > fNew)
+				if (cellDetails[i][jpJ][kNew][lNew].f == INT_MAX ||
+					cellDetails[i][jpJ][kNew][lNew].f > fNew)
 				{
 					openList.insert(make_pair(fNew,
-						make_tuple(i, j + addNorth, kNew, lNew)));
+						make_tuple(i, jpJ, kNew, lNew)));
 
 					// Update the details of this cell 
-					cellDetails[i][j + addNorth][kNew][lNew].f = fNew;
-					cellDetails[i][j + addNorth][kNew][lNew].g = gNew;
-					cellDetails[i][j + addNorth][kNew][lNew].h = hNew;
-					cellDetails[i][j + addNorth][kNew][lNew].parent_i = i;
-					cellDetails[i][j + addNorth][kNew][lNew].parent_j = j;
-					cellDetails[i][j + addNorth][kNew][lNew].parent_k = k;
-					cellDetails[i][j + addNorth][kNew][lNew].parent_l = l;
+					cellDetails[i][jpJ][kNew][lNew].f = fNew;
+					cellDetails[i][jpJ][kNew][lNew].g = gNew;
+					cellDetails[i][jpJ][kNew][lNew].h = hNew;
+					cellDetails[i][jpJ][kNew][lNew].parent_i = i;
+					cellDetails[i][jpJ][kNew][lNew].parent_j = j;
+					cellDetails[i][jpJ][kNew][lNew].parent_k = k;
+					cellDetails[i][jpJ][kNew][lNew].parent_l = l;
 				}
 			}
 		}
@@ -547,6 +586,19 @@ vector<Four> aStarSearch(
 			if (jumpPadJ != -1)
 			{
 				lNew = 1;
+
+				if (game.level.tiles[i][j + addNorth] == JUMP_PAD && isDestination(i, j + addNorth, dest))
+				{
+					cellDetails[i][j + addNorth][kNew][lNew].parent_i = i;
+					cellDetails[i][j + addNorth][kNew][lNew].parent_j = j;
+					cellDetails[i][j + addNorth][kNew][lNew].parent_k = k;
+					cellDetails[i][j + addNorth][kNew][lNew].parent_l = l;
+					foundDest = true;
+					foundDestK = kNew;
+					foundDestL = lNew;
+					break;
+				}
+				
 				jpJ = jumpPadJ + 1;
 			}
 			else
@@ -622,6 +674,19 @@ vector<Four> aStarSearch(
 			{
 				kNew = 0;
 				lNew = 1;
+
+				if (game.level.tiles[i - 1][j + addNorth] == JUMP_PAD && isDestination(i - 1, j + addNorth, dest))
+				{
+					cellDetails[i-1][j + addNorth][kNew][lNew].parent_i = i;
+					cellDetails[i-1][j + addNorth][kNew][lNew].parent_j = j;
+					cellDetails[i-1][j + addNorth][kNew][lNew].parent_k = k;
+					cellDetails[i-1][j + addNorth][kNew][lNew].parent_l = l;
+					foundDest = true;
+					foundDestK = kNew;
+					foundDestL = lNew;
+					break;
+				}
+				
 				jpJ = jumpPadJ + 1;
 			}
 			else
@@ -698,6 +763,19 @@ vector<Four> aStarSearch(
 			if (jumpPadJ != -1)
 			{
 				lNew = 1;
+
+				if (game.level.tiles[i - 1][j + addNorth] == JUMP_PAD && isDestination(i - 1, j + addNorth, dest))
+				{
+					cellDetails[i - 1][j + addNorth][kNew][lNew].parent_i = i;
+					cellDetails[i - 1][j + addNorth][kNew][lNew].parent_j = j;
+					cellDetails[i - 1][j + addNorth][kNew][lNew].parent_k = k;
+					cellDetails[i - 1][j + addNorth][kNew][lNew].parent_l = l;
+					foundDest = true;
+					foundDestK = kNew;
+					foundDestL = lNew;
+					break;
+				}
+				
 				jpJ = jumpPadJ + 1;
 			}		
 			else
@@ -774,6 +852,19 @@ vector<Four> aStarSearch(
 			{
 				kNew = 0;
 				lNew = 1;
+				
+				if (game.level.tiles[i + 1][j + addNorth] == JUMP_PAD && isDestination(i + 1, j + addNorth, dest))
+				{
+					cellDetails[i + 1][j + addNorth][kNew][lNew].parent_i = i;
+					cellDetails[i + 1][j + addNorth][kNew][lNew].parent_j = j;
+					cellDetails[i + 1][j + addNorth][kNew][lNew].parent_k = k;
+					cellDetails[i + 1][j + addNorth][kNew][lNew].parent_l = l;
+					foundDest = true;
+					foundDestK = kNew;
+					foundDestL = lNew;
+					break;
+				}
+				
 				jpJ = jumpPadJ + 1;
 			}
 			else
@@ -850,6 +941,18 @@ vector<Four> aStarSearch(
 			if (jumpPadJ != -1)
 			{
 				lNew = 1;
+
+				if (game.level.tiles[i + 1][j + addNorth] == JUMP_PAD && isDestination(i + 1, j + addNorth, dest))
+				{
+					cellDetails[i + 1][j + addNorth][kNew][lNew].parent_i = i;
+					cellDetails[i + 1][j + addNorth][kNew][lNew].parent_j = j;
+					cellDetails[i + 1][j + addNorth][kNew][lNew].parent_k = k;
+					cellDetails[i + 1][j + addNorth][kNew][lNew].parent_l = l;
+					foundDest = true;
+					foundDestK = kNew;
+					foundDestL = lNew;
+					break;
+				}
 				jpJ = jumpPadJ + 1;
 			}
 			else
@@ -928,6 +1031,19 @@ vector<Four> aStarSearch(
 			{
 				kNew = 0;
 				lNew = 1;
+
+				if (game.level.tiles[i][j - 1] == JUMP_PAD && isDestination(i, j - 1, dest))
+				{
+					cellDetails[i][j-1][kNew][lNew].parent_i = i;
+					cellDetails[i][j-1][kNew][lNew].parent_j = j;
+					cellDetails[i][j-1][kNew][lNew].parent_k = k;
+					cellDetails[i][j-1][kNew][lNew].parent_l = l;
+					foundDest = true;
+					foundDestK = kNew;
+					foundDestL = lNew;
+					break;
+				}
+				
 				jpJ = jumpPadJ + 1;				
 			}
 			else
@@ -1005,6 +1121,19 @@ vector<Four> aStarSearch(
 			{
 				kNew = 0;
 				lNew = 1;
+
+				if (game.level.tiles[i - 1][j - 1] == JUMP_PAD && isDestination(i - 1, j - 1, dest))
+				{
+					cellDetails[i-1][j - 1][kNew][lNew].parent_i = i;
+					cellDetails[i-1][j - 1][kNew][lNew].parent_j = j;
+					cellDetails[i-1][j - 1][kNew][lNew].parent_k = k;
+					cellDetails[i-1][j - 1][kNew][lNew].parent_l = l;
+					foundDest = true;
+					foundDestK = kNew;
+					foundDestL = lNew;
+					break;
+				}
+				
 				jpJ = jumpPadJ + 1;
 			}
 			
@@ -1080,6 +1209,18 @@ vector<Four> aStarSearch(
 			{
 				kNew = 0;
 				lNew = 1;
+				
+				if (game.level.tiles[i+1][j - 1] == JUMP_PAD && isDestination(i+1, j - 1, dest))
+				{
+					cellDetails[i+1][j - 1][kNew][lNew].parent_i = i;
+					cellDetails[i+1][j - 1][kNew][lNew].parent_j = j;
+					cellDetails[i+1][j - 1][kNew][lNew].parent_k = k;
+					cellDetails[i+1][j - 1][kNew][lNew].parent_l = l;
+					foundDest = true;
+					foundDestK = kNew;
+					foundDestL = lNew;
+					break;
+				}
 				jpJ = jumpPadJ + 1;
 			}
 			else
