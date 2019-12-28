@@ -873,6 +873,8 @@ void setShootingAction(
 			action.plantMine = true;
 			action.aim = { 0, -1 };
 			action.shoot = false;
+			action.jump = false;
+			action.jumpDown = false;
 			return;
 		}
 	}
@@ -937,6 +939,8 @@ void setShootingAction(
 			action.plantMine = true;
 			action.aim = { 0, -1 };
 			action.shoot = true;
+			action.jump = false;
+			action.jumpDown = false;
 			return;
 		}
 	}	
