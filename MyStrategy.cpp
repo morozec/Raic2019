@@ -822,10 +822,12 @@ void setShootingAction(
 		game.level.tiles[size_t(me.position.x)][size_t(me.position.y)] == LADDER ||
 		game.level.tiles[size_t(me.position.x)][size_t(myCenterY)] == LADDER;
 	const auto centerBottomTile = game.level.tiles[size_t(me.position.x)][size_t(me.position.y - 0.5)];
-	const auto isGoodMinePos = 
-		!Simulator::isUnitOnAir(me.position, me.size, me.id, game) &&
+	const auto isStillFalling = !me.jumpState.canJump && !me.jumpState.canCancel;
+	
+	const auto isGoodMinePos = 		
 		!isOnLadder &&
 		(centerBottomTile == WALL || centerBottomTile == PLATFORM);
+	
 
 	auto areSamePosMines = false;
 	for (const auto& mine : game.mines)
@@ -837,7 +839,9 @@ void setShootingAction(
 		}
 	}
 
-	if (isGoodMinePos && !areSamePosMines && me.mines >= 2 &&
+	if (isGoodMinePos && 
+		!Simulator::isUnitOnAir(me.position, me.size, me.id, game) && !isStillFalling &&
+		!areSamePosMines && me.mines >= 2 &&
 		(me.weapon->fireTimer == nullptr || *(me.weapon->fireTimer) - 2 * tickTime < 0))
 	{
 		int meLeftCount = 0;
@@ -889,6 +893,7 @@ void setShootingAction(
 	
 	
 	if (isGoodMinePos && me.mines > 0 &&
+		!Simulator::isUnitOnAir(me.position, me.size, me.id, game) && !isStillFalling &&
 		(me.weapon->fireTimer == nullptr || *(me.weapon->fireTimer) - tickTime < 0))
 	{
 		int meLeftCount = 0;
@@ -956,7 +961,8 @@ void setShootingAction(
 		}
 	}
 
-	if (isGoodMinePos && me.mines > 0 && 
+	if (isGoodMinePos && me.mines > 0 &&
+		!Simulator::isUnitOnAir(me.position, me.size, me.id, game) &&
 		me.weapon->fireTimer != nullptr &&
 		*(me.weapon->fireTimer) >= 2 * tickTime)
 	{
