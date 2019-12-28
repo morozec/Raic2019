@@ -92,6 +92,11 @@ vector<Four> tracePath(cell****& cellDetails, Pair dest, int foundDestK, int fou
 		row = temp_row;		
 		k = temp_k;
 		l = temp_l;
+
+		if (col == -1 && row == -1 && k == -1 && k == -1)
+		{
+			return vector<Four>();
+		}
 	}
 
 	Path.emplace_back(make_tuple(col, row, k, l));
