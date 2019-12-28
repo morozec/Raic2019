@@ -57,10 +57,14 @@ bool isDestination(int col, int row, Pair dest)
 }
 
 // A Utility Function to calculate the 'h' heuristics. 
-int calculateHValue(int col, int row, Pair dest)
+double calculateHValue(int col, int row, Pair dest, double addDiagonalWeight)
 {
-	// Return using the distance formula 
-	return std::abs(col - dest.first) + std::abs(row - dest.second);
+	// Return using the distance formula
+	const auto dx = std::abs(col - dest.first);
+	const auto dy = std::abs(row - dest.second);
+	const auto max = std::max(dx, dy);
+	const auto min = std::min(dx, dy);
+	return max + min * addDiagonalWeight;
 }
 
 // A Utility Function to trace the path from the source 
@@ -290,7 +294,7 @@ vector<Four> aStarSearch(
 
 
 			gNew = cellDetails[i][j][k][l].g + diagonalAddWeight; //ïîñòîÿòü íà ïëàòôîðìå ñòîèò íå äîðîãî
-			hNew = calculateHValue(i, jpJ, dest);
+			hNew = calculateHValue(i, jpJ, dest, diagonalAddWeight);
 			fNew = gNew + hNew;
 
 			// If it isn’t on the open list, add it to 
@@ -374,7 +378,7 @@ vector<Four> aStarSearch(
 			else if (closedList[i - 1][jpJ][kNew][lNew] == false)
 			{
 				gNew = cellDetails[i][j][k][l].g + 1.0;
-				hNew = calculateHValue(i - 1, jpJ, dest);
+				hNew = calculateHValue(i - 1, jpJ, dest, diagonalAddWeight);
 				fNew = gNew + hNew;
 
 				// If it isn’t on the open list, add it to 
@@ -458,7 +462,7 @@ vector<Four> aStarSearch(
 			else if (closedList[i + 1][jpJ][kNew][lNew] == false )
 			{
 				gNew = cellDetails[i][j][k][l].g + 1.0;
-				hNew = calculateHValue(i + 1, jpJ, dest);
+				hNew = calculateHValue(i + 1, jpJ, dest, diagonalAddWeight);
 				fNew = gNew + hNew;
 
 				// If it isn’t on the open list, add it to 
@@ -545,7 +549,7 @@ vector<Four> aStarSearch(
 			else if (closedList[i][jpJ][kNew][lNew] == false)
 			{
 				gNew = cellDetails[i][j][k][l].g + 1.0;
-				hNew = calculateHValue(i, jpJ, dest);
+				hNew = calculateHValue(i, jpJ, dest, diagonalAddWeight);
 				fNew = gNew + hNew;
 
 				// If it isn’t on the open list, add it to 
@@ -629,7 +633,7 @@ vector<Four> aStarSearch(
 			else if (closedList[i][jpJ][kNew][lNew] == false)
 			{
 				gNew = cellDetails[i][j][k][l].g + 1.0;
-				hNew = calculateHValue(i, jpJ, dest);
+				hNew = calculateHValue(i, jpJ, dest, diagonalAddWeight);
 				fNew = gNew + hNew;
 
 				// If it isn’t on the open list, add it to 
@@ -720,7 +724,7 @@ vector<Four> aStarSearch(
 				isUnBlocked(grid, i - 1, jpJ) == true)
 			{
 				gNew = cellDetails[i][j][k][l].g + 1.0 + diagonalAddWeight;
-				hNew = calculateHValue(i - 1, jpJ, dest);
+				hNew = calculateHValue(i - 1, jpJ, dest, diagonalAddWeight);
 				fNew = gNew + hNew;
 
 				// If it isn’t on the open list, add it to 
@@ -808,7 +812,7 @@ vector<Four> aStarSearch(
 				isUnBlocked(grid, i - 1, jpJ) == true)
 			{
 				gNew = cellDetails[i][j][k][l].g + 1.0 + diagonalAddWeight;
-				hNew = calculateHValue(i - 1, jpJ, dest);
+				hNew = calculateHValue(i - 1, jpJ, dest, diagonalAddWeight);
 				fNew = gNew + hNew;
 
 				// If it isn’t on the open list, add it to 
@@ -898,7 +902,7 @@ vector<Four> aStarSearch(
 				isUnBlocked(grid, i + 1, jpJ) == true)
 			{
 				gNew = cellDetails[i][j][k][l].g + 1.0 + diagonalAddWeight;
-				hNew = calculateHValue(i + 1, jpJ, dest);
+				hNew = calculateHValue(i + 1, jpJ, dest, diagonalAddWeight);
 				fNew = gNew + hNew;
 
 				// If it isn’t on the open list, add it to 
@@ -986,7 +990,7 @@ vector<Four> aStarSearch(
 				isUnBlocked(grid, i + 1, jpJ) == true)
 			{
 				gNew = cellDetails[i][j][k][l].g + 1.0 + diagonalAddWeight;
-				hNew = calculateHValue(i + 1, jpJ, dest);
+				hNew = calculateHValue(i + 1, jpJ, dest, diagonalAddWeight);
 				fNew = gNew + hNew;
 
 				// If it isn’t on the open list, add it to 
@@ -1077,7 +1081,7 @@ vector<Four> aStarSearch(
 			else if (closedList[i][jpJ][kNew][lNew] == false)
 			{
 				gNew = cellDetails[i][j][k][l].g + 1.0;
-				hNew = calculateHValue(i, jpJ, dest);
+				hNew = calculateHValue(i, jpJ, dest, diagonalAddWeight);
 				fNew = gNew + hNew;
 
 				// If it isn’t on the open list, add it to 
@@ -1169,7 +1173,7 @@ vector<Four> aStarSearch(
 			else if (closedList[i - 1][jpJ][kNew][lNew] == false)
 			{
 				gNew = cellDetails[i][j][k][l].g + 1.0 + diagonalAddWeight;
-				hNew = calculateHValue(i - 1, jpJ, dest);
+				hNew = calculateHValue(i - 1, jpJ, dest, diagonalAddWeight);
 				fNew = gNew + hNew;
 
 				// If it isn’t on the open list, add it to 
@@ -1255,7 +1259,7 @@ vector<Four> aStarSearch(
 			else if (closedList[i + 1][jpJ][kNew][lNew] == false)
 			{
 				gNew = cellDetails[i][j][k][l].g + 1.0 + diagonalAddWeight;
-				hNew = calculateHValue(i + 1, jpJ, dest);
+				hNew = calculateHValue(i + 1, jpJ, dest, diagonalAddWeight);
 				fNew = gNew + hNew;
 
 				// If it isn’t on the open list, add it to 
