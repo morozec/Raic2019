@@ -1313,7 +1313,7 @@ bool Strategy::isMineExplosionShootUnit(const Vec2Double& minePosition, const Ve
 	if (minePosition.x > unitPosition.x + unitSize.x / 2) 
 		xDist = minePosition.x - (unitPosition.x + unitSize.x / 2);
 	else if (minePosition.x < unitPosition.x - unitSize.x / 2) 
-		xDist = unitPosition.x - (minePosition.x + mineSize.x / 2);
+		xDist = unitPosition.x - unitSize.x/2 - minePosition.x;
 	else xDist = 0.0;
 	
 	double yDist;
