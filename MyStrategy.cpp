@@ -817,9 +817,14 @@ void setShootingAction(
 
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 
+	const auto myCenterY = me.position.y + 0.5;
+	const auto isOnLadder =
+		game.level.tiles[size_t(me.position.x)][size_t(me.position.y)] == LADDER ||
+		game.level.tiles[size_t(me.position.x)][size_t(myCenterY)] == LADDER;
 	const auto centerBottomTile = game.level.tiles[size_t(me.position.x)][size_t(me.position.y - 0.5)];
 	const auto isGoodMinePos = 
 		!Simulator::isUnitOnAir(me.position, me.size, me.id, game) &&
+		!isOnLadder &&
 		(centerBottomTile == WALL || centerBottomTile == PLATFORM);
 
 	auto areSamePosMines = false;
