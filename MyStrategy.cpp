@@ -962,20 +962,27 @@ void setShootingAction(
 	}
 
 	if (isGoodMinePos && me.mines > 0 &&
-		!Simulator::isUnitOnAir(me.position, me.size, me.id, game) &&
-		me.weapon->fireTimer != nullptr &&
-		*(me.weapon->fireTimer) >= 2 * tickTime)
+		!Simulator::isUnitOnAir(me.position, me.size, me.id, game))
 	{
+		double fireTimer;
+		if (me.weapon->fireTimer == nullptr)
+		{
+			fireTimer = isStillFalling ? tickTime : 0.0;
+		}
+		else
+		{
+			fireTimer = isStillFalling ? std::max(*(me.weapon->fireTimer), tickTime) : *(me.weapon->fireTimer);
+		}
+		
 		auto damage = 0;
 		for (const auto& smb:shootMeBullets)
 		{
-			if (smb.first * tickTime < *(me.weapon->fireTimer)) damage += smb.second;
+			if (smb.first * tickTime < fireTimer) damage += smb.second;
 		}
 		for (const auto& smm: shootMeMines)
 		{
-			if (smm.first * tickTime < *(me.weapon->fireTimer)) damage += smm.second;
+			if (smm.first * tickTime < fireTimer) damage += smm.second;
 		}
-
 		
 
 		if (damage < me.health)
@@ -989,7 +996,7 @@ void setShootingAction(
 			int meKilledCount = 0;
 			int enemyKilledCount = 0;
 
-			const auto fireTimer = *(me.weapon->fireTimer);
+			
 
 			for (const auto& unit : game.units)
 			{
