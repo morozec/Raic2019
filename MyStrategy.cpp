@@ -418,6 +418,110 @@ void initOneStepAction(const Four& myTile, const Four& nextTile, const vector<Fo
 	else action.jumpDown = false;
 }
 
+
+bool isWayCell(int meX, int meY, int x, int y, int targetX, int targetY)
+{
+	return x == meX && (y == meY || y == meY + 1) ||
+		x == targetX && (y == targetY || y == targetY + 1);
+}
+
+vector<pair<int, int>> getUnitWalls(const Unit& me, int targetX, int targetY, Strategy& strategy, const Game& game, int playerId)
+{
+	vector<pair<int, int>> unitWalls;
+	const auto meX = static_cast<int>(me.position.x);
+	const auto meY = static_cast<int>(me.position.y);
+	for (const auto& unit : game.units)
+	{
+		if (unit.id == me.id) continue;
+		if (unit.playerId != playerId) continue;
+		
+		const int x = static_cast<int>(unit.position.x);
+		const int y = static_cast<int>(unit.position.y);
+		if (!isWayCell(meX, meY, x, y, targetX, targetY) &&
+			strategy.grid[x][y] == 1) {
+			strategy.grid[x][y] = 0;
+			unitWalls.emplace_back(make_pair(x, y));
+		}
+		if (!isWayCell(meX, meY, x, y + 1, targetX, targetY) &&
+			strategy.grid[x][y + 1] == 1)
+		{
+			strategy.grid[x][y + 1] = 0;
+			unitWalls.emplace_back(make_pair(x, y + 1));
+		}
+
+		if (!isWayCell(meX, meY, x, y - 1, targetX, targetY) &&
+			strategy.grid[x][y - 1] == 1)
+		{
+			strategy.grid[x][y - 1] = 0;
+			unitWalls.emplace_back(make_pair(x, y - 1));
+		}
+
+		const bool isHigh = unit.position.y + unit.size.y > y + 2;
+
+		if (!isWayCell(meX, meY, x, y + 2, targetX, targetY) &&
+			isHigh && strategy.grid[x][y + 2] == 1)
+		{
+			strategy.grid[x][y + 2] = 0;
+			unitWalls.emplace_back(make_pair(x, y + 2));
+		}
+
+		if (unit.position.x - unit.size.x / 2 < x)
+		{
+			if (!isWayCell(meX, meY, x - 1, y, targetX, targetY) &&
+				strategy.grid[x - 1][y] == 1) {
+				strategy.grid[x - 1][y] = 0;
+				unitWalls.emplace_back(make_pair(x - 1, y));
+			}
+			if (!isWayCell(meX, meY, x - 1, y + 1, targetX, targetY) &&
+				strategy.grid[x - 1][y + 1] == 1)
+			{
+				strategy.grid[x - 1][y + 1] = 0;
+				unitWalls.emplace_back(make_pair(x - 1, y + 1));
+			}
+			if (!isWayCell(meX, meY, x - 1, y - 1, targetX, targetY) &&
+				strategy.grid[x - 1][y - 1] == 1) {
+				strategy.grid[x - 1][y - 1] = 0;
+				unitWalls.emplace_back(make_pair(x - 1, y - 1));
+			}
+
+			if (!isWayCell(meX, meY, x - 1, y + 2, targetX, targetY) &&
+				isHigh && strategy.grid[x - 1][y + 2] == 1)
+			{
+				strategy.grid[x - 1][y + 2] = 0;
+				unitWalls.emplace_back(make_pair(x - 1, y + 2));
+			}
+		}
+
+		if (unit.position.x + unit.size.x / 2 > x + 1)
+		{
+			if (!isWayCell(meX, meY, x + 1, y, targetX, targetY) &&
+				strategy.grid[x + 1][y] == 1) {
+				strategy.grid[x + 1][y] = 0;
+				unitWalls.emplace_back(make_pair(x + 1, y));
+			}
+			if (!isWayCell(meX, meY, x + 1, y + 1, targetX, targetY) &&
+				strategy.grid[x + 1][y + 1] == 1)
+			{
+				strategy.grid[x + 1][y + 1] = 0;
+				unitWalls.emplace_back(make_pair(x + 1, y + 1));
+			}
+			if (!isWayCell(meX, meY, x + 1, y - 1, targetX, targetY) &&
+				strategy.grid[x + 1][y - 1] == 1)
+			{
+				strategy.grid[x + 1][y - 1] = 0;
+				unitWalls.emplace_back(make_pair(x + 1, y - 1));
+			}
+			if (!isWayCell(meX, meY, x + 1, y + 2, targetX, targetY) &&
+				isHigh && strategy.grid[x + 1][y + 2] == 1)
+			{
+				strategy.grid[x + 1][y + 2] = 0;
+				unitWalls.emplace_back(make_pair(x + 1, y + 2));
+			}
+		}
+	}
+	return unitWalls;
+}
+
 void initAStarAction(
 	const Unit& me, const Vec2Double& targetPos, const Vec2Double& targetSize,
 	vector<Vec2Double>& mePositions,
@@ -458,11 +562,28 @@ void initAStarAction(
 	const auto startPos =
 		make_tuple(size_t(me.position.x), size_t(me.position.y), start_z, isJumpPadJumping ? 1 : 0);
 
-	const auto path = aStarSearch(
+	const auto unitWalls = getUnitWalls(me, endPos.first, endPos.second, strategy, game, me.playerId);
+
+	auto path = aStarSearch(
 		strategy.grid, game.level.tiles.size(), game.level.tiles[0].size(),
 		strategy.closedList, strategy.cellDetails, startPos, endPos, 
 		maxJumpTiles, maxJumpPadJumpTiles,
 		game);
+
+	for (const auto& uw: unitWalls)
+	{
+		strategy.grid[uw.first][uw.second] = 1;
+	}
+
+	if (path.empty()) //пробуем построить путь без преград
+	{
+		path = aStarSearch(
+			strategy.grid, game.level.tiles.size(), game.level.tiles[0].size(),
+			strategy.closedList, strategy.cellDetails, startPos, endPos,
+			maxJumpTiles, maxJumpPadJumpTiles,
+			game);
+	}
+	
 	auto curPosition = me.position;
 	auto curJumpState = me.jumpState;
 	mePositions.emplace_back(curPosition);
