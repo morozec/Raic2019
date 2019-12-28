@@ -1601,8 +1601,25 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	action.aim = Vec2Double(0, 0);
 	action.reload = false;
 	action.swapWeapon = false;
+	if (unit.weapon != nullptr && unit.weapon->typ == ROCKET_LAUNCHER)
+	{
+		for (const LootBox& lootBox : game.lootBoxes)
+		{
+			if (std::dynamic_pointer_cast<Item::Weapon>(lootBox.item) &&
+				std::dynamic_pointer_cast<Item::Weapon>(lootBox.item)->weaponType != ROCKET_LAUNCHER)
+			{
+				if (Simulator::areRectsCross(unit.position, unit.size, lootBox.position, lootBox.size))
+				{
+					action.swapWeapon = true;
+					break;
+				}
+			}
+		}
+	}
+	
 	action.plantMine = false;
 	action.shoot = false;
+	
 
 	if (game.properties.teamSize == 2 && game.currentTick < 9)
 	{
