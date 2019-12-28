@@ -1870,8 +1870,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	const auto shootMeBullets = strategy_.getShootMeBullets(
 		unit.position, unit.size, unit.jumpState, unit.playerId, unit.id,
 		enemyBulletsSimulation, 0, game);
-	const auto shootMeMines = strategy_.getShootMeMines(
-		unit.position, unit.size, unit.jumpState, unit.id, unit.playerId, 0, game);
+	const auto shootMeMines = strategy_.getShootMeMines(unit,
+		unit.position, unit.jumpState, 0, game);
 
 	vector<double> meSimpleProbabilities;
 	if (curStopRunawayTick == 0)
@@ -2192,12 +2192,13 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		unit.playerId,
 		unit.id,
 		nextTickEnemyBulletsSimulation, 1, game);
-	const auto nextTickShootMeMines = strategy_.getShootMeMines(
-		nextTickMeAttackPosition, unit.size, nextTickMeAttackingJumpState, unit.id, unit.playerId, 1, game);
+	const auto nextTickShootMeMines = strategy_.getShootMeMines(unit,
+		nextTickMeAttackPosition, nextTickMeAttackingJumpState, 1, game);
 	
 	
 	attackRunawayAction = strategy_.getRunawayAction(
-		nextTickMeAttackPosition, unit.size, unit.playerId, unit.id, nextTickMeAttackingJumpState,
+		unit,
+		nextTickMeAttackPosition, nextTickMeAttackingJumpState,
 		nextTickShootMeBullets, nextTickShootMeMines, nextTickEnemyBulletsSimulation, 1,
 		true, true, true, true,
 		game);
@@ -2247,7 +2248,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	
 	
 	const auto noAttackRunawayAction = strategy_.getRunawayAction(
-		unit.position, unit.size, unit.playerId, unit.id, unit.jumpState,
+		unit,
+		unit.position, unit.jumpState,
 		shootMeBullets, shootMeMines, enemyBulletsSimulation, 0,
 		checkUp, checkDown, checkLeft, checkRight,
 		game);
