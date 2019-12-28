@@ -192,6 +192,26 @@ double Strategy::getShootEnemyProbability(
 	return shootingCount * 1.0 / (ANGLE_SPLIT_COUNT * 2 + 1);
 }
 
+double Strategy::getMineAboveUnitTimer(const Mine& mine, int myPlayerId, double tickTime, const Game& game)
+{
+	const Unit* aboveUnit = nullptr;
+	for (const auto& unit : game.units)
+	{
+		if (unit.playerId == myPlayerId) continue;
+		if (unit.weapon == nullptr) continue;
+		if (std::abs(unit.position.y - mine.position.y) < TOLERANCE &&
+			std::abs(unit.position.x - mine.position.x) < game.properties.unitMaxHorizontalSpeed * tickTime + TOLERANCE)
+		{
+			aboveUnit = &unit;
+			break;
+		}
+	}
+
+	if (aboveUnit == nullptr) return -1;
+
+	return aboveUnit->weapon->fireTimer == nullptr ? 0 : *(aboveUnit->weapon->fireTimer);
+}
+
 std::map<Bullet, BulletSimulation> Strategy::getEnemyBulletsSimulation(const Game& game, int mePlayerId, int meId)
 {
 	std::map<Bullet, BulletSimulation> simulations;
@@ -259,6 +279,7 @@ std::map<Bullet, BulletSimulation> Strategy::getEnemyBulletsSimulation(const Gam
 
 std::vector<std::pair<int, int>> Strategy::getShootMeMines(
 	const Vec2Double& mePosition, const Vec2Double& meSize, const JumpState& meJumpState, int meId,
+	int mePlayerId,
 	int addTicks,
 	const Game& game)
 {
@@ -271,10 +292,26 @@ std::vector<std::pair<int, int>> Strategy::getShootMeMines(
 	std::vector<std::pair<int, int>> shootMeMines;
 	for (const auto& mine:game.mines)
 	{
-		if (mine.state != TRIGGERED) continue;
-		if (addTicks == 1 && mine.timer != nullptr && *mine.timer < tickTime) continue; //мина взорволась в тик 0-1. ее мы учли заранее
+		if (mine.state == EXPLODED) continue;
 
-		auto expTick = static_cast<int>((*mine.timer) / tickTime);
+		const auto mauTimer = getMineAboveUnitTimer(mine, mePlayerId, tickTime, game);
+
+		if (mine.state != TRIGGERED && mauTimer < 0) continue;
+
+		double expTime = 100.0;
+		if (mine.timer != nullptr) expTime = *mine.timer;
+
+		if (mauTimer >= 0)
+		{
+			//здесь tickTime/2, иначе тик взрыва будет равен 0			
+			expTime = std::min(
+				std::abs(mauTimer) < TOLERANCE ? tickTime / 2.0 : mauTimer,
+				expTime);
+		}
+		
+		if (addTicks == 1 && expTime < tickTime) continue; //мина взорволась в тик 0-1. ее мы учли заранее
+
+		auto expTick = static_cast<int>(expTime / tickTime);
 		expTick -= addTicks;
 		auto jumpState = meJumpState;
 		auto pos = mePosition;
@@ -283,7 +320,7 @@ std::vector<std::pair<int, int>> Strategy::getShootMeMines(
 		{
 			pos = Simulator::getUnitInTimePosition(pos, meSize, meId, action, tickTime, jumpState, game);
 		}
-		const auto leftTime = (*mine.timer) - addTicks * tickTime - expTick * tickTime;
+		const auto leftTime = expTime - addTicks * tickTime - expTick * tickTime;
 		pos = Simulator::getUnitInTimePosition(pos, meSize, meId, action, leftTime, jumpState, game);
 
 		const auto shoot = isMineExplosionShootUnit(mine.position, mine.size, mine.explosionParams.radius,
@@ -291,7 +328,7 @@ std::vector<std::pair<int, int>> Strategy::getShootMeMines(
 				
 		if (shoot)
 		{
-			const auto tick = static_cast<int>(ceil(*mine.timer / tickTime)) - addTicks;
+			const auto tick = static_cast<int>(ceil(expTime / tickTime)) - addTicks;
 			shootMeMines.emplace_back(tick, mine.explosionParams.damage);
 		}
 	}
@@ -563,9 +600,20 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 	double maxMineExplosionTime = 0;
 	for (const auto& mine:game.mines)
 	{
-		if (mine.state != TRIGGERED) continue;
-		if (mine.timer == nullptr) continue;
-		if (*mine.timer > maxMineExplosionTime) maxMineExplosionTime = *mine.timer;
+		const auto mauTimer = getMineAboveUnitTimer(mine, unitPlayerId, tickTime, game);
+		if (mine.state != TRIGGERED && mauTimer < 0) continue;
+
+		double expTime = 100.0;
+		if (mine.timer != nullptr) expTime = *mine.timer;
+
+		if (mauTimer >= 0)
+		{
+			expTime = std::min(
+				mauTimer,
+				expTime);
+		}
+		
+		if (expTime > maxMineExplosionTime) maxMineExplosionTime = expTime;
 	}
 
 	int maxMineExplosionTick = static_cast<int>(ceil(maxMineExplosionTime * game.properties.ticksPerSecond));
@@ -985,12 +1033,26 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 				//цикл по минам
 				for (const auto& mine:game.mines)
 				{
-					if (mine.state != TRIGGERED) continue;
-					const auto isExplodingMine = mine.timer != nullptr &&
-						*mine.timer > (tick + addTicks - 1) * tickTime && *mine.timer <= (tick + addTicks) * tickTime;
+					const auto mauTimer = getMineAboveUnitTimer(mine, unitPlayerId, tickTime, game);
+					if (mine.state != TRIGGERED && mauTimer < 0) continue;
+
+					double expTime = 100.0;
+					if (mine.timer != nullptr) expTime = *mine.timer;
+
+					if (mauTimer >= 0)
+					{
+						expTime = std::min(
+							mauTimer,
+							expTime);
+					}
+					
+					
+					const auto isExplodingMine = 
+						expTime >= (tick + addTicks - 1) * tickTime && 
+						expTime < (tick + addTicks) * tickTime;
 
 					if (!isExplodingMine) continue;
-					const auto time = *mine.timer - (tick + addTicks - 1) / game.properties.ticksPerSecond;
+					const auto time = expTime - (tick + addTicks - 1) / game.properties.ticksPerSecond;
 
 					auto newGoUpJumpState = goUpJumpState;
 					const auto newJumpUnitPosition =
@@ -1246,12 +1308,27 @@ std::map<Bullet, int> Strategy::isSafeMove(
 
 	for (const auto& mine:game.mines)
 	{
-		if(mine.state != TRIGGERED) continue;
-		if (mine.timer == nullptr || *mine.timer > tickTime) continue;
+		if(mine.state == EXPLODED) continue;
+
+		const auto mauTimer = getMineAboveUnitTimer(mine, unit.playerId, tickTime, game);
+		if (mine.state != TRIGGERED && mauTimer < 0) continue;
+				
+		double expTime = 100.0;
+		if (mine.timer != nullptr) expTime = *mine.timer;
+
+		if (mauTimer >= 0)
+		{
+			expTime = std::min(
+				mauTimer,
+				expTime);
+		}
+
+		
+		if (expTime > tickTime) continue;
 
 		auto jumpState = unit.jumpState;
 		const auto unitInTimePosition = Simulator::getUnitInTimePosition(
-			unit.position, unit.size, unit.id, action, *mine.timer, jumpState, game);
+			unit.position, unit.size, unit.id, action, expTime, jumpState, game);
 
 		if (isMineExplosionShootUnit(mine.position, mine.size, mine.explosionParams.radius, 
 			unitInTimePosition, unit.size, 0, 0))

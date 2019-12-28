@@ -32,7 +32,10 @@ public:
 		const Game& game
 	);
 
-	static std::vector<std::pair<int, int>> getShootMeMines(const Vec2Double& mePosition, const Vec2Double& meSize, const JumpState& meJumpState, int meId,
+	static double getMineAboveUnitTimer(const Mine& mine, int myPlayerId, double tickTime, const Game& game);
+
+	static std::vector<std::pair<int, int>> getShootMeMines(const Vec2Double& mePosition, const Vec2Double& meSize, const JumpState& meJumpState, 
+		int meId, int mePlayerId,
 		int addTicks,
 		const Game& game);
 
