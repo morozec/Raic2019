@@ -75,8 +75,6 @@ public:
 	size_t getStartedJumpY(int id) const;
 	void setStartedJumpY(int id, size_t newStartedJumpY);
 
-	bool getIsMonkeyMode(int id) const;
-	void setIsMonkeyMode(int id, bool isMonkeyMode);
 
 	bool isInit = false;
 
@@ -102,7 +100,6 @@ private:
 	std::map<int, int> stop_runaway_ticks_;
 	std::map<int, RunawayDirection> runaway_directions_;
 	std::map<int, size_t> startedJumpYs_;
-	std::map<int, bool> isMonkeyMode_;
 	int jumpingUnitId_ = -1;
 	
 };

@@ -742,7 +742,6 @@ void getAttackingData(
 	UnitAction& meAction,
 	size_t& startJumpY,
 	int& jumpingUnitId,
-	bool& isMonkeyMode,
 	const Game& game)
 {
 	const auto tickTime = 1 / game.properties.ticksPerSecond;
@@ -782,99 +781,61 @@ void getAttackingData(
 	{
 		UnitAction action;
 		
-		if (hasWeaponEnemy && isMonkeyMode && lastMeJumpState.canJump && lastMeJumpState.canCancel)
-		{
-			action.velocity = 0;
-			action.jump = true;
-			action.jumpDown = false;
+		
+		const auto curEnemyPositions = enemyPositions[counter];
+		const auto curEnemyPosition = curEnemyPositions[0];
+
+		const auto enemyFireTick = static_cast<int>(enemyFireTimer / tickTime);
+
+		const auto shootingVector = curEnemyPosition - lastMePosition;
+		double shootingAngle;
+		if (abs(shootingVector.x) > TOLERANCE) {
+			shootingAngle = atan2(shootingVector.y, shootingVector.x);
 		}
 		else
 		{
-			const auto curEnemyPositions = enemyPositions[counter];
-			const auto curEnemyPosition = curEnemyPositions[0];
+			shootingAngle = shootingVector.y > 0 ? M_PI / 2 : -M_PI / 2;
+		}
 
-			const auto enemyFireTick = static_cast<int>(enemyFireTimer / tickTime);
-
-			const auto shootingVector = curEnemyPosition - lastMePosition;
-			double shootingAngle;
-			if (abs(shootingVector.x) > TOLERANCE) {
-				shootingAngle = atan2(shootingVector.y, shootingVector.x);
-			}
-			else
-			{
-				shootingAngle = shootingVector.y > 0 ? M_PI / 2 : -M_PI / 2;
-			}
-
-			const auto isDangerousZone = MathHelper::getMHDist(lastMePosition, curEnemyPosition) < SAFE_SHOOTING_DIST;
-			auto isEnemyShootEarlier = false;
-			if (std::abs(enemyFireTimer - INT_MAX) < TOLERANCE) isEnemyShootEarlier = false;
-			else if (std::abs(meFireTimer - INT_MAX) < TOLERANCE) isEnemyShootEarlier = true;
-			else
-			{
-				const auto curEnemyFireTime = std::max(0.0, enemyFireTimer - tickTime * (counter-1));
-				const auto curMeFireTimer = std::max(0.0, meFireTimer - tickTime * (counter-1));
-				isEnemyShootEarlier = curEnemyFireTime < curMeFireTimer - TOLERANCE;
-			}
+		const auto isDangerousZone = MathHelper::getMHDist(lastMePosition, curEnemyPosition) < SAFE_SHOOTING_DIST;
+		auto isEnemyShootEarlier = false;
+		if (std::abs(enemyFireTimer - INT_MAX) < TOLERANCE) isEnemyShootEarlier = false;
+		else if (std::abs(meFireTimer - INT_MAX) < TOLERANCE) isEnemyShootEarlier = true;
+		else
+		{
+			const auto curEnemyFireTime = std::max(0.0, enemyFireTimer - tickTime * (counter-1));
+			const auto curMeFireTimer = std::max(0.0, meFireTimer - tickTime * (counter-1));
+			isEnemyShootEarlier = curEnemyFireTime < curMeFireTimer - TOLERANCE;
+		}
 
 
-			if (!isMonkeyMode && counter == 1 && 
-				needMonkeyMode(lastMePosition, curEnemyPosition, hasWeaponEnemy, enemyFireTick) &&
-				!Simulator::isUnitOnAir(lastMePosition, me.size, me.id, game))	
-			{
-				isMonkeyMode = true;
-				action.jump = true;
-				action.jumpDown = false;
-				action.velocity = 0;
-			}
+		if (
+			hasWeaponEnemy &&
+			!isMyClosestUnit && //тормозим дальним,  				
+			//и стрелять не опасно
+				(me.weapon->params.explosion == nullptr ||
+					!Strategy::isDangerousRocketShooting(
+						lastMePosition, me.size, shootingAngle, me.weapon->spread, me.weapon->params.bullet.size / 2, game)) 				
+			)
 
-			else if (
-				hasWeaponEnemy &&
-				!isMyClosestUnit && //тормозим дальним,  				
-				//и стрелять не опасно
-					(me.weapon->params.explosion == nullptr ||
-						!Strategy::isDangerousRocketShooting(
-							lastMePosition, me.size, shootingAngle, me.weapon->spread, me.weapon->params.bullet.size / 2, game)) 				
-				)
+		{
+			vector<Vec2Double> tmpPositions;
+			tmpPositions.emplace_back(lastMePosition);
+			prolongatePositions(tmpPositions, me.size, me.id, lastMeJumpState, game);
 
-			{
-				vector<Vec2Double> tmpPositions;
-				tmpPositions.emplace_back(lastMePosition);
-				prolongatePositions(tmpPositions, me.size, me.id, lastMeJumpState, game);
+			//если видим врага
+			const auto isEnemyVisible = getSimpleProbability(
+				tmpPositions.back(), me.size, curEnemyPositions, enemySize, game) > 1 - TOLERANCE;
 
-				//если видим врага
-				const auto isEnemyVisible = getSimpleProbability(
-					tmpPositions.back(), me.size, curEnemyPositions, enemySize, game) > 1 - TOLERANCE;
-
-				if (isEnemyVisible)
-				{
-					needStop = true;
-					action.jump = false;
-					action.jumpDown = false;
-					action.velocity = 0;
-				}
-				else
-				{
-					action.velocity = curEnemyPosition.x > lastMePosition.x ? INT_MAX : -INT_MAX;
-					setJumpAndJumpDown(
-						lastMePosition, me.size, lastMeJumpState,
-						me.playerId,
-						me.id,
-						curEnemyPosition, enemySize, game,
-						hasWeaponEnemy ? false : true,
-						action, lastStartJumpY, lastJumpingUnitId);
-				}
-			}
-
-			else if ((!hasWeaponEnemy || isMyClosestUnit) && //тормозим ближним, если подошли вплотную
-				Simulator::areRectsTouch(lastMePosition, me.size, curEnemyPosition, enemySize) ||
-				isMyClosestUnit && isDangerousZone && isEnemyShootEarlier) //или если я близко, а он стреляет раньше
+			if (isEnemyVisible)
 			{
 				needStop = true;
 				action.jump = false;
 				action.jumpDown = false;
 				action.velocity = 0;
 			}
-			else {
+			else
+			{
 				action.velocity = curEnemyPosition.x > lastMePosition.x ? INT_MAX : -INT_MAX;
 				setJumpAndJumpDown(
 					lastMePosition, me.size, lastMeJumpState,
@@ -885,6 +846,27 @@ void getAttackingData(
 					action, lastStartJumpY, lastJumpingUnitId);
 			}
 		}
+
+		else if ((!hasWeaponEnemy || isMyClosestUnit) && //тормозим ближним, если подошли вплотную
+			Simulator::areRectsTouch(lastMePosition, me.size, curEnemyPosition, enemySize) ||
+			isMyClosestUnit && isDangerousZone && isEnemyShootEarlier) //или если я близко, а он стреляет раньше
+		{
+			needStop = true;
+			action.jump = false;
+			action.jumpDown = false;
+			action.velocity = 0;
+		}
+		else {
+			action.velocity = curEnemyPosition.x > lastMePosition.x ? INT_MAX : -INT_MAX;
+			setJumpAndJumpDown(
+				lastMePosition, me.size, lastMeJumpState,
+				me.playerId,
+				me.id,
+				curEnemyPosition, enemySize, game,
+				hasWeaponEnemy ? false : true,
+				action, lastStartJumpY, lastJumpingUnitId);
+		}
+		
 		
 			
 		if (counter == 1) {
@@ -1617,7 +1599,7 @@ void initAttackAction(
 	const JumpState& nextTickMeAttackingJumpState, const Vec2Double& nextTickMeAttackPosition,
 	vector<double>& meSimpleProbabilities,
 	const vector<vector<Vec2Double>>& enemyPositions, const Vec2Double& enemySize, int enemyId,
-	int startJumpY, int jumpingUnitId, bool isMonkeyMode,
+	int startJumpY, int jumpingUnitId, 
 	tuple<RunawayDirection, int, int, int> runawayAction,
 	const UnitAction& meAttackingAction, UnitAction& action, Strategy& strategy,
 	const map<Bullet, BulletSimulation>& enemyBulletsSimulations,
@@ -1699,7 +1681,6 @@ void initAttackAction(
 		game, action, isHealing);
 	strategy.setStartedJumpY(unit.id, startJumpY);
 	strategy.setJumpingUnitId(jumpingUnitId);
-	strategy.setIsMonkeyMode(unit.id, isMonkeyMode);
 }
 
 UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
@@ -1712,7 +1693,6 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			if (u.playerId != unit.playerId) continue;
 			strategy_.setRunaway(u.id, GoNONE, -1);
 			strategy_.setStartedJumpY(u.id, 0);
-			strategy_.setIsMonkeyMode(u.id, false);
 		}
 		strategy_.isInit = true;
 		strategy_.setJumpingUnitId(-1);
@@ -1871,22 +1851,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	const auto tickTime = 1 / game.properties.ticksPerSecond;
 	const auto enemyFireTick = static_cast<int>(enemyFireTimer / tickTime);
 	
-	auto isMonkeyMode = strategy_.getIsMonkeyMode(unit.id);
-	if (isMonkeyMode && (
-		!needMonkeyMode(
-			unit.position,
-			nearestEnemy->position,
-			nearestEnemy->weapon != nullptr, 
-			enemyFireTick) || //monkeyMode не нужен
-		(!unit.jumpState.canJump && !unit.jumpState.canCancel) || //прыжок окончен
-		!Simulator::isUnitOnAir(unit.position, unit.size, unit.id, game))) //я оказался на земле
-	{
-		strategy_.setIsMonkeyMode(unit.id, false);
-		isMonkeyMode = false;
-	}
-
 	
-
 	const auto enemyBulletsSimulation = strategy_.getEnemyBulletsSimulation(game, unit.playerId, unit.id);
 	const auto enemyPositions = getSimplePositionsSimulations(*nearestEnemy, game, MAX_SIMULATIONS, false);
 
@@ -2162,7 +2127,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 						meAttackingPositions, meAttackingJumpStates,
 						nearestEnemy->size, enemyPositions,
 						enemyFireTimer,
-						meAttackingAction, startJumpY, jumpingUnitId, isMonkeyMode, game);
+						meAttackingAction, startJumpY, jumpingUnitId, game);
 			}
 		}
 	}
@@ -2222,7 +2187,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 		initAttackAction(unit, meAttackingPositions, meAttackingJumpStates,
 			nextTickMeAttackingJumpState, nextTickMeAttackPosition, meSimpleProbabilities,
-			enemyPositions, nearestEnemy->size, nearestEnemy->id, startJumpY, jumpingUnitId, isMonkeyMode,
+			enemyPositions, nearestEnemy->size, nearestEnemy->id, startJumpY, jumpingUnitId,
 			attackRunawayAction, meAttackingAction, action, strategy_, enemyBulletsSimulation,
 			shootMeBullets, shootMeMines,
 			game, isHealing);
@@ -2273,7 +2238,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		
 		initAttackAction(unit, meAttackingPositions, meAttackingJumpStates,
 			nextTickMeAttackingJumpState, nextTickMeAttackPosition, meSimpleProbabilities,
-			enemyPositions, nearestEnemy->size, nearestEnemy->id, startJumpY, jumpingUnitId, isMonkeyMode,
+			enemyPositions, nearestEnemy->size, nearestEnemy->id, startJumpY, jumpingUnitId, 
 			attackRunawayAction, meAttackingAction, action, strategy_, enemyBulletsSimulation,
 			shootMeBullets, shootMeMines,
 			game, isHealing);
