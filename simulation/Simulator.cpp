@@ -1079,8 +1079,11 @@ std::map<int, Vec2Double> Simulator::getBulletPositions(
 	for (int i = 1; i <= shootWallTick; ++i)
 	{
 		Vec2Double position;
-		const auto exists = Simulator::getBulletInTimePosition(
+		auto exists = Simulator::getBulletInTimePosition(
 			bulletPosition, bulletVelocity, tickTime * i, targetCrossTime, game, position);
+		if (exists && i == shootWallTick) {
+			exists = false;
+		}
 		bulletPositions[exists ? i : -1] = position;
 	}
 
