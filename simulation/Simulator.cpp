@@ -916,7 +916,10 @@ bool Simulator::isUnitOnLadder(const Vec2Double& unitPosition, const Vec2Double&
 	if (isUnitOnWall(unitPosition, unitSize, game)) return false;
 
 	const auto centerDownTile = game.level.tiles[size_t(unitPosition.x)][size_t(unitPosition.y - TOLERANCE)];
-	return centerDownTile == LADDER;
+
+	const auto centerY = unitPosition.y + unitSize.y / 2;
+	const auto centerTile = game.level.tiles[size_t(unitPosition.x)][size_t(centerY)];
+	return centerDownTile == LADDER || centerTile == LADDER;
 	
 }
 
