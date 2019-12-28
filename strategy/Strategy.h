@@ -34,8 +34,9 @@ public:
 
 	static double getMineAboveUnitTimer(const Mine& mine, int myPlayerId, double tickTime, const Game& game);
 
-	static std::vector<std::pair<int, int>> getShootMeMines(const Vec2Double& mePosition, const Vec2Double& meSize, const JumpState& meJumpState, 
-		int meId, int mePlayerId,
+	static std::vector<std::pair<int, int>> getShootMeMines(
+		const Unit& me,
+		const Vec2Double& mePosition, const JumpState& meJumpState,
 		int addTicks,
 		const Game& game);
 
@@ -50,7 +51,8 @@ public:
 		const Vec2Double& bulletPos, const Vec2Double& newBulletPos, double halfBulletSize);
 
 	std::tuple<RunawayDirection, int, int, int> getRunawayAction(
-		const Vec2Double& unitPosition, const Vec2Double& unitSize, int unitPlayerId, int unitId,
+		const Unit& me,
+		const Vec2Double& unitPosition, 
 		const JumpState& jumpState,
 		const std::vector<std::pair<int, int>>& shootingMeBullets,
 		const std::vector<std::pair<int, int>>& shootMeMines,
@@ -59,7 +61,7 @@ public:
 		const Game& game) const;
 
 	static std::map<Bullet, int> isSafeMove(
-		const Unit& unit, const UnitAction& action, const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, const Game& game,
+		const Unit& me, const UnitAction& action, const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, const Game& game,
 		int& minesDamage);
 
 	static bool isBulletExplosionShootUnit(
