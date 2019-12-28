@@ -138,6 +138,15 @@ int getJumpPadJ(int startI, int startJ, int targetI, int targetJ, const Game& ga
 	return -1;
 }
 
+bool hasUnitWall(const vector<pair<int,int>>& unitWalls, int col, int row)
+{
+	for (const auto& uw: unitWalls)
+	{
+		if (uw.first == col && uw.second == row) return true;
+	}
+	return false;
+}
+
 // A Function to find the shortest path between 
 // a given source cell to a destination cell according 
 // to A* Search Algorithm 
@@ -147,6 +156,7 @@ vector<Four> aStarSearch(
 	cell****& cellDetails,
 	const Four& src, const Pair& dest,
 	int maxJumpTiles, int maxJumpPadJumpTiles,
+	const vector<pair<int, int>>& unitWalls,
 	const Game& game)
 {
 	// z-index:
@@ -336,8 +346,8 @@ vector<Four> aStarSearch(
 		if (isValid(i - 1, j, COL, ROW) == true &&
 			isUnBlocked(grid, i - 1, j) == true &&
 			(l ==0 || l == 1 && kValue == maxJumpPadJumpTiles) &&
-			game.level.tiles[i - 1][j - 1] != EMPTY &&
-			game.level.tiles[i - 1][j - 1] != JUMP_PAD)
+			(game.level.tiles[i - 1][j - 1] != EMPTY &&
+			game.level.tiles[i - 1][j - 1] != JUMP_PAD || hasUnitWall(unitWalls, i-1,j-1)))
 		{
 			kNew = 0;
 			const auto jumpPadJ = getJumpPadJ(i, j, i - 1, j, game);
@@ -420,8 +430,8 @@ vector<Four> aStarSearch(
 		if (isValid(i + 1, j, COL, ROW) == true &&
 			isUnBlocked(grid, i + 1, j) == true &&
 			(l ==0 || l == 1 && kValue == maxJumpPadJumpTiles) &&
-			game.level.tiles[i + 1][j - 1] != EMPTY &&
-			game.level.tiles[i + 1][j - 1] != JUMP_PAD)
+			(game.level.tiles[i + 1][j - 1] != EMPTY &&
+			game.level.tiles[i + 1][j - 1] != JUMP_PAD || hasUnitWall(unitWalls, i + 1, j - 1)))
 		{
 			kNew = 0;
 			const auto jumpPadJ = getJumpPadJ(i, j, i + 1, j, game);
@@ -768,7 +778,8 @@ vector<Four> aStarSearch(
 			l == 1 && kValue == maxJumpPadJumpTiles - addNorth) &&
 			isUnBlocked(grid, i - 1, j + addNorth) == true &&
 			isUnBlocked(grid, i, j + addNorth) == true &&
-			(game.level.tiles[i - 1][j + addNorth - 1] == PLATFORM || game.level.tiles[i - 1][j + addNorth - 1] == LADDER || game.level.tiles[i - 1][j + addNorth - 1] == WALL))
+			(game.level.tiles[i - 1][j + addNorth - 1] == PLATFORM || game.level.tiles[i - 1][j + addNorth - 1] == LADDER || game.level.tiles[i - 1][j + addNorth - 1] == WALL||
+				hasUnitWall(unitWalls, i - 1, j + addNorth - 1)))
 		{
 			kNew = 0;
 
@@ -946,7 +957,8 @@ vector<Four> aStarSearch(
 				l == 1 && kValue == maxJumpPadJumpTiles - addNorth) &&
 			isUnBlocked(grid, i + 1, j + addNorth) == true &&
 			isUnBlocked(grid, i, j + addNorth) == true &&
-			(game.level.tiles[i + 1][j + addNorth - 1] == PLATFORM || game.level.tiles[i + 1][j + addNorth - 1] == LADDER || game.level.tiles[i + 1][j + addNorth - 1] == WALL))
+			(game.level.tiles[i + 1][j + addNorth - 1] == PLATFORM || game.level.tiles[i + 1][j + addNorth - 1] == LADDER || game.level.tiles[i + 1][j + addNorth - 1] == WALL ||
+				hasUnitWall(unitWalls, i + 1, j + addNorth - 1)))
 		{
 			kNew = 0;
 

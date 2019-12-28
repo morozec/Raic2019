@@ -569,7 +569,7 @@ void initAStarAction(
 	auto path = aStarSearch(
 		strategy.grid, game.level.tiles.size(), game.level.tiles[0].size(),
 		strategy.closedList, strategy.cellDetails, startPos, endPos, 
-		maxJumpTiles, maxJumpPadJumpTiles,
+		maxJumpTiles, maxJumpPadJumpTiles, unitWalls,
 		game);
 
 	for (const auto& uw: unitWalls)
@@ -582,7 +582,7 @@ void initAStarAction(
 		path = aStarSearch(
 			strategy.grid, game.level.tiles.size(), game.level.tiles[0].size(),
 			strategy.closedList, strategy.cellDetails, startPos, endPos,
-			maxJumpTiles, maxJumpPadJumpTiles,
+			maxJumpTiles, maxJumpPadJumpTiles, vector<pair<int,int>>(),
 			game);
 	}
 	

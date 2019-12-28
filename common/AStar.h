@@ -23,4 +23,5 @@ std::vector<Four> aStarSearch(
 	cell****& cellDetails,
 	const Four& src, const Pair& dest,
 	int maxJumpTiles, int maxJumpPadJumpTiles,
+	const std::vector<std::pair<int, int>>& unitWalls,
 	const Game& game);
