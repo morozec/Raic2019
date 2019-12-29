@@ -33,6 +33,7 @@ public:
 	);
 
 	static double getMineAboveUnitTimer(const Mine& mine, int myPlayerId, double tickTime, const Game& game);
+	static double getBulletToMineFlyTime(const Unit& unit, const Game& game);
 
 	static std::vector<std::pair<int, int>> getShootMeMines(
 		const Unit& me,
