@@ -209,7 +209,19 @@ double Strategy::getMineAboveUnitTimer(const Mine& mine, int myPlayerId, double 
 
 	if (aboveUnit == nullptr) return -1;
 
-	return aboveUnit->weapon->fireTimer == nullptr ? 0 : *(aboveUnit->weapon->fireTimer);
+	auto time = aboveUnit->weapon->fireTimer == nullptr ? 0 : *(aboveUnit->weapon->fireTimer);
+	const auto bulletFlyTime = getBulletToMineFlyTime(*aboveUnit, game);
+	time += bulletFlyTime;
+	
+	return time;
+}
+
+double Strategy::getBulletToMineFlyTime(const Unit& unit, const Game& game)
+{
+	const auto distToMine = unit.size.y / 2.0 - game.properties.mineSize.y;
+	const auto bulletVelocity = unit.weapon->params.bullet.speed;
+	const auto bulletFlyTime = distToMine / bulletVelocity;
+	return bulletFlyTime;
 }
 
 std::map<Bullet, BulletSimulation> Strategy::getEnemyBulletsSimulation(const Game& game, int mePlayerId, int meId)
@@ -344,9 +356,10 @@ std::vector<std::pair<int, int>> Strategy::getShootMeMines(
 			mePosition, me.size, 0, 0);
 		if (shoot)
 		{
-			auto expTime = unit.weapon->fireTimer == nullptr ? tickTime / 2.0 : *(unit.weapon->fireTimer);
+			auto expTime = unit.weapon->fireTimer == nullptr ? 0.0 : *(unit.weapon->fireTimer);
 			if (me.health > game.properties.mineExplosionParams.damage && expTime < tickTime) 
 				expTime = tickTime;//нужно время на установку второй мины
+			expTime += getBulletToMineFlyTime(unit, game);
 
 			if (addTicks == 1 && expTime <= tickTime) continue;
 			
@@ -659,6 +672,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 			auto expTime = unit.weapon->fireTimer == nullptr ? 0 : *(unit.weapon->fireTimer);
 			if (me.health > game.properties.mineExplosionParams.damage && expTime < tickTime)
 				expTime = tickTime;//нужно время на установку второй мины
+			expTime += getBulletToMineFlyTime(unit, game);
 
 			if (addTicks == 1 && expTime <= tickTime) continue;
 			if (expTime > maxMineExplosionTime) maxMineExplosionTime = expTime;
@@ -1187,6 +1201,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 					auto expTime = unit.weapon->fireTimer == nullptr ? 0 : *(unit.weapon->fireTimer);
 					if (me.health > game.properties.mineExplosionParams.damage && expTime < tickTime)
 						expTime = tickTime;//нужно время на установку второй мины
+					expTime += getBulletToMineFlyTime(unit, game);
 
 					const auto isExplodingMine =
 						expTime >= (tick + addTicks - 1) * tickTime &&
@@ -1495,6 +1510,7 @@ std::map<Bullet, int> Strategy::isSafeMove(
 		auto expTime = unit.weapon->fireTimer == nullptr ? 0 : *(unit.weapon->fireTimer);
 		if (me.health > game.properties.mineExplosionParams.damage && expTime < tickTime)
 			expTime = tickTime;//нужно время на установку второй мины
+		expTime += getBulletToMineFlyTime(unit, game);
 		
 		if (expTime > tickTime) continue;
 
