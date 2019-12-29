@@ -1272,6 +1272,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 
 					if (!isExplodingMine) continue;
 					const auto expTime = unitExplosionTimes[unit.id];
+					const auto mines = std::min(unit.mines, 2);
 					
 					const auto time = expTime - (tick + addTicks - 1) / game.properties.ticksPerSecond;
 					
@@ -1290,7 +1291,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 						unit.position, game.properties.mineSize, game.properties.mineExplosionParams.radius,
 						newJumpUnitPosition, unitSize, 0, 0))
 					{
-						thisTickUpDamage += game.properties.mineExplosionParams.damage;
+						thisTickUpDamage += mines * game.properties.mineExplosionParams.damage;
 					}
 
 
@@ -1309,7 +1310,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 						unit.position, game.properties.mineSize, game.properties.mineExplosionParams.radius,
 						newFallUnitPosition, unitSize, 0, 0))
 					{
-						thisTickDownDamage += game.properties.mineExplosionParams.damage;
+						thisTickDownDamage += mines * game.properties.mineExplosionParams.damage;
 					}
 
 
@@ -1329,7 +1330,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 						unit.position, game.properties.mineSize, game.properties.mineExplosionParams.radius,
 						newGoLeftUnitPosition, unitSize, 0, 0))
 					{
-						thisTickLeftDamage += game.properties.mineExplosionParams.damage;
+						thisTickLeftDamage += mines * game.properties.mineExplosionParams.damage;
 					}
 					
 
@@ -1347,7 +1348,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 					if (isMineExplosionShootUnit(unit.position, game.properties.mineSize, game.properties.mineExplosionParams.radius,
 						newGoRightUnitPosition, unitSize, 0, 0))
 					{
-						thisTickRightDamage += game.properties.mineExplosionParams.damage;
+						thisTickRightDamage += mines * game.properties.mineExplosionParams.damage;
 					}
 
 				}
