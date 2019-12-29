@@ -606,7 +606,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 
 	std::map<int, int> unitExplosionTicks;
-	std::map<int, int> unitExplosionTimes;
+	std::map<int, double> unitExplosionTimes;
 	for (const auto& unit: game.units)
 	{
 		if (unit.playerId == me.playerId ||
