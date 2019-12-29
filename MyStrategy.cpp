@@ -326,10 +326,11 @@ int** getGrid(const Game& game, int cols, int rows)
 }
 
 void initOneStepAction(const Four& myTile, const Four& nextTile, const vector<Four>& path,
-	const Vec2Double& curPosition, const Vec2Double& unitSize, const JumpState& curJumpState, int unitId,
+	const Vec2Double& curPosition, const JumpState& curJumpState, 
+	const Unit& me,
 	UnitAction& action, double tickTime, const Game& game)
 {
-	const auto isOnAir = Simulator::isUnitOnAir(curPosition, unitSize, unitId, game);
+	const auto isOnAir = Simulator::isUnitOnAir(curPosition, me.size, me.id, game);
 	const auto isJumping = isOnAir && curJumpState.canJump && curJumpState.canCancel;
 	const auto isFalling = isOnAir && !curJumpState.canJump && !curJumpState.canCancel;
 
@@ -374,7 +375,25 @@ void initOneStepAction(const Four& myTile, const Four& nextTile, const vector<Fo
 	}
 	const auto yBorderDist = curPosition.y - myTileY;
 
-	action.jump = false;
+
+	const auto centralBottomTile = game.level.tiles[myTileX][myTileY - 1];
+	if (centralBottomTile == WALL || centralBottomTile == PLATFORM)
+	{
+		for (const auto& u : game.units)
+		{
+			if (u.playerId == me.playerId) continue;
+			const auto isDangerousZone = MathHelper::getMHDist(curPosition, u.position) < SAFE_SHOOTING_DIST;
+			if (!isDangerousZone) continue;
+			const auto canExplode = u.mines * game.properties.mineExplosionParams.damage >= me.health;
+			if (!canExplode) continue;
+
+			action.jump = false;
+			action.jumpDown = false;
+			return;
+		}
+	}	
+	
+	action.jump = false;	
 	
 	
 	if (nextTileY > myTileY)
@@ -639,7 +658,7 @@ void initAStarAction(
 		const auto& nextTile = path[i + 1];
 
 		UnitAction curAction;
-		initOneStepAction(myTile, nextTile, path, curPosition, me.size, curJumpState, me.id, curAction, tickTime, game);
+		initOneStepAction(myTile, nextTile, path, curPosition, curJumpState, me, curAction, tickTime, game);
 		curPosition = Simulator::getUnitInTimePosition(curPosition, me.size, me.id, curAction, tickTime, curJumpState, game);
 
 		mePositions.emplace_back(curPosition);
