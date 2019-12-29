@@ -1102,7 +1102,11 @@ void setShootingAction(
 					continue;
 				}
 
-				const auto& unitPos = oneStepAllEnemyPositions.at(unit.id)[i][0];
+				const auto& unitPos =
+					unit.playerId == me.playerId ?
+					unit.position :
+					oneStepAllEnemyPositions.at(unit.id)[i][0];
+				
 				const auto isShootUnit = Strategy::isMineExplosionShootUnit(mePos, 
 					game.properties.mineSize, game.properties.mineExplosionParams.radius,
 					unitPos, unit.size, 0, 0);
