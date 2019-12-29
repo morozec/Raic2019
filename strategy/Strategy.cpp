@@ -1190,6 +1190,15 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 					if (!isExplodingMine) continue;
 					const auto time = expTime - (tick + addTicks - 1) / game.properties.ticksPerSecond;
 
+					if (tick > stopGoTick)
+					{
+						action.jump = false;
+					}
+					else if (tick > startGoTick)
+					{
+						action.jump = true;
+					}
+
 					auto newGoUpJumpState = goUpJumpState;
 					const auto newJumpUnitPosition =
 						Simulator::getUnitInTimePosition(
@@ -1200,13 +1209,24 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 							time,
 							newGoUpJumpState,
 							game);
+					action.jump = false;
 
 					if (isMineExplosionShootUnit(mine.position, mine.size, mine.explosionParams.radius,
 						newJumpUnitPosition, unitSize, 0 ,0))
 					{
 						thisTickUpDamage += mine.explosionParams.damage;
 					}
+
+
 					
+					if (tick > stopGoTick)
+					{
+						action.jumpDown = false;
+					}
+					else if (tick > startGoTick)
+					{
+						action.jumpDown = true;
+					}
 
 					auto newGoDownJumpState = goDownJumpState;
 					const auto newFallUnitPosition =
@@ -1218,6 +1238,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 							time,
 							newGoDownJumpState,
 							game);
+					action.jumpDown = false;
 
 					if (isMineExplosionShootUnit(mine.position, mine.size, mine.explosionParams.radius,
 						newFallUnitPosition, unitSize, 0, 0))
@@ -1226,6 +1247,15 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 					}
 					
 
+					if (tick > stopGoTick)
+					{
+						action.velocity = 0;
+					}
+					else if (tick > startGoTick)
+					{
+						action.velocity = -INT_MAX;
+					}
+					
 					auto newGoLeftJumpState = goLeftJumpState;
 					const auto newGoLeftUnitPosition = 
 						Simulator::getUnitInTimePosition(
@@ -1236,6 +1266,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 							time,
 							newGoLeftJumpState,
 							game);
+					action.velocity = 0;
 
 					if (isMineExplosionShootUnit(mine.position, mine.size, mine.explosionParams.radius,
 						newGoLeftUnitPosition, unitSize, 0, 0))
@@ -1244,6 +1275,15 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 					}
 
 
+
+					if (tick > stopGoTick)
+					{
+						action.velocity = 0;
+					}
+					else if (tick > startGoTick)
+					{
+						action.velocity = INT_MAX;
+					}
 					auto newGoRightJumpState = goRightJumpState;
 					const auto newGoRightUnitPosition =
 						Simulator::getUnitInTimePosition(
@@ -1254,6 +1294,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 							time,
 							newGoRightJumpState,
 							game);
+					action.velocity = 0;
 
 					if (isMineExplosionShootUnit(mine.position, mine.size, mine.explosionParams.radius,
 						newGoRightUnitPosition, unitSize, 0, 0))
@@ -1278,7 +1319,16 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 					const auto mines = std::min(unit.mines, 2);
 					
 					const auto time = expTime - (tick + addTicks - 1) / game.properties.ticksPerSecond;
-					
+
+
+					if (tick > stopGoTick)
+					{
+						action.jump = false;
+					}
+					else if (tick > startGoTick)
+					{
+						action.jump = true;
+					}
 					auto newGoUpJumpState = goUpJumpState;
 					const auto newJumpUnitPosition =
 						Simulator::getUnitInTimePosition(
@@ -1289,6 +1339,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 							time,
 							newGoUpJumpState,
 							game);
+					action.jump = false;
 
 					if (isMineExplosionShootUnit(
 						unit.position, game.properties.mineSize, game.properties.mineExplosionParams.radius,
@@ -1298,6 +1349,14 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 					}
 
 
+					if (tick > stopGoTick)
+					{
+						action.jumpDown = false;
+					}
+					else if (tick > startGoTick)
+					{
+						action.jumpDown = true;
+					}
 					auto newGoDownJumpState = goDownJumpState;
 					const auto newFallUnitPosition =
 						Simulator::getUnitInTimePosition(
@@ -1308,6 +1367,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 							time,
 							newGoDownJumpState,
 							game);
+					action.jumpDown = false;
 
 					if (isMineExplosionShootUnit(
 						unit.position, game.properties.mineSize, game.properties.mineExplosionParams.radius,
@@ -1317,6 +1377,14 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 					}
 
 
+					if (tick > stopGoTick)
+					{
+						action.velocity = 0;
+					}
+					else if (tick > startGoTick)
+					{
+						action.velocity = -INT_MAX;
+					}
 
 					auto newGoLeftJumpState = goLeftJumpState;
 					const auto newGoLeftUnitPosition =
@@ -1328,6 +1396,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 							time,
 							newGoLeftJumpState,
 							game);
+					action.velocity = 0;
 
 					if (isMineExplosionShootUnit(
 						unit.position, game.properties.mineSize, game.properties.mineExplosionParams.radius,
@@ -1337,6 +1406,15 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 					}
 					
 
+
+					if (tick > stopGoTick)
+					{
+						action.velocity = 0;
+					}
+					else if (tick > startGoTick)
+					{
+						action.velocity = INT_MAX;
+					}
 					auto newGoRightJumpState = goRightJumpState;
 					const auto newGoRightUnitPosition =
 						Simulator::getUnitInTimePosition(
@@ -1347,6 +1425,7 @@ std::tuple<RunawayDirection, int, int, int> Strategy::getRunawayAction(
 							time,
 							newGoRightJumpState,
 							game);
+					action.velocity = 0;
 
 					if (isMineExplosionShootUnit(unit.position, game.properties.mineSize, game.properties.mineExplosionParams.radius,
 						newGoRightUnitPosition, unitSize, -game.properties.unitMaxHorizontalSpeed * tickTime, 0))
