@@ -39,6 +39,7 @@ public:
 		const Unit& me,
 		const Vec2Double& mePosition, const JumpState& meJumpState,
 		int addTicks,
+		const std::map<int, std::vector<std::vector<Vec2Double>>>& oneStepAllEnemyPositions,
 		const Game& game);
 
 	static std::map<Bullet, BulletSimulation> getEnemyBulletsSimulation(const Game& game, int mePlayerId, int meId);
@@ -58,8 +59,11 @@ public:
 		const std::vector<std::pair<int, int>>& shootingMeBullets,
 		const std::vector<std::pair<int, int>>& shootMeMines,
 		const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, int addTicks,
+		const std::map<int, std::vector<std::vector<Vec2Double>>>& oneStepAllEnemyPositions,
 		bool checkUp, bool checkDown, bool checkLeft, bool checkRight,
 		const Game& game) const;
+
+	static bool checkGoodMinePos(const Unit& unit, const Vec2Double& position, bool isStillFalling, const Game& game);
 
 	static std::map<Bullet, int> isSafeMove(
 		const Unit& me, const UnitAction& action, const std::map<Bullet, BulletSimulation>& enemyBulletsSimulations, const Game& game,
