@@ -2122,12 +2122,35 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 						game, debug);
 				}
 				else
-					getAttackingData(
-						unit,
-						meAttackingPositions, meAttackingJumpStates,
-						nearestEnemy->size, enemyPositions,
-						enemyFireTimer,
-						meAttackingAction, startJumpY, jumpingUnitId, game);
+				{
+					int myScore = 0;
+					int enemyScore = 0;
+					for (const auto& p: game.players)
+					{
+						if (p.id == unit.playerId) myScore = p.score;
+						else enemyScore = p.score;
+					}
+
+					const auto simpleShootingProb = getSimpleProbability(
+						unit.position, unit.size,
+						enemyPositions[0], nearestEnemy->size, game);
+
+					if (myScore <= enemyScore && simpleShootingProb < TOLERANCE)
+					{
+						initAStarAction(unit, nearestEnemy->position, nearestEnemy->size,
+							meAttackingPositions, meAttackingJumpStates, meAttackingAction,
+							strategy_, game, debug);
+					}
+					else
+					{
+						getAttackingData(
+							unit,
+							meAttackingPositions, meAttackingJumpStates,
+							nearestEnemy->size, enemyPositions,
+							enemyFireTimer,
+							meAttackingAction, startJumpY, jumpingUnitId, game);
+					}
+				}
 			}
 		}
 	}
