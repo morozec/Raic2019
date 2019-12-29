@@ -744,7 +744,7 @@ void getAttackingData(
 	const Unit& me,	
 	vector<Vec2Double>& mePositions,
 	vector<JumpState>& meJumpStates,	
-	const Vec2Double& enemySize,
+	const Unit& enemy,
 	const vector<vector<Vec2Double>>& enemyPositions,
 	double enemyFireTimer,
 	UnitAction& meAction,
@@ -815,6 +815,7 @@ void getAttackingData(
 			const auto curMeFireTimer = std::max(0.0, meFireTimer - tickTime * (counter-1));
 			isEnemyShootEarlier = curEnemyFireTime < curMeFireTimer - TOLERANCE;
 		}
+		const auto isGoodMinePos = Strategy::checkGoodMinePos(me, lastMePosition, false, game);
 
 
 		if (
@@ -833,7 +834,7 @@ void getAttackingData(
 
 			//если видим врага
 			const auto isEnemyVisible = getSimpleProbability(
-				tmpPositions.back(), me.size, curEnemyPositions, enemySize, game) > 1 - TOLERANCE;
+				tmpPositions.back(), me.size, curEnemyPositions, enemy.size, game) > 1 - TOLERANCE;
 
 			if (isEnemyVisible)
 			{
@@ -849,14 +850,14 @@ void getAttackingData(
 					lastMePosition, me.size, lastMeJumpState,
 					me.playerId,
 					me.id,
-					curEnemyPosition, enemySize, game,
+					curEnemyPosition, enemy.size, game,
 					hasWeaponEnemy ? false : true,
 					action, lastStartJumpY, lastJumpingUnitId);
 			}
 		}
 
 		else if ((!hasWeaponEnemy || isMyClosestUnit) && //тормозим ближним, если подошли вплотную
-			Simulator::areRectsTouch(lastMePosition, me.size, curEnemyPosition, enemySize) ||
+			Simulator::areRectsTouch(lastMePosition, me.size, curEnemyPosition, enemy.size) ||
 			isMyClosestUnit && isDangerousZone && isEnemyShootEarlier) //или если я близко, а он стреляет раньше
 		{
 			needStop = true;
@@ -866,13 +867,21 @@ void getAttackingData(
 		}
 		else {
 			action.velocity = curEnemyPosition.x > lastMePosition.x ? INT_MAX : -INT_MAX;
-			setJumpAndJumpDown(
-				lastMePosition, me.size, lastMeJumpState,
-				me.playerId,
-				me.id,
-				curEnemyPosition, enemySize, game,
-				hasWeaponEnemy ? false : true,
-				action, lastStartJumpY, lastJumpingUnitId);
+
+			if (isDangerousZone && enemy.mines * game.properties.mineExplosionParams.damage >= me.health)
+			{
+				action.jump = false;
+				action.jumpDown = false;
+			}
+			else {
+				setJumpAndJumpDown(
+					lastMePosition, me.size, lastMeJumpState,
+					me.playerId,
+					me.id,
+					curEnemyPosition, enemy.size, game,
+					hasWeaponEnemy ? false : true,
+					action, lastStartJumpY, lastJumpingUnitId);
+			}
 		}
 		
 		
@@ -2055,7 +2064,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 						getAttackingData(
 							unit,
 							meAttackingPositions, meAttackingJumpStates,
-							nearestEnemy->size, enemyPositions,
+							*nearestEnemy, enemyPositions,
 							enemyFireTimer,
 							meAttackingAction, startJumpY, jumpingUnitId, game);
 					}
