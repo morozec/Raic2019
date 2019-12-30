@@ -354,9 +354,15 @@ void initOneStepAction(const Four& myTile, const Four& nextTile, const vector<Fo
 		action.jump = false;
 		action.jumpDown = false;
 		return;
+	}
+
+	if (nextTileX != myTileX && nextTileY < myTileY && 
+		curPosition.y + unitSize.y > nextTileY + 3 &&
+		game.level.tiles[nextTileX][nextTileY + 3] == JUMP_PAD)
+	{
+		action.velocity = 0;
 	}	
-	
-	if (nextTileX > myTileX) action.velocity = INT_MAX;
+	else if (nextTileX > myTileX) action.velocity = INT_MAX;
 	else if (nextTileX < myTileX) action.velocity = -INT_MAX;
 	else
 	{
