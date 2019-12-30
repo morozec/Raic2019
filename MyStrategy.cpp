@@ -25,10 +25,12 @@ MyStrategy::MyStrategy()
 
 
 void prolongatePositions(
-	vector<Vec2Double>& positions, const Vec2Double& unitSize, int unitId, JumpState& jumpState, const Game& game)
+	vector<Vec2Double>& positions, const Vec2Double& unitSize, int unitId, const Game& game,
+	vector<JumpState>& jumpStates)
 {
 	const auto tickTime = 1 / game.properties.ticksPerSecond;
 	auto lastPosition = positions.back();
+	auto jumpState = jumpStates.back();
 
 	const auto isFalling = !jumpState.canJump && !jumpState.canCancel;
 	const auto isJumpPadJumping = jumpState.canJump && !jumpState.canCancel;
@@ -45,6 +47,7 @@ void prolongatePositions(
 	{
 		lastPosition = Simulator::getUnitInTimePosition(lastPosition, unitSize, unitId, action, tickTime, jumpState, game);
 		positions.push_back(lastPosition);
+		jumpStates.emplace_back(jumpState);
 
 		if (isFallingWhileJumpPadJumping && jumpState.canJump && !jumpState.canCancel) break;//новый цикл прыжка на батуте
 		if (isJumpPadJumpingWhileFalling && !jumpState.canJump && !jumpState.canCancel) break;//новый цикл падения при прыжке на батуте
@@ -63,7 +66,8 @@ inline bool operator<(const Bullet& lhs, const Bullet& rhs)
 
 vector<Vec2Double> getActionPositions(
 	const Vec2Double& unitPosition, const Vec2Double& unitSize, int unitId,
-	const UnitAction& action, int startTick, int stopTick, JumpState& jumpState, const Game& game)
+	const UnitAction& action, int startTick, int stopTick, const JumpState& jumpState, const Game& game,
+	vector<JumpState>& jumpStates)
 {
 	//if (startTick < 0 || stopTick < 0) throw runtime_error("getActionPositions tick is negative");
 	
@@ -71,6 +75,8 @@ vector<Vec2Double> getActionPositions(
 	vector<Vec2Double> positions;
 
 	positions.emplace_back(unitPosition);
+	jumpStates.emplace_back(jumpState);
+	auto curJumpState = jumpState;
 
 	UnitAction waitAction;
 	waitAction.jump = false;
@@ -79,15 +85,17 @@ vector<Vec2Double> getActionPositions(
 	for (int i = 0; i < startTick; ++i)
 	{
 		const auto nextPos = Simulator::getUnitInTimePosition(
-			positions.back(), unitSize, unitId, waitAction, tickTime, jumpState, game);
+			positions.back(), unitSize, unitId, waitAction, tickTime, curJumpState, game);
 		positions.emplace_back(nextPos);
+		jumpStates.emplace_back(curJumpState);
 	}
 
 	for (int i = 0; i < stopTick - startTick; ++i)
 	{
 		const auto nextPos = Simulator::getUnitInTimePosition(
-			positions.back(), unitSize, unitId, action, tickTime, jumpState, game);
+			positions.back(), unitSize, unitId, action, tickTime, curJumpState, game);
 		positions.emplace_back(nextPos);
+		jumpStates.emplace_back(curJumpState);
 	}
 	
 	return positions;
@@ -846,7 +854,9 @@ void getAttackingData(
 		{
 			vector<Vec2Double> tmpPositions;
 			tmpPositions.emplace_back(lastMePosition);
-			prolongatePositions(tmpPositions, me.size, me.id, lastMeJumpState, game);
+			vector<JumpState> tmpJumpStates;
+			tmpJumpStates.emplace_back(lastMeJumpState);
+			prolongatePositions(tmpPositions, me.size, me.id, game, tmpJumpStates);
 
 			//если видим врага
 			const auto isEnemyVisible = getSimpleProbability(
@@ -932,7 +942,7 @@ bool isSafeShoot(const Unit& me, const Game& game)
 
 
 void setShootingAction(
-	const Unit& me, const vector<Vec2Double>& mePositions, 
+	const Unit& me, const vector<Vec2Double>& mePositions,  const vector<JumpState>& meJumpStates,
 	const vector<double>& meSimpleProbabilities,
 	const Vec2Double& enemySize, const vector<vector<Vec2Double>>& enemyPositions,	int enemyId, 
 	const map<int, vector<vector<Vec2Double>>>& oneStepAllEnemyPositions,
@@ -1088,18 +1098,39 @@ void setShootingAction(
 		
 		
 		
-		for (int i = 1; i < mePositions.size(); ++i)
+		for (int i = 0; i < mePositions.size(); ++i)
 		{
-			const auto fireTimer = me.weapon->fireTimer == nullptr ? 0.0 : *(me.weapon->fireTimer);
+			const auto fireTimer = me.weapon->fireTimer == nullptr ? tickTime/2.0 : *(me.weapon->fireTimer);
 			const auto fireTick = static_cast<int>(ceil(fireTimer / tickTime));
-			if (i < fireTick) continue;
-			
 			
 			const auto& mePos = mePositions[i];
-			const auto iIsGoodMinePos = Strategy::checkGoodMinePos(me, mePos, false, game);
+			auto meJumpState = meJumpStates[i];
+			auto iIsGoodMinePos = i != 0 && Strategy::checkGoodMinePos(me, mePos, false, game);
 
-			if (!iIsGoodMinePos) continue;		
-						
+			int explosionTick;
+			if (!iIsGoodMinePos)
+			{
+				UnitAction stopAction;
+				stopAction.velocity = 0;
+				stopAction.jump = false;
+				stopAction.jumpDown = false;
+				const auto stopPos = Simulator::getUnitInTimePosition(mePos, me.size, me.id,
+					stopAction, tickTime, meJumpState, game);
+
+				iIsGoodMinePos = Strategy::checkGoodMinePos(me, stopPos, false, game);
+				if (!iIsGoodMinePos) continue;
+				
+				explosionTick = i + 1;
+				if (explosionTick >= MAX_SIMULATIONS) continue;
+			}
+			else
+			{
+				explosionTick = i;
+			}
+
+			if (fireTick > explosionTick+1) continue;	
+			const auto nextShootTime = fireTimer + me.weapon->params.fireRate;
+			if (explosionTick * tickTime > nextShootTime) continue; // успеем выстрелить и перезарядиться
 
 			int meLeftCount = 0;
 			int enemyLeftCount = 0;
@@ -1119,10 +1150,11 @@ void setShootingAction(
 					continue;
 				}
 
+				
 				const auto& unitPos =
 					unit.playerId == me.playerId ?
 					unit.position :
-					oneStepAllEnemyPositions.at(unit.id)[i][0];
+					oneStepAllEnemyPositions.at(unit.id)[ explosionTick][0];
 				
 				const auto isShootUnit = Strategy::isMineExplosionShootUnit(mePos, 
 					game.properties.mineSize, game.properties.mineExplosionParams.radius,
@@ -1143,6 +1175,13 @@ void setShootingAction(
 				action.plantMine = false;
 				action.aim = enemyPositions[i][0] - mePos;
 				action.shoot = false;
+
+				if (i == 0)
+				{
+					action.jump = false;
+					action.jumpDown = false;
+				}
+				
 				return;
 			}
 		}
@@ -1513,7 +1552,7 @@ void setShootingAction(
 
 void initAttackAction(
 	const Unit& unit,
-	vector<Vec2Double>& meAttackingPositions, const vector<JumpState>& meAttackingJumpStates,
+	vector<Vec2Double>& meAttackingPositions, vector<JumpState>& meAttackingJumpStates,
 	const JumpState& nextTickMeAttackingJumpState, const Vec2Double& nextTickMeAttackPosition,
 	vector<double>& meSimpleProbabilities,
 	const vector<vector<Vec2Double>>& enemyPositions, const Vec2Double& enemySize, int enemyId,
@@ -1572,11 +1611,12 @@ void initAttackAction(
 			throw runtime_error("unknown runawayDirection 2");
 		}*/
 
-		lastMeAttackingJumpState = nextTickMeAttackingJumpState;
+
+		vector<JumpState> jumpStates;
 		auto nextPositions = getActionPositions(
 			nextTickMeAttackPosition, unit.size, unit.id, runawayAttackAction,
-			runawayStartTick, runawayStopTick, lastMeAttackingJumpState,
-			game);
+			runawayStartTick, runawayStopTick, nextTickMeAttackingJumpState,
+			game, jumpStates);
 		for (const auto& nextPos : nextPositions)
 		{
 			runawayMeAttackingPositions.emplace_back(nextPos);
@@ -1584,7 +1624,7 @@ void initAttackAction(
 		meAttackingPositions = runawayMeAttackingPositions;
 	}
 
-	prolongatePositions(meAttackingPositions, unit.size, unit.id, lastMeAttackingJumpState, game);
+	prolongatePositions(meAttackingPositions, unit.size, unit.id, game, meAttackingJumpStates);
 
 	for (size_t i = 0; i < meAttackingPositions.size(); ++i)
 	{
@@ -1595,7 +1635,7 @@ void initAttackAction(
 	}
 
 	setShootingAction(
-		unit, meAttackingPositions, meSimpleProbabilities, enemySize, enemyPositions,
+		unit, meAttackingPositions, meAttackingJumpStates, meSimpleProbabilities, enemySize, enemyPositions,
 		enemyId, oneStepAllEnemyPositions,
 		game, action, isHealing);
 	strategy.setStartedJumpY(unit.id, startJumpY);
@@ -1827,9 +1867,11 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		{
 			throw runtime_error("unknown runawayDirection");
 		}*/
-		auto jumpState = unit.jumpState;
-		auto mePositions = getActionPositions(unit.position, unit.size, unit.id, action, 0, curStopRunawayTick, jumpState, game);		
-		prolongatePositions(mePositions, unit.size, unit.id, jumpState, game);
+
+		vector<JumpState> meJumpStates;
+		auto mePositions = getActionPositions(
+			unit.position, unit.size, unit.id, action, 0, curStopRunawayTick, unit.jumpState, game, meJumpStates);		
+		prolongatePositions(mePositions, unit.size, unit.id, game, meJumpStates);
 
 		
 		for (size_t i = 0; i < mePositions.size(); ++i)
@@ -1839,7 +1881,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			const auto sp = getSimpleProbability(mePosition, unit.size, curEnemyPositions, nearestEnemy->size, game);
 			meSimpleProbabilities.emplace_back(sp);
 		}
-		setShootingAction(unit, mePositions, meSimpleProbabilities, nearestEnemy->size, enemyPositions, 
+		setShootingAction(unit, mePositions, meJumpStates, meSimpleProbabilities, nearestEnemy->size, enemyPositions, 
 			nearestEnemy->id, oneStepAllEnemyPositions,
 			game, action, false);
 
@@ -2257,14 +2299,24 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		action.velocity = runawayUnitAction.velocity;
 	}	
 	
-	
 
-	JumpState jumpState = unit.jumpState;
-	auto mePositions = runawayDirection == GoNONE ?
-		vector<Vec2Double>{ unit.position } :
-		getActionPositions(unit.position, unit.size, unit.id, runawayUnitAction, startRunawayTick, stopRunawayTick, jumpState, game);
 	
-	prolongatePositions(mePositions, unit.size, unit.id, jumpState, game);
+	vector<Vec2Double> mePositions;
+	vector<JumpState> meJumpStates;
+
+	if (runawayDirection == GoNONE)
+	{
+		mePositions = vector<Vec2Double>{ unit.position };
+		meJumpStates = vector<JumpState>{ unit.jumpState };
+	}
+	else
+	{
+		mePositions = getActionPositions(
+			unit.position, unit.size, unit.id, runawayUnitAction, startRunawayTick, stopRunawayTick, unit.jumpState, game,
+			meJumpStates);
+	}
+		
+	prolongatePositions(mePositions, unit.size, unit.id, game, meJumpStates);
 	
 	for (size_t i = 0; i < mePositions.size(); ++i)
 	{
@@ -2274,7 +2326,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		meSimpleProbabilities.emplace_back(sp);
 	}
 	
-	setShootingAction(unit, mePositions, meSimpleProbabilities, nearestEnemy->size, enemyPositions, nearestEnemy->id,
+	setShootingAction(unit, mePositions, meJumpStates, meSimpleProbabilities, nearestEnemy->size, enemyPositions, nearestEnemy->id,
 		oneStepAllEnemyPositions,
 		game, action, false);
 	//cerr << game.currentTick << ": (" <<unit.id << "-2) " << action.jump << " " << action.jumpDown << " " << action.velocity <<  "\n";
