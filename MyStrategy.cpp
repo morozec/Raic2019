@@ -633,11 +633,15 @@ void initAStarAction(
 		return;
 	}
 
-	for (int i = 0; i < path.size() - 1; ++i)
+	int i = 1;
+	int x = get<0>(path[0]);
+	int y = get<1>(path[0]);
+	int pathIndex = 0;
+	while (i < MAX_SIMULATIONS && pathIndex < path.size() - 1)
 	{
-		const auto& myTile = path[i];
-		const auto& nextTile = path[i + 1];
-
+		const auto& myTile = path[pathIndex];
+		const auto& nextTile = path[pathIndex + 1];
+		
 		UnitAction curAction;
 		initOneStepAction(myTile, nextTile, path, curPosition, me.size, curJumpState, me.id, curAction, tickTime, game);
 		curPosition = Simulator::getUnitInTimePosition(curPosition, me.size, me.id, curAction, tickTime, curJumpState, game);
@@ -645,12 +649,25 @@ void initAStarAction(
 		mePositions.emplace_back(curPosition);
 		meJumpStates.emplace_back(curJumpState);
 
-		if (i == 0) action = curAction;
+		if (i == 1) action = curAction;
 
 		const auto isCross = Simulator::areRectsCross(
 			curPosition, me.size, targetPos, targetSize);
-		if (isCross) return;
-		
+		if (isCross) break;
+
+		const auto nextX = static_cast<int>(curPosition.x);
+		const auto nextY = static_cast<int>(curPosition.y);
+
+		i++;
+		if (nextX == get<0>(nextTile) && nextY == get<1>(nextTile))
+		{
+			pathIndex++;
+		}
+	}
+
+	for (int i = 0; i < path.size() - 1; ++i)
+	{
+		const auto& myTile = path[i];
 		debug.draw(CustomData::Rect(
 			vec2DoubleToVec2Float({ static_cast<double>(get<0>(myTile)), static_cast<double>(get<1>(myTile)) }),
 			{ 1, 1 },
