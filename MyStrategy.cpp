@@ -970,7 +970,8 @@ void setShootingAction(
 	auto areSamePosMines = false;
 	for (const auto& mine : game.mines)
 	{
-		if (std::abs(mine.position.x - me.position.x) < TOLERANCE && std::abs(mine.position.y - me.position.y) < TOLERANCE)
+		if (std::abs(mine.position.x - me.position.x) < mine.size.x/2.0 && 
+			std::abs(mine.position.y - me.position.y) < TOLERANCE)
 		{
 			areSamePosMines = true;
 			break;
