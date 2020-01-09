@@ -1795,7 +1795,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	
 
-	/*if (game.currentTick < 659)
+	/*if (game.currentTick < 524)
 	{
 		action.velocity = 0;
 		action.jump = false;
@@ -1959,7 +1959,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			for (const auto& enemy : game.units)
 			{
 				if (enemy.playerId == unit.playerId) continue;
-				if (enemy.health > unit.health)
+				if (enemy.health > unit.health || enemy.health == unit.health && unit.health < game.properties.unitMaxHealth)
 				{
 					needHeal = true;
 					break;
