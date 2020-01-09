@@ -988,6 +988,7 @@ void setShootingAction(
 
 		auto fireTimer = tickTime;
 		if (me.weapon->fireTimer != nullptr) fireTimer += std::max(0.0, *(me.weapon->fireTimer) - tickTime);
+		fireTimer += Strategy::getBulletToMineFlyTime(me, game);
 		
 		for (const auto& unit : game.units)
 		{
@@ -1039,7 +1040,8 @@ void setShootingAction(
 		int meDamagedCount = 0;
 		int enemyDamagedCount = 0;
 
-		const auto fireTimer = me.weapon->fireTimer == nullptr ? 0.0 : *(me.weapon->fireTimer);
+		auto fireTimer = me.weapon->fireTimer == nullptr ? 0.0 : *(me.weapon->fireTimer);
+		fireTimer += Strategy::getBulletToMineFlyTime(me, game);
 
 		for (const auto& unit: game.units)
 		{
@@ -1793,7 +1795,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	
 
-	/*if (game.currentTick < 1055)
+	/*if (game.currentTick < 659)
 	{
 		action.velocity = 0;
 		action.jump = false;
