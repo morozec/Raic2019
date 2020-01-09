@@ -1085,7 +1085,7 @@ void setShootingAction(
 		enemyLeftCount -= enemyKilledCount;
 
 		if (meLeftCount >= enemyLeftCount &&
-			(enemyKilledCount > 0 || enemyDamagedCount > meDamagedCount))
+			(enemyKilledCount > 0 || meKilledCount == 0 && enemyDamagedCount > meDamagedCount))
 		{
 			action.velocity = 0;
 			action.plantMine = true;
