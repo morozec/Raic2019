@@ -1587,6 +1587,9 @@ void initAttackAction(
 		vector<Vec2Double> runawayMeAttackingPositions;
 		runawayMeAttackingPositions.emplace_back(meAttackingPositions[0]);
 
+		vector<JumpState> runawayMeAttackingJumpStates;
+		runawayMeAttackingJumpStates.emplace_back(meAttackingJumpStates[0]);
+
 		UnitAction runawayAttackAction;
 		if (runawayDirection == GoUP)
 		{
@@ -1618,16 +1621,23 @@ void initAttackAction(
 		}*/
 
 
-		vector<JumpState> jumpStates;
+		vector<JumpState> nextJumpStates;
 		auto nextPositions = getActionPositions(
 			nextTickMeAttackPosition, unit.size, unit.id, runawayAttackAction,
 			runawayStartTick, runawayStopTick, nextTickMeAttackingJumpState,
-			game, jumpStates);
+			game, nextJumpStates);
 		for (const auto& nextPos : nextPositions)
 		{
 			runawayMeAttackingPositions.emplace_back(nextPos);
 		}
+		
+		for (const auto& nextJumpState:nextJumpStates)
+		{
+			runawayMeAttackingJumpStates.emplace_back(nextJumpState);
+		}
+		
 		meAttackingPositions = runawayMeAttackingPositions;
+		meAttackingJumpStates = runawayMeAttackingJumpStates;
 	}
 
 	prolongatePositions(meAttackingPositions, unit.size, unit.id, game, meAttackingJumpStates);
