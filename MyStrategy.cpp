@@ -815,6 +815,15 @@ void getAttackingData(
 	{
 		meFireTimer = me.weapon->fireTimer != nullptr ? *(me.weapon->fireTimer) : 0;
 	}
+
+	int myScore = 0;
+	int enemyScore = 0;
+	for (const auto& p : game.players)
+	{
+		if (p.id == me.playerId) myScore = p.score;
+		else enemyScore = p.score;
+	}
+	
 	
 	while (counter < MAX_SIMULATIONS)
 	{
@@ -870,7 +879,7 @@ void getAttackingData(
 				tmpPositions.back(), me.size, curEnemyPositions, enemySize, game) > 1 - TOLERANCE;
 
 			
-			if (isEnemyVisible)
+			if (isEnemyVisible && myScore > enemyScore)
 			{
 				needStop = true;
 				action.jump = false;
@@ -1890,7 +1899,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	
 
-	/*if (game.currentTick < 271)
+	/*if (game.currentTick < 432)
 	{
 		action.velocity = 0;
 		action.jump = false;
