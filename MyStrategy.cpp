@@ -552,7 +552,8 @@ void initAStarAction(
 	vector<JumpState>& meJumpStates,
 	UnitAction& action,
 	Strategy& strategy,
-	const Game& game, Debug& debug)
+	const Game& game, Debug& debug,
+	int& pathLength)
 {
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	
@@ -607,6 +608,8 @@ void initAStarAction(
 			maxJumpTiles, maxJumpPadJumpTiles, vector<pair<int,int>>(),
 			game);
 	}
+
+	pathLength = path.size();
 	
 	auto curPosition = me.position;
 	auto curJumpState = me.jumpState;
@@ -1899,7 +1902,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	
 
-	/*if (game.currentTick < 292)
+	/*if (game.currentTick < 291)
 	{
 		action.velocity = 0;
 		action.jump = false;
@@ -2048,12 +2051,13 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			}
 		}
 		strategy_.lootboxes_[unit.id] = nearestWeapon->position;
-		
+
+		int pathLength;
 		initAStarAction(
 			unit, nearestWeapon->position, nearestWeapon->size, 
 			meAttackingPositions, meAttackingJumpStates, meAttackingAction,
 			strategy_,
-			game, debug);
+			game, debug, pathLength);
 	}
 	else
 	{
@@ -2136,6 +2140,9 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 				UnitAction curMeAttackingAction;
 				size_t curStartJumpY = startJumpY;
 				int curJumpingUnitId = jumpingUnitId;
+
+				int curMePathLength;
+				
 				/*getHealingData(
 					unit, curMeAttackingPositions, curMeAttackingJumpStates,
 					lb, curMeAttackingAction, curStartJumpY, curJumpingUnitId, game);*/
@@ -2143,36 +2150,29 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 					unit, lb.position, lb.size,
 					curMeAttackingPositions, curMeAttackingJumpStates, curMeAttackingAction,
 					strategy_,
-					game, debug);
+					game, debug, curMePathLength);
 
 
 				for (const auto& enemyUnit : game.units)
 				{
 					if (enemyUnit.playerId == unit.playerId) continue;
+					
+					vector<Vec2Double> curEnemyAttackingPositions;
+					vector<JumpState> curEnemyAttackingJumpStates;
+					UnitAction curEnemyAttackingAction;
+					int curEnemyPathLength;
+					
+					initAStarAction(
+						enemyUnit, lb.position, lb.size,
+						curEnemyAttackingPositions, curEnemyAttackingJumpStates, curEnemyAttackingAction,
+						strategy_,
+						game, debug, curEnemyPathLength);
 
-					bool areStartTouch =
-						Simulator::areRectsCross(curMeAttackingPositions[0], unit.size, enemyUnit.position,
-							{ enemyUnit.size.x + 1, enemyUnit.size.y + 1 });
-
-					for (size_t i = 1; i < curMeAttackingPositions.size(); ++i)
+					if (curEnemyPathLength < curMePathLength)
 					{
-						const auto& pos = curMeAttackingPositions[i];
-						if (Simulator::areRectsCross(pos, unit.size, enemyUnit.position,
-							{ enemyUnit.size.x + 1, enemyUnit.size.y + 1 }))
-						{
-							if (!areStartTouch)
-							{
-								isHealing = false;
-								break;
-							}
-						}
-						else
-						{
-							areStartTouch = false;
-						}
+						isHealing = false;
+						break;
 					}
-
-					if (!isHealing) break;
 				}
 
 				if (isHealing)
@@ -2197,6 +2197,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		{
 			const Unit* noWeaponEnemyUnit = nullptr;
 			minMHDist = INT_MAX;
+			int mePathLength;
+			
 			for (const auto& u:game.units)
 			{
 				if (u.playerId == unit.playerId) continue;
@@ -2215,7 +2217,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 					unit, noWeaponEnemyUnit->position, noWeaponEnemyUnit->size,
 					meAttackingPositions, meAttackingJumpStates, meAttackingAction,
 					strategy_,
-					game, debug);
+					game, debug, mePathLength);
 			}
 			else
 			{
@@ -2228,7 +2230,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 						unit, nearestMine->position, nearestMine->size,
 						meAttackingPositions, meAttackingJumpStates, meAttackingAction,
 						strategy_,
-						game, debug);
+						game, debug, mePathLength);
 				}
 				else
 				{
@@ -2248,7 +2250,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 					{
 						initAStarAction(unit, nearestEnemy->position, nearestEnemy->size,
 							meAttackingPositions, meAttackingJumpStates, meAttackingAction,
-							strategy_, game, debug);
+							strategy_, game, debug, mePathLength);
 					}
 					else
 					{
