@@ -965,6 +965,9 @@ void setShootingAction(
 		return;
 	}
 
+	const auto isEnemyVisible = getSimpleProbability(
+		me.position, me.size, enemyPositions[0], enemySize, game) > 1 - TOLERANCE;
+
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 
 	const auto isStillFalling = !me.jumpState.canJump && !me.jumpState.canCancel;
@@ -1406,6 +1409,8 @@ void setShootingAction(
 			else
 			{
 				action.shoot = false;
+				if (!isEnemyVisible && me.weapon->magazine < me.weapon->params.magazineSize)
+					action.reload = true;
 			}
 			
 			action.aim = { cos(okShootingAngle), sin(okShootingAngle) };
@@ -1649,7 +1654,13 @@ void setShootingAction(
 		const auto enemyPos = enemyPositions[canShootingTick][0];
 		const auto mePos = canShootingTick < mePositions.size() ? mePositions[canShootingTick] : mePositions.back();
 		action.aim = enemyPos - mePos;
-	}				
+	}
+
+	if (!action.shoot)
+	{
+		if (!isEnemyVisible && me.weapon->magazine < me.weapon->params.magazineSize)
+			action.reload = true;
+	}
 
 	//TODO: ракетницей стрелять под ноги врагу
 }
@@ -1891,7 +1902,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	
 
-	/*if (game.currentTick < 235)
+	/*if (game.currentTick < 575)
 	{
 		action.velocity = 0;
 		action.jump = false;
