@@ -2071,23 +2071,9 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		}
 
 		
-		bool needHeal = unit.health <= game.properties.unitMaxHealth / 2;
-		if (!needHeal)
-		{
-			//только если собрали доcтаточно мин
-			if (nearestMine == nullptr || unit.mines * game.properties.mineExplosionParams.damage >= nearestEnemy->health)
-			{
-				for (const auto& enemy : game.units)
-				{
-					if (enemy.playerId == unit.playerId) continue;
-					if (enemy.health > unit.health || enemy.health == unit.health && unit.health < game.properties.unitMaxHealth)
-					{
-						needHeal = true;
-						break;
-					}
-				}
-			}
-		}
+		bool needHeal = unit.health < game.properties.unitMaxHealth &&
+			(nearestMine == nullptr || unit.mines * game.properties.mineExplosionParams.damage >= nearestEnemy->health);//только если собрали доcтаточно мин
+		
 
 		const LootBox* nearestHPLootBox = nullptr;
 		minMHDist = INT_MAX;
