@@ -847,6 +847,8 @@ void getAttackingData(
 			isEnemyShootEarlier = curEnemyFireTime < curMeFireTimer - TOLERANCE;
 		}
 
+		const auto isStillFalling = !me.jumpState.canJump && !me.jumpState.canCancel;
+		const auto isGoodMinePos = Strategy::checkGoodMinePos(me, me.position, isStillFalling, game);
 
 		if (
 			hasWeaponEnemy &&
@@ -856,8 +858,7 @@ void getAttackingData(
 					!Strategy::isDangerousRocketShooting(
 						lastMePosition, me.size, shootingAngle, me.weapon->spread, me.weapon->params.bullet.size / 2, game)) 				
 			)
-
-		{
+		{			
 			vector<Vec2Double> tmpPositions;
 			tmpPositions.emplace_back(lastMePosition);
 			vector<JumpState> tmpJumpStates;
@@ -868,6 +869,7 @@ void getAttackingData(
 			const auto isEnemyVisible = getSimpleProbability(
 				tmpPositions.back(), me.size, curEnemyPositions, enemySize, game) > 1 - TOLERANCE;
 
+			
 			if (isEnemyVisible)
 			{
 				needStop = true;
@@ -890,7 +892,8 @@ void getAttackingData(
 
 		else if ((!hasWeaponEnemy || isMyClosestUnit) && //тормозим ближним, если подошли вплотную
 			Simulator::areRectsTouch(lastMePosition, me.size, curEnemyPosition, enemySize) ||
-			isMyClosestUnit && isDangerousZone && isEnemyShootEarlier) //или если я близко, а он стреляет раньше
+			isMyClosestUnit && isDangerousZone && isEnemyShootEarlier ||//или если я близко, а он стреляет раньше
+			isMyClosestUnit && hasWeaponEnemy && isGoodMinePos) //не прем на врага, если можем врануть мину
 		{
 			needStop = true;
 			action.jump = false;
@@ -1887,7 +1890,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	
 
-	/*if (game.currentTick < 124)
+	/*if (game.currentTick < 271)
 	{
 		action.velocity = 0;
 		action.jump = false;
