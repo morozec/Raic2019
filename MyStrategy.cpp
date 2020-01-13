@@ -1003,6 +1003,20 @@ void setShootingAction(
 			if (unit.playerId == me.playerId) meLeftCount++;
 			else enemyLeftCount++;
 
+			bool isHpCross = false;
+			for (const auto& lb : game.lootBoxes)
+			{
+				if (std::dynamic_pointer_cast<Item::HealthPack>(lb.item))
+				{
+					if (Simulator::areRectsCross(unit.position, unit.size, lb.position, lb.size))
+					{
+						isHpCross = true;
+						break;
+					}
+				}
+			}
+			if (isHpCross) continue;
+
 			if (unit.id == me.id)
 			{
 				meKilledCount++;
@@ -1088,7 +1102,21 @@ void setShootingAction(
 		{
 			if (unit.playerId == me.playerId) meLeftCount++;
 			else enemyLeftCount++;
-			//if (!areSamePosMines && unit.health > game.properties.mineExplosionParams.damage) continue;			
+			//if (!areSamePosMines && unit.health > game.properties.mineExplosionParams.damage) continue;
+
+			bool isHpCross = false;
+			for (const auto& lb : game.lootBoxes)
+			{
+				if (std::dynamic_pointer_cast<Item::HealthPack>(lb.item))
+				{
+					if (Simulator::areRectsCross(unit.position, unit.size, lb.position, lb.size))
+					{
+						isHpCross = true;
+						break;
+					}
+				}
+			}
+			if (isHpCross) continue;
 			
 			if (unit.id == me.id)
 			{
@@ -1220,6 +1248,21 @@ void setShootingAction(
 			{
 				if (unit.playerId == me.playerId) meLeftCount++;
 				else enemyLeftCount++;
+
+				bool isHpCross = false;
+				for (const auto& lb : game.lootBoxes)
+				{
+					if (std::dynamic_pointer_cast<Item::HealthPack>(lb.item))
+					{
+						if (Simulator::areRectsCross(unit.position, unit.size, lb.position, lb.size))
+						{
+							isHpCross = true;
+							break;
+						}
+					}
+				}
+				if (isHpCross) continue;
+				
 				
 				if (unit.health > damage) continue;
 				
