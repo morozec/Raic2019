@@ -449,7 +449,7 @@ bool isWayCell(int meX, int meY, int x, int y, int targetX, int targetY)
 		x == targetX && (y == targetY || y == targetY + 1);
 }
 
-vector<pair<int, int>> getUnitWalls(const Unit& me, int targetX, int targetY, Strategy& strategy, const Game& game, int playerId)
+vector<pair<int, int>> getUnitWalls(const Unit& me, int targetX, int targetY, Strategy& strategy, const Game& game)
 {
 	vector<pair<int, int>> unitWalls;
 	const auto meX = static_cast<int>(me.position.x);
@@ -457,7 +457,7 @@ vector<pair<int, int>> getUnitWalls(const Unit& me, int targetX, int targetY, St
 	for (const auto& unit : game.units)
 	{
 		if (unit.id == me.id) continue;
-		if (unit.playerId != playerId) continue;
+		//if (unit.playerId != playerId) continue;
 		
 		const int x = static_cast<int>(unit.position.x);
 		const int y = static_cast<int>(unit.position.y);
@@ -586,7 +586,7 @@ void initAStarAction(
 	const auto startPos =
 		make_tuple(size_t(me.position.x), size_t(me.position.y), start_z, isJumpPadJumping ? 1 : 0);
 
-	const auto unitWalls = getUnitWalls(me, endPos.first, endPos.second, strategy, game, me.playerId);
+	const auto unitWalls = getUnitWalls(me, endPos.first, endPos.second, strategy, game);
 
 	auto path = aStarSearch(
 		strategy.grid, game.level.tiles.size(), game.level.tiles[0].size(),
@@ -1884,7 +1884,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	
 
-	/*if (game.currentTick < 128)
+	/*if (game.currentTick < 230)
 	{
 		action.velocity = 0;
 		action.jump = false;
@@ -2138,7 +2138,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 				strategy_,
 				game, debug);
 						
-			for (size_t i = 1; i < curMeAttackingPositions.size(); ++i)
+			/*for (size_t i = 1; i < curMeAttackingPositions.size(); ++i)
 			{
 				const auto& pos = curMeAttackingPositions[i];
 				for (const auto& enemyUnit : game.units)
@@ -2151,22 +2151,20 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 					}
 				}
 				if (!isHealing) break;
-			}
+			}*/
 
-			if (isHealing)
-			{
-				meAttackingPositions = curMeAttackingPositions;
-				meAttackingJumpStates = curMeAttackingJumpStates;
-				meAttackingAction = curMeAttackingAction;
-				startJumpY = curStartJumpY;
-				jumpingUnitId = curJumpingUnitId;
+			
+			meAttackingPositions = curMeAttackingPositions;
+			meAttackingJumpStates = curMeAttackingJumpStates;
+			meAttackingAction = curMeAttackingAction;
+			startJumpY = curStartJumpY;
+			jumpingUnitId = curJumpingUnitId;
 
-				strategy_.heal_boxes_[unit.id] = nearestHPLootBox->position;
-				
-			}
+			strategy_.heal_boxes_[unit.id] = nearestHPLootBox->position;				
+			
 		}
 
-		if (!isHealing)
+		else
 		{
 			const Unit* noWeaponEnemyUnit = nullptr;
 			minMHDist = INT_MAX;
