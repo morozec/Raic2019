@@ -1887,7 +1887,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	
 
-	/*if (game.currentTick < 317)
+	/*if (game.currentTick < 124)
 	{
 		action.velocity = 0;
 		action.jump = false;
@@ -2126,6 +2126,37 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 				curMeAttackingPositions, curMeAttackingJumpStates, curMeAttackingAction,
 				strategy_,
 				game, debug);
+
+		
+			for (const auto& enemyUnit : game.units)
+			{
+				if (enemyUnit.playerId == unit.playerId) continue;
+				
+				bool areStartTouch = 
+					Simulator::areRectsCross(curMeAttackingPositions[0], unit.size, enemyUnit.position,
+						{enemyUnit.size.x + 1, enemyUnit.size.y + 1});
+
+				for (size_t i = 1; i < curMeAttackingPositions.size(); ++i)
+				{
+					const auto& pos = curMeAttackingPositions[i];
+					if (Simulator::areRectsCross(pos, unit.size, enemyUnit.position,
+						{ enemyUnit.size.x + 1, enemyUnit.size.y + 1 }))
+					{
+						if (!areStartTouch)
+						{
+							isHealing = false;
+							break;
+						}
+					}
+					else
+					{
+						areStartTouch = false;
+					}
+				}
+
+				if (!isHealing) break;
+			}
+			
 						
 			/*for (size_t i = 1; i < curMeAttackingPositions.size(); ++i)
 			{
@@ -2142,18 +2173,21 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 				if (!isHealing) break;
 			}*/
 
-			
-			meAttackingPositions = curMeAttackingPositions;
-			meAttackingJumpStates = curMeAttackingJumpStates;
-			meAttackingAction = curMeAttackingAction;
-			startJumpY = curStartJumpY;
-			jumpingUnitId = curJumpingUnitId;
+			if (isHealing)
+			{
 
-			strategy_.heal_boxes_[unit.id] = nearestHPLootBox->position;				
+				meAttackingPositions = curMeAttackingPositions;
+				meAttackingJumpStates = curMeAttackingJumpStates;
+				meAttackingAction = curMeAttackingAction;
+				startJumpY = curStartJumpY;
+				jumpingUnitId = curJumpingUnitId;
+
+				strategy_.heal_boxes_[unit.id] = nearestHPLootBox->position;
+			}
 			
 		}
 
-		else
+		if (!isHealing)
 		{
 			const Unit* noWeaponEnemyUnit = nullptr;
 			minMHDist = INT_MAX;
