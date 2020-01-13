@@ -1074,6 +1074,9 @@ void setShootingAction(
 		auto fireTimer = me.weapon->fireTimer == nullptr ? 0.0 : *(me.weapon->fireTimer);
 		fireTimer += Strategy::getBulletToMineFlyTime(me, game);
 
+		auto damage = game.properties.mineExplosionParams.damage;
+		if (me.weapon->params.explosion != nullptr) damage += me.weapon->params.explosion->damage;
+
 		for (const auto& unit: game.units)
 		{
 			if (unit.playerId == me.playerId) meLeftCount++;
@@ -1082,7 +1085,7 @@ void setShootingAction(
 			
 			if (unit.id == me.id)
 			{
-				if (areSamePosMines || unit.health <= game.properties.mineExplosionParams.damage)
+				if (areSamePosMines || unit.health <= damage)
 					meKilledCount++;
 				else
 					meDamagedCount++;
@@ -1099,14 +1102,14 @@ void setShootingAction(
 			{
 				if (unit.playerId == me.playerId)
 				{
-					if (areSamePosMines || unit.health <= game.properties.mineExplosionParams.damage)
+					if (areSamePosMines || unit.health <= damage)
 						meKilledCount++;
 					else
 						meDamagedCount++;
 				}
 				else
 				{
-					if (areSamePosMines || unit.health <= game.properties.mineExplosionParams.damage)
+					if (areSamePosMines || unit.health <= damage)
 						enemyKilledUnits.emplace_back(unit);
 					else
 						enemyDamagedCount++;
@@ -1163,8 +1166,8 @@ void setShootingAction(
 
 	if (me.mines > 0)
 	{
-		const auto damage = game.properties.mineExplosionParams.damage * me.mines;
-		
+		auto damage = game.properties.mineExplosionParams.damage * me.mines;
+		if (me.weapon->params.explosion != nullptr) damage += me.weapon->params.explosion->damage;
 		
 		
 		for (int i = 0; i < mePositions.size(); ++i)
@@ -1884,7 +1887,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	
 
-	/*if (game.currentTick < 230)
+	/*if (game.currentTick < 317)
 	{
 		action.velocity = 0;
 		action.jump = false;
