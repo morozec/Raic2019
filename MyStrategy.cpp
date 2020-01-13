@@ -927,12 +927,16 @@ void getAttackingData(
 }
 
 
-bool isSafeShoot(const Unit& me, const Game& game)
+bool isSafeShoot(const Unit& me, const Vec2Double& targetPosition, const Game& game)
 {
+	const auto distToTarget2 = MathHelper::getVectorLength2(me.position, targetPosition);
 	for (const auto& unit: game.units)
 	{
 		if (unit.playerId != me.playerId) continue;
 		if (unit.id == me.id) continue;
+
+		const auto distToUnit2 = MathHelper::getVectorLength2(me.position, unit.position);
+		if (distToTarget2 < distToUnit2) continue;
 
 		const auto dist = MathHelper::getMHDist(me.position, unit.position);
 		if (dist > SAFE_SHOOTING_DIST) continue;
@@ -1394,7 +1398,7 @@ void setShootingAction(
 					me.weapon->params.bullet.size / 2, game);
 			}
 			
-			const auto isSafe = isSafeShoot(me, game);
+			const auto isSafe = isSafeShoot(me, enemyPositions[0][0], game);
 			if (!isDangerousShoot && isSafe)
 			{
 				action.shoot = true;
@@ -1614,7 +1618,7 @@ void setShootingAction(
 							me.weapon->params.bullet.size / 2, game);
 					}
 					
-					const auto isSafe = isSafeShoot(me, game);
+					const auto isSafe = isSafeShoot(me, enemyPositions[0][0], game);
 					if (!isDangerousShoot && isSafe)
 					{
 						action.shoot = true;
@@ -1887,7 +1891,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	
 
-	/*if (game.currentTick < 317)
+	/*if (game.currentTick < 235)
 	{
 		action.velocity = 0;
 		action.jump = false;
