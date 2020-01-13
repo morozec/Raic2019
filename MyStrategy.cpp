@@ -985,7 +985,7 @@ void setShootingAction(
 		int meLeftCount = 0;
 		int enemyLeftCount = 0;
 		int meKilledCount = 0;
-		int enemyKilledCount = 0;
+		vector<Unit> enemyKilledUnits;
 
 		auto fireTimer = tickTime;
 		if (me.weapon->fireTimer != nullptr) fireTimer += std::max(0.0, *(me.weapon->fireTimer) - tickTime);
@@ -1011,14 +1011,43 @@ void setShootingAction(
 			if (isShootUnit)
 			{
 				if (unit.playerId == me.playerId) meKilledCount++;
-				else enemyKilledCount++;
+				else enemyKilledUnits.emplace_back(unit);
 			}
 		}
 
 		meLeftCount -= meKilledCount;
-		enemyLeftCount -= enemyKilledCount;
+		enemyLeftCount -= enemyKilledUnits.size();
 
-		if (enemyKilledCount > 0 && meLeftCount >= enemyLeftCount)
+
+		bool isLoosingFinal = false;
+		int meScore = 0;
+		int enemyScore = 0;
+		if (meLeftCount == 0 && enemyLeftCount == 0)
+		{
+			for (const auto& player : game.players)
+			{
+				if (player.id == me.playerId)
+				{
+					meScore += player.score;
+				}
+				else
+				{
+					enemyScore += player.score;
+				}
+			}
+			meScore += enemyKilledUnits.size() * game.properties.killScore;
+			enemyScore += meKilledCount * game.properties.killScore;
+
+			for (const auto& eku : enemyKilledUnits)
+			{
+				meScore += eku.health;
+			}
+
+			isLoosingFinal = meScore <= enemyScore;
+		}
+
+
+		if (!isLoosingFinal && !enemyKilledUnits.empty() && meLeftCount >= enemyLeftCount)
 		{
 			action.velocity = 0;
 			action.plantMine = true;
@@ -1037,7 +1066,8 @@ void setShootingAction(
 		int meLeftCount = 0;
 		int enemyLeftCount = 0;
 		int meKilledCount = 0;
-		int enemyKilledCount = 0;
+
+		vector<Unit> enemyKilledUnits;
 		int meDamagedCount = 0;
 		int enemyDamagedCount = 0;
 
@@ -1077,7 +1107,7 @@ void setShootingAction(
 				else
 				{
 					if (areSamePosMines || unit.health <= game.properties.mineExplosionParams.damage)
-						enemyKilledCount++;
+						enemyKilledUnits.emplace_back(unit);
 					else
 						enemyDamagedCount++;
 				}
@@ -1085,10 +1115,40 @@ void setShootingAction(
 		}
 
 		meLeftCount -= meKilledCount;
-		enemyLeftCount -= enemyKilledCount;
+		enemyLeftCount -= enemyKilledUnits.size();
 
-		if (meLeftCount >= enemyLeftCount &&
-			(enemyKilledCount > 0 || meKilledCount == 0 && enemyDamagedCount > meDamagedCount))
+		bool isLoosingFinal = false;
+		int meScore = 0;
+		int enemyScore = 0;
+		if (meLeftCount == 0 && enemyLeftCount == 0)
+		{
+			for (const auto& player: game.players)
+			{
+				if (player.id == me.playerId)
+				{
+					meScore += player.score;
+				}
+				else
+				{
+					enemyScore += player.score;
+				}
+			}
+			meScore += enemyKilledUnits.size() * game.properties.killScore;
+			enemyScore += meKilledCount * game.properties.killScore;
+
+			for (const auto& eku: enemyKilledUnits)
+			{
+				meScore += eku.health;
+			}			
+
+			isLoosingFinal = meScore <= enemyScore;
+		}
+		
+		
+
+		if (!isLoosingFinal &&
+			meLeftCount >= enemyLeftCount &&
+			(!enemyKilledUnits.empty() || meKilledCount == 0 && enemyDamagedCount > meDamagedCount))
 		{
 			action.velocity = 0;
 			action.plantMine = true;
@@ -1144,7 +1204,7 @@ void setShootingAction(
 			int meLeftCount = 0;
 			int enemyLeftCount = 0;
 			int meKilledCount = 0;
-			int enemyKilledCount = 0;
+			vector<Unit> enemyKilledUnits;
 
 			for (const auto& unit: game.units)
 			{
@@ -1172,14 +1232,42 @@ void setShootingAction(
 				if (isShootUnit)
 				{
 					if (unit.playerId == me.playerId) meKilledCount++;
-					else enemyKilledCount++;
+					else enemyKilledUnits.emplace_back(unit);
 				}
 			}
 
 			meLeftCount -= meKilledCount;
-			enemyLeftCount -= enemyKilledCount;
+			enemyLeftCount -= enemyKilledUnits.size();
 
-			if (meLeftCount >= enemyLeftCount && enemyKilledCount > 0)
+
+			bool isLoosingFinal = false;
+			int meScore = 0;
+			int enemyScore = 0;
+			if (meLeftCount == 0 && enemyLeftCount == 0)
+			{
+				for (const auto& player : game.players)
+				{
+					if (player.id == me.playerId)
+					{
+						meScore += player.score;
+					}
+					else
+					{
+						enemyScore += player.score;
+					}
+				}
+				meScore += enemyKilledUnits.size() * game.properties.killScore;
+				enemyScore += meKilledCount * game.properties.killScore;
+
+				for (const auto& eku : enemyKilledUnits)
+				{
+					meScore += eku.health;
+				}
+
+				isLoosingFinal = meScore <= enemyScore;
+			}
+
+			if (!isLoosingFinal && meLeftCount >= enemyLeftCount && !enemyKilledUnits.empty())
 			{
 				action.plantMine = false;
 				action.aim = enemyPositions[i][0] - mePos;
