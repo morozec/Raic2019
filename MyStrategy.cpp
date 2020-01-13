@@ -1945,7 +1945,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	
 
-	/*if (game.currentTick < 575)
+	/*if (game.currentTick < 719)
 	{
 		action.velocity = 0;
 		action.jump = false;
@@ -2166,7 +2166,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 				strategy_,
 				game, debug);
 						
-			for (size_t i = 1; i < curMeAttackingPositions.size(); ++i)
+			/*for (size_t i = 1; i < curMeAttackingPositions.size(); ++i)
 			{
 				const auto& pos = curMeAttackingPositions[i];
 				for (const auto& enemyUnit : game.units)
@@ -2179,7 +2179,37 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 					}
 				}
 				if (!isHealing) break;
+			}*/
+
+			for (const auto& enemyUnit : game.units)
+			{
+				if (enemyUnit.playerId == unit.playerId) continue;
+
+				bool areStartTouch =
+					Simulator::areRectsCross(curMeAttackingPositions[0], unit.size, enemyUnit.position,
+						{ enemyUnit.size.x + 1, enemyUnit.size.y + 1 });
+
+				for (size_t i = 1; i < curMeAttackingPositions.size(); ++i)
+				{
+					const auto& pos = curMeAttackingPositions[i];
+					if (Simulator::areRectsCross(pos, unit.size, enemyUnit.position,
+						{ enemyUnit.size.x + 1, enemyUnit.size.y + 1 }))
+					{
+						if (!areStartTouch)
+						{
+							isHealing = false;
+							break;
+						}
+					}
+					else
+					{
+						areStartTouch = false;
+					}
+				}
+
+				if (!isHealing) break;
 			}
+			
 
 			if (isHealing)
 			{
