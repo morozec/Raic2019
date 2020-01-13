@@ -1899,7 +1899,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	
 
-	/*if (game.currentTick < 432)
+	/*if (game.currentTick < 292)
 	{
 		action.velocity = 0;
 		action.jump = false;
@@ -2095,7 +2095,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 		if (needHeal)
 		{
-			
+			vector<LootBox> hpLootBoxes;
 			for (const auto& lb : game.lootBoxes)
 			{
 				if (std::dynamic_pointer_cast<Item::HealthPack>(lb.item))
@@ -2111,93 +2111,87 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 						}
 					}
 					if (isGot) continue;
-					
-					const auto dist = MathHelper::getMHDist(unit.position, lb.position);
+
+					hpLootBoxes.emplace_back(lb);
+					/*const auto dist = MathHelper::getMHDist(unit.position, lb.position);
 					if (dist < minMHDist)
 					{
 						minMHDist = dist;
 						nearestHPLootBox = &lb;
-					}				
+					}			*/	
 				}
 			}
-		}
-		
-		if (nearestHPLootBox != nullptr)
-		{
-			isHealing = true;
-			vector<Vec2Double> curMeAttackingPositions;
-			vector<JumpState> curMeAttackingJumpStates;
-			UnitAction curMeAttackingAction;
-			size_t curStartJumpY = startJumpY;
-			int curJumpingUnitId = jumpingUnitId;
-			/*getHealingData(
-				unit, curMeAttackingPositions, curMeAttackingJumpStates,
-				lb, curMeAttackingAction, curStartJumpY, curJumpingUnitId, game);*/
-			initAStarAction(
-				unit,  nearestHPLootBox->position, nearestHPLootBox->size,
-				curMeAttackingPositions, curMeAttackingJumpStates, curMeAttackingAction,
-				strategy_,
-				game, debug);
 
-		
-			for (const auto& enemyUnit : game.units)
+			std::sort(hpLootBoxes.begin(), hpLootBoxes.end(),
+				[unit](const LootBox& a, const LootBox& b) 
 			{
-				if (enemyUnit.playerId == unit.playerId) continue;
-				
-				bool areStartTouch = 
-					Simulator::areRectsCross(curMeAttackingPositions[0], unit.size, enemyUnit.position,
-						{enemyUnit.size.x + 1, enemyUnit.size.y + 1});
+				return MathHelper::getMHDist(unit.position, a.position) < MathHelper::getMHDist(unit.position, b.position);
+			});
 
-				for (size_t i = 1; i < curMeAttackingPositions.size(); ++i)
-				{
-					const auto& pos = curMeAttackingPositions[i];
-					if (Simulator::areRectsCross(pos, unit.size, enemyUnit.position,
-						{ enemyUnit.size.x + 1, enemyUnit.size.y + 1 }))
-					{
-						if (!areStartTouch)
-						{
-							isHealing = false;
-							break;
-						}
-					}
-					else
-					{
-						areStartTouch = false;
-					}
-				}
-
-				if (!isHealing) break;
-			}
-			
-						
-			/*for (size_t i = 1; i < curMeAttackingPositions.size(); ++i)
+			for (const auto& lb: hpLootBoxes)
 			{
-				const auto& pos = curMeAttackingPositions[i];
+				isHealing = true;
+				vector<Vec2Double> curMeAttackingPositions;
+				vector<JumpState> curMeAttackingJumpStates;
+				UnitAction curMeAttackingAction;
+				size_t curStartJumpY = startJumpY;
+				int curJumpingUnitId = jumpingUnitId;
+				/*getHealingData(
+					unit, curMeAttackingPositions, curMeAttackingJumpStates,
+					lb, curMeAttackingAction, curStartJumpY, curJumpingUnitId, game);*/
+				initAStarAction(
+					unit, lb.position, lb.size,
+					curMeAttackingPositions, curMeAttackingJumpStates, curMeAttackingAction,
+					strategy_,
+					game, debug);
+
+
 				for (const auto& enemyUnit : game.units)
 				{
 					if (enemyUnit.playerId == unit.playerId) continue;
-					if (Simulator::areRectsTouch(pos, unit.size, enemyUnit.position, enemyUnit.size))
+
+					bool areStartTouch =
+						Simulator::areRectsCross(curMeAttackingPositions[0], unit.size, enemyUnit.position,
+							{ enemyUnit.size.x + 1, enemyUnit.size.y + 1 });
+
+					for (size_t i = 1; i < curMeAttackingPositions.size(); ++i)
 					{
-						isHealing = false;
-						break;
+						const auto& pos = curMeAttackingPositions[i];
+						if (Simulator::areRectsCross(pos, unit.size, enemyUnit.position,
+							{ enemyUnit.size.x + 1, enemyUnit.size.y + 1 }))
+						{
+							if (!areStartTouch)
+							{
+								isHealing = false;
+								break;
+							}
+						}
+						else
+						{
+							areStartTouch = false;
+						}
 					}
+
+					if (!isHealing) break;
 				}
-				if (!isHealing) break;
-			}*/
 
-			if (isHealing)
-			{
+				if (isHealing)
+				{
+					nearestHPLootBox = &lb;
+					
+					meAttackingPositions = curMeAttackingPositions;
+					meAttackingJumpStates = curMeAttackingJumpStates;
+					meAttackingAction = curMeAttackingAction;
+					startJumpY = curStartJumpY;
+					jumpingUnitId = curJumpingUnitId;
 
-				meAttackingPositions = curMeAttackingPositions;
-				meAttackingJumpStates = curMeAttackingJumpStates;
-				meAttackingAction = curMeAttackingAction;
-				startJumpY = curStartJumpY;
-				jumpingUnitId = curJumpingUnitId;
-
-				strategy_.heal_boxes_[unit.id] = nearestHPLootBox->position;
+					strategy_.heal_boxes_[unit.id] = nearestHPLootBox->position;
+					
+					break;
+				}
 			}
-			
 		}
+				
 
 		if (!isHealing)
 		{
