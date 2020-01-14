@@ -1437,14 +1437,14 @@ void setShootingAction(
 		{
 
 			bool isDangerousShoot = false;
-			if (me.weapon->params.explosion != nullptr && 
+			/*if (me.weapon->params.explosion != nullptr && 
 				!Simulator::areRectsTouch(me.position, me.size, enemyShootingPositions[0], enemySize))
 			{
 				isDangerousShoot = Strategy::isDangerousRocketShooting(
 					me.position, me.size, 
 					okShootingAngle, okShootingSpread,
 					me.weapon->params.bullet.size / 2, game);
-			}
+			}*/
 			
 			const auto isSafe = isSafeShoot(me, enemyPositions[0][0], game);
 			if (!isDangerousShoot && isSafe)
@@ -1672,7 +1672,8 @@ void setShootingAction(
 				if (canShootingTick == 0 && okAddShootingSimulations == 0)
 				{
 					bool isDangerousShoot = false;
-					if (me.weapon->params.explosion != nullptr &&
+					if (maxShootingProbability < OK_SHOOTING_PROBABILITY &&
+						me.weapon->params.explosion != nullptr &&
 						!Simulator::areRectsTouch(me.position, me.size, enemyPositions[0][0], enemySize))
 					{
 						isDangerousShoot = Strategy::isDangerousRocketShooting(
@@ -1965,7 +1966,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	
 
-	/*if (game.currentTick < 321)
+	/*if (game.currentTick < 796)
 	{
 		action.velocity = 0;
 		action.jump = false;
