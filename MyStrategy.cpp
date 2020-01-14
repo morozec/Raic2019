@@ -1465,6 +1465,7 @@ void setShootingAction(
 		
 	
 	auto maxShootingProbability = 0.0;
+	auto maxShootingProbabilityDist2 = INT_MAX;
 	double okShootingAngle = 0;
 	double okShootingSpread = 0;
 	
@@ -1481,6 +1482,7 @@ void setShootingAction(
 		double curMaxShootingProbability = 0.0;
 		double curOkShootingAngle = 0.0;
 		double curSpread = 0.0;
+			
 		
 		const auto shootingTick = canShootingTick + addShootingSimulations;
 		Vec2Double meShootingPosition;//позиция, откуда произойдет выстрел
@@ -1500,11 +1502,21 @@ void setShootingAction(
 		{
 			addShootingSimulations++;
 			continue;
-		}		
+		}
+
 		
 		const auto enemyShootingPositions = enemyPositions[shootingTick]; //позиции врага, начиная с тика выстрела
 		double minAngle = INT_MAX;
 		double maxAngle = -INT_MAX;
+
+
+		double curShootingDist2 = MathHelper::getVectorLength2(meShootingPosition, enemyShootingPositions[0]);
+		if (maxShootingProbability >= NOT_BAD_SHOOTING_PROBABILITY && curShootingDist2 > maxShootingProbabilityDist2)
+		{
+			addShootingSimulations++;
+			continue;
+		}
+		
 		for (const auto& ep : enemyShootingPositions)
 		{
 			const auto shootingVector = ep - meShootingPosition;
@@ -1575,6 +1587,7 @@ void setShootingAction(
 		if (curMaxShootingProbability > maxShootingProbability)
 		{
 			maxShootingProbability = curMaxShootingProbability;
+			maxShootingProbabilityDist2 = curShootingDist2;
 			okShootingAngle = curOkShootingAngle;
 			okShootingSpread = curSpread;
 			okAddShootingSimulations = addShootingSimulations;
