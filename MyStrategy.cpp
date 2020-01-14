@@ -1873,13 +1873,17 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	action.aim = Vec2Double(0, 0);
 	action.reload = false;
 	action.swapWeapon = false;
-	if (unit.weapon != nullptr && unit.weapon->typ == ROCKET_LAUNCHER)
+	if (unit.weapon != nullptr && (unit.weapon->typ == ROCKET_LAUNCHER || unit.weapon->typ == ASSAULT_RIFLE))
 	{
 		for (const LootBox& lootBox : game.lootBoxes)
 		{
-			if (std::dynamic_pointer_cast<Item::Weapon>(lootBox.item) &&
-				std::dynamic_pointer_cast<Item::Weapon>(lootBox.item)->weaponType != ROCKET_LAUNCHER)
+			if (std::dynamic_pointer_cast<Item::Weapon>(lootBox.item))
 			{
+				const auto needSwap = (unit.weapon->typ == ROCKET_LAUNCHER &&
+					std::dynamic_pointer_cast<Item::Weapon>(lootBox.item)->weaponType != ROCKET_LAUNCHER) ||
+					(unit.weapon->typ == ASSAULT_RIFLE &&
+						std::dynamic_pointer_cast<Item::Weapon>(lootBox.item)->weaponType == PISTOL);				
+				
 				if (Simulator::areRectsCross(unit.position, unit.size, lootBox.position, lootBox.size))
 				{
 					action.swapWeapon = true;
