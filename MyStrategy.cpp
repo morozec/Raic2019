@@ -552,7 +552,7 @@ void initAStarAction(
 	vector<JumpState>& meJumpStates,
 	UnitAction& action,
 	Strategy& strategy,
-	const Game& game, Debug& debug)
+	const Game& game, Debug& debug, int& pathLength)
 {
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 	
@@ -607,6 +607,8 @@ void initAStarAction(
 			maxJumpTiles, maxJumpPadJumpTiles, vector<pair<int,int>>(),
 			game);
 	}
+
+	pathLength = path.size();
 	
 	auto curPosition = me.position;
 	auto curJumpState = me.jumpState;
@@ -2094,12 +2096,13 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			}
 		}
 		strategy_.lootboxes_[unit.id] = nearestWeapon->position;
-		
+
+		int pathLength;
 		initAStarAction(
 			unit, nearestWeapon->position, nearestWeapon->size, 
 			meAttackingPositions, meAttackingJumpStates, meAttackingAction,
 			strategy_,
-			game, debug);
+			game, debug, pathLength);
 	}
 	else
 	{
@@ -2122,7 +2125,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 		if (needHeal)
 		{
-			
+			vector<LootBox> hpLootBoxes;
 			for (const auto& lb : game.lootBoxes)
 			{
 				if (std::dynamic_pointer_cast<Item::HealthPack>(lb.item))
@@ -2138,91 +2141,85 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 						}
 					}
 					if (isGot) continue;
+
+					hpLootBoxes.emplace_back(lb);
 					
-					const auto dist = MathHelper::getMHDist(unit.position, lb.position);
+					/*const auto dist = MathHelper::getMHDist(unit.position, lb.position);
 					if (dist < minMHDist)
 					{
 						minMHDist = dist;
 						nearestHPLootBox = &lb;
-					}				
+					}	*/			
 				}
 			}
-		}
-		
-		if (nearestHPLootBox != nullptr)
-		{
-			isHealing = true;
-			vector<Vec2Double> curMeAttackingPositions;
-			vector<JumpState> curMeAttackingJumpStates;
-			UnitAction curMeAttackingAction;
-			size_t curStartJumpY = startJumpY;
-			int curJumpingUnitId = jumpingUnitId;
-			/*getHealingData(
-				unit, curMeAttackingPositions, curMeAttackingJumpStates,
-				lb, curMeAttackingAction, curStartJumpY, curJumpingUnitId, game);*/
-			initAStarAction(
-				unit,  nearestHPLootBox->position, nearestHPLootBox->size,
-				curMeAttackingPositions, curMeAttackingJumpStates, curMeAttackingAction,
-				strategy_,
-				game, debug);
-						
-			/*for (size_t i = 1; i < curMeAttackingPositions.size(); ++i)
+
+			std::sort(hpLootBoxes.begin(), hpLootBoxes.end(),
+				[unit](const LootBox& a, const LootBox& b)
 			{
-				const auto& pos = curMeAttackingPositions[i];
+				return MathHelper::getMHDist(unit.position, a.position) < MathHelper::getMHDist(unit.position, b.position);
+			});
+
+			for (const auto& lb : hpLootBoxes)
+			{
+				isHealing = true;
+				vector<Vec2Double> curMeAttackingPositions;
+				vector<JumpState> curMeAttackingJumpStates;
+				UnitAction curMeAttackingAction;
+				size_t curStartJumpY = startJumpY;
+				int curJumpingUnitId = jumpingUnitId;
+
+				int curMePathLength;
+
+				/*getHealingData(
+					unit, curMeAttackingPositions, curMeAttackingJumpStates,
+					lb, curMeAttackingAction, curStartJumpY, curJumpingUnitId, game);*/
+				initAStarAction(
+					unit, lb.position, lb.size,
+					curMeAttackingPositions, curMeAttackingJumpStates, curMeAttackingAction,
+					strategy_,
+					game, debug, curMePathLength);
+
+
 				for (const auto& enemyUnit : game.units)
 				{
 					if (enemyUnit.playerId == unit.playerId) continue;
-					if (Simulator::areRectsTouch(pos, unit.size, enemyUnit.position, enemyUnit.size))
+
+					vector<Vec2Double> curEnemyAttackingPositions;
+					vector<JumpState> curEnemyAttackingJumpStates;
+					UnitAction curEnemyAttackingAction;
+					int curEnemyPathLength;
+
+					initAStarAction(
+						enemyUnit, lb.position, lb.size,
+						curEnemyAttackingPositions, curEnemyAttackingJumpStates, curEnemyAttackingAction,
+						strategy_,
+						game, debug, curEnemyPathLength);
+
+					if (curEnemyPathLength < curMePathLength)
 					{
+
 						isHealing = false;
 						break;
 					}
 				}
-				if (!isHealing) break;
-			}*/
 
-			for (const auto& enemyUnit : game.units)
-			{
-				if (enemyUnit.playerId == unit.playerId) continue;
-
-				bool areStartTouch =
-					Simulator::areRectsCross(curMeAttackingPositions[0], unit.size, enemyUnit.position,
-						{ enemyUnit.size.x + 1, enemyUnit.size.y + 1 });
-
-				for (size_t i = 1; i < curMeAttackingPositions.size(); ++i)
+				if (isHealing)
 				{
-					const auto& pos = curMeAttackingPositions[i];
-					if (Simulator::areRectsCross(pos, unit.size, enemyUnit.position,
-						{ enemyUnit.size.x + 1, enemyUnit.size.y + 1 }))
-					{
-						if (!areStartTouch)
-						{
-							isHealing = false;
-							break;
-						}
-					}
-					else
-					{
-						areStartTouch = false;
-					}
+					nearestHPLootBox = &lb;
+
+					meAttackingPositions = curMeAttackingPositions;
+					meAttackingJumpStates = curMeAttackingJumpStates;
+					meAttackingAction = curMeAttackingAction;
+					startJumpY = curStartJumpY;
+					jumpingUnitId = curJumpingUnitId;
+
+					strategy_.heal_boxes_[unit.id] = nearestHPLootBox->position;
+
+					break;
 				}
-
-				if (!isHealing) break;
-			}
-			
-
-			if (isHealing)
-			{
-				meAttackingPositions = curMeAttackingPositions;
-				meAttackingJumpStates = curMeAttackingJumpStates;
-				meAttackingAction = curMeAttackingAction;
-				startJumpY = curStartJumpY;
-				jumpingUnitId = curJumpingUnitId;
-
-				strategy_.heal_boxes_[unit.id] = nearestHPLootBox->position;
-				
 			}
 		}
+		
 
 		if (!isHealing)
 		{
@@ -2242,11 +2239,12 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 			if (noWeaponEnemyUnit != nullptr)
 			{
+				int pathLength;
 				initAStarAction(
 					unit, noWeaponEnemyUnit->position, noWeaponEnemyUnit->size,
 					meAttackingPositions, meAttackingJumpStates, meAttackingAction,
 					strategy_,
-					game, debug);
+					game, debug, pathLength);
 			}
 			else
 			{
@@ -2280,12 +2278,13 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 				}
 				if (nearestMine != nullptr)
 				{
+					int pathLength;
 					strategy_.lootboxes_[unit.id] = nearestMine->position;
 					initAStarAction(
 						unit, nearestMine->position, nearestMine->size,
 						meAttackingPositions, meAttackingJumpStates, meAttackingAction,
 						strategy_,
-						game, debug);
+						game, debug, pathLength);
 				}
 				else
 				{
@@ -2303,9 +2302,10 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 
 					if (myScore <= enemyScore && simpleShootingProb < TOLERANCE)
 					{
+						int pathLength;
 						initAStarAction(unit, nearestEnemy->position, nearestEnemy->size,
 							meAttackingPositions, meAttackingJumpStates, meAttackingAction,
-							strategy_, game, debug);
+							strategy_, game, debug, pathLength);
 					}
 					else
 					{
