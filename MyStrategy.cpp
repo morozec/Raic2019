@@ -967,8 +967,7 @@ void setShootingAction(
 		return;
 	}
 
-	const auto isEnemyVisible = getSimpleProbability(
-		me.position, me.size, enemyPositions[0], enemySize, game) > TOLERANCE;
+	const auto isEnemyVisible = MathHelper::getVectorLength(me.position, enemyPositions[0][0]) < 15;
 
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 
