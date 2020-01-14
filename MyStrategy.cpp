@@ -1476,6 +1476,7 @@ void setShootingAction(
 	map<int, double> allSpreads;
 
 	int addShootingSimulations = 0;
+	
 	while (canShootingTick + addShootingSimulations < MAX_SIMULATIONS)
 	{
 		double curMaxShootingProbability = 0.0;
@@ -1510,7 +1511,8 @@ void setShootingAction(
 
 
 		double curShootingDist2 = MathHelper::getVectorLength2(meShootingPosition, enemyShootingPositions[0]);
-		if (maxShootingProbability >= NOT_BAD_SHOOTING_PROBABILITY && curShootingDist2 > maxShootingProbabilityDist2)
+		if (maxShootingProbability >= NOT_BAD_SHOOTING_PROBABILITY && curShootingDist2 > maxShootingProbabilityDist2 
+			&& maxShootingProbabilityDist2 < 5 * 5)
 		{
 			addShootingSimulations++;
 			continue;
