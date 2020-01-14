@@ -1089,9 +1089,7 @@ void setShootingAction(
 		int enemyLeftCount = 0;
 		int meKilledCount = 0;
 
-		vector<Unit> enemyKilledUnits;
-		int meDamagedCount = 0;
-		int enemyDamagedCount = 0;
+		vector<Unit> enemyKilledUnits;		
 
 		auto fireTimer = me.weapon->fireTimer == nullptr ? 0.0 : *(me.weapon->fireTimer);
 		fireTimer += Strategy::getBulletToMineFlyTime(me, game);
@@ -1122,9 +1120,7 @@ void setShootingAction(
 			if (unit.id == me.id)
 			{
 				if (areSamePosMines || unit.health <= damage)
-					meKilledCount++;
-				else
-					meDamagedCount++;
+					meKilledCount++;			
 				continue;
 			}
 
@@ -1139,16 +1135,12 @@ void setShootingAction(
 				if (unit.playerId == me.playerId)
 				{
 					if (areSamePosMines || unit.health <= damage)
-						meKilledCount++;
-					else
-						meDamagedCount++;
+						meKilledCount++;					
 				}
 				else
 				{
 					if (areSamePosMines || unit.health <= damage)
-						enemyKilledUnits.emplace_back(unit);
-					else
-						enemyDamagedCount++;
+						enemyKilledUnits.emplace_back(unit);					
 				}
 			}			
 		}
@@ -1186,8 +1178,8 @@ void setShootingAction(
 		
 
 		if (!isLoosingFinal &&
-			meLeftCount >= enemyLeftCount &&
-			(!enemyKilledUnits.empty() || meKilledCount == 0 && enemyDamagedCount > meDamagedCount))
+			meLeftCount >= enemyLeftCount && 
+			!enemyKilledUnits.empty())
 		{
 			action.velocity = 0;
 			action.plantMine = true;
