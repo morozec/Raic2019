@@ -1882,6 +1882,24 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		else ++it;
 	}
 
+
+
+	const Unit* nearestEnemy = nullptr;
+	for (const Unit& other : game.units)
+	{
+		if (other.playerId != unit.playerId)
+		{
+			if (nearestEnemy == nullptr ||
+				MathHelper::getVectorLength2(unit.position, other.position) <
+				MathHelper::getVectorLength2(unit.position, nearestEnemy->position))
+			{
+				nearestEnemy = &other;
+			}
+		}
+	}
+
+	
+
 	UnitAction action;
 	action.aim = Vec2Double(0, 0);
 	action.reload = false;
@@ -1894,7 +1912,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			{
 				const auto needSwap = (unit.weapon->typ == ROCKET_LAUNCHER &&
 					std::dynamic_pointer_cast<Item::Weapon>(lootBox.item)->weaponType != ROCKET_LAUNCHER) ||
-					(unit.weapon->typ == ASSAULT_RIFLE &&
+					(unit.weapon->typ == ASSAULT_RIFLE && 
+						nearestEnemy != nullptr && MathHelper::getMHDist(unit.position, (*nearestEnemy).position) > 15 &&
 						std::dynamic_pointer_cast<Item::Weapon>(lootBox.item)->weaponType == PISTOL);				
 				
 				if (needSwap &&
@@ -1949,20 +1968,6 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 		},
 		game);*/
 
-	
-	const Unit* nearestEnemy = nullptr;
-	for (const Unit& other : game.units)
-	{
-		if (other.playerId != unit.playerId)
-		{
-			if (nearestEnemy == nullptr ||
-				MathHelper::getVectorLength2(unit.position, other.position) <
-				MathHelper::getVectorLength2(unit.position, nearestEnemy->position))
-			{
-				nearestEnemy = &other;
-			}
-		}
-	}
 	
 
 	/*if (game.currentTick < 796)
