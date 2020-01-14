@@ -1670,7 +1670,9 @@ std::map<Bullet, int> Strategy::isSafeMove(
 		if (unit.playerId == me.playerId) continue;
 		if (unit.weapon == nullptr) continue;
 		if (unit.mines * game.properties.mineExplosionParams.damage < me.health) continue;
-		if (!checkGoodMinePos(unit, unit.position, !unit.jumpState.canJump && !unit.jumpState.canCancel, game)) continue;
+		if (!checkGoodMinePos(unit, unit.position, 
+			!unit.jumpState.canJump && !unit.jumpState.canCancel || unit.jumpState.maxTime < game.properties.unitJumpTime - TOLERANCE,
+			game)) continue;
 
 		auto expTime = unit.weapon->fireTimer == nullptr ? 0 : *(unit.weapon->fireTimer);
 		if (me.health > game.properties.mineExplosionParams.damage && expTime < tickTime)

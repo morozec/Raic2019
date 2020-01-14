@@ -972,7 +972,7 @@ void setShootingAction(
 
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 
-	const auto isStillFalling = !me.jumpState.canJump && !me.jumpState.canCancel;
+	const auto isStillFalling = !me.jumpState.canJump && !me.jumpState.canCancel || me.jumpState.maxTime < game.properties.unitJumpTime - TOLERANCE;
 	const auto isGoodMinePos = Strategy::checkGoodMinePos(me, me.position, isStillFalling, game);
 	
 
