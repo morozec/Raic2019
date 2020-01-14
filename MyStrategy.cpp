@@ -966,7 +966,7 @@ void setShootingAction(
 	}
 
 	const auto isEnemyVisible = getSimpleProbability(
-		me.position, me.size, enemyPositions[0], enemySize, game) > 1 - TOLERANCE;
+		me.position, me.size, enemyPositions[0], enemySize, game) > TOLERANCE;
 
 	const auto tickTime = 1.0 / game.properties.ticksPerSecond;
 
