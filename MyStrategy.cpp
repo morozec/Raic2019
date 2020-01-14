@@ -1884,7 +1884,8 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 					(unit.weapon->typ == ASSAULT_RIFLE &&
 						std::dynamic_pointer_cast<Item::Weapon>(lootBox.item)->weaponType == PISTOL);				
 				
-				if (Simulator::areRectsCross(unit.position, unit.size, lootBox.position, lootBox.size))
+				if (needSwap &&
+					Simulator::areRectsCross(unit.position, unit.size, lootBox.position, lootBox.size))
 				{
 					action.swapWeapon = true;
 					break;
