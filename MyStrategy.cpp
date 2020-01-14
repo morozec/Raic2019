@@ -1965,7 +1965,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	
 
-	/*if (game.currentTick < 719)
+	/*if (game.currentTick < 321)
 	{
 		action.velocity = 0;
 		action.jump = false;
@@ -2213,9 +2213,10 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 						strategy_,
 						game, debug, curEnemyPathLength);
 
+					if (curEnemyPathLength == 0 && MathHelper::getMHDist(enemyUnit.position, lb.position) > 3) continue;//не можем построить путь
+
 					if (curEnemyPathLength < curMePathLength)
 					{
-
 						isHealing = false;
 						break;
 					}
