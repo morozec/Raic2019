@@ -2124,22 +2124,55 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 	}
 	else
 	{
+
+		const LootBox* nearestMine = nullptr;
+		double minMHDist = INT_MAX;
+		for (const LootBox& lootBox : game.lootBoxes)
+		{
+			if (std::dynamic_pointer_cast<Item::Mine>(lootBox.item))
+			{
+				auto isOtherUnitMine = false;
+				for (const auto& item : strategy_.lootboxes_)
+				{
+					if (item.first != unit.id &&
+						std::abs(item.second.x - lootBox.position.x) < TOLERANCE &&
+						std::abs(item.second.y - lootBox.position.y) < TOLERANCE)
+					{
+						isOtherUnitMine = true;
+						break;
+					}
+				}
+				if (isOtherUnitMine) continue;
+
+				if (nearestMine == nullptr ||
+					MathHelper::getVectorLength2(unit.position, lootBox.position) <
+					MathHelper::getVectorLength2(unit.position, nearestMine->position))
+				{
+					nearestMine = &lootBox;
+				}
+			}
+		}
+		
 		bool needHeal = unit.health <= game.properties.unitMaxHealth / 2;
 		if (!needHeal)
 		{
-			for (const auto& enemy : game.units)
+			//только если собрали доcтаточно мин
+			if (nearestMine == nullptr || unit.mines * game.properties.mineExplosionParams.damage >= nearestEnemy->health)
 			{
-				if (enemy.playerId == unit.playerId) continue;
-				if (enemy.health > unit.health || enemy.health == unit.health && unit.health < game.properties.unitMaxHealth)
+				for (const auto& enemy : game.units)
 				{
-					needHeal = true;
-					break;
+					if (enemy.playerId == unit.playerId) continue;
+					if (enemy.health > unit.health || enemy.health == unit.health && unit.health < game.properties.unitMaxHealth)
+					{
+						needHeal = true;
+						break;
+					}
 				}
 			}
 		}
 
 		const LootBox* nearestHPLootBox = nullptr;
-		double minMHDist = INT_MAX;
+		minMHDist = INT_MAX;
 
 		if (needHeal)
 		{
@@ -2268,33 +2301,7 @@ UnitAction MyStrategy::getAction(const Unit& unit, const Game& game,
 			else
 			{
 
-				const LootBox* nearestMine = nullptr;
-				minMHDist = INT_MAX;
-				for (const LootBox& lootBox : game.lootBoxes)
-				{
-					if (std::dynamic_pointer_cast<Item::Mine>(lootBox.item))
-					{
-						auto isOtherUnitMine = false;
-						for (const auto& item : strategy_.lootboxes_)
-						{
-							if (item.first != unit.id &&
-								std::abs(item.second.x - lootBox.position.x) < TOLERANCE &&
-								std::abs(item.second.y - lootBox.position.y) < TOLERANCE)
-							{
-								isOtherUnitMine = true;
-								break;
-							}
-						}
-						if (isOtherUnitMine) continue;
-
-						if (nearestMine == nullptr ||
-							MathHelper::getVectorLength2(unit.position, lootBox.position) <
-							MathHelper::getVectorLength2(unit.position, nearestMine->position))
-						{
-							nearestMine = &lootBox;
-						}
-					}
-				}
+				
 				if (nearestMine != nullptr)
 				{
 					int pathLength;
