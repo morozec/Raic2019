@@ -1452,7 +1452,7 @@ void setShootingAction(
 			else
 			{
 				action.shoot = false;
-				if (!isEnemyVisible && me.weapon->magazine < me.weapon->params.magazineSize)
+				if (!isEnemyVisible && me.weapon->magazine <= (me.weapon->params.magazineSize)/2)
 					action.reload = true;
 			}
 			
@@ -1701,7 +1701,7 @@ void setShootingAction(
 
 	if (!action.shoot)
 	{
-		if (!isEnemyVisible && me.weapon->magazine < me.weapon->params.magazineSize)
+		if (!isEnemyVisible && me.weapon->magazine <= (me.weapon->params.magazineSize)/2)
 			action.reload = true;
 	}
 
