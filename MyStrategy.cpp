@@ -1024,7 +1024,7 @@ void setShootingAction(
 				continue;
 			}
 
-			if (unit.playerId != me.playerId && unit.weapon == nullptr) continue;//не подрываем безоружных
+			//if (unit.playerId != me.playerId && unit.weapon == nullptr) continue;//не подрываем безоружных
 
 			const auto isShootUnit = Strategy::isMineExplosionShootUnit(me.position, game.properties.mineSize, game.properties.mineExplosionParams.radius,
 				unit.position, unit.size,
@@ -1068,8 +1068,15 @@ void setShootingAction(
 			isLoosingFinal = meScore <= enemyScore;
 		}
 
+		auto noWeaponEnemyCount = 0;
+		for (const auto &u: enemyKilledUnits)
+		{
+			if (u.weapon == nullptr) noWeaponEnemyCount++;
+		}
 
-		if (!isLoosingFinal && !enemyKilledUnits.empty() && meLeftCount >= enemyLeftCount)
+
+		if (!isLoosingFinal && !enemyKilledUnits.empty() && meLeftCount >= enemyLeftCount && 
+			(noWeaponEnemyCount == 0 || noWeaponEnemyCount > 0 && enemyLeftCount == 0))//взрываем безоружного только при победе
 		{
 			action.velocity = 0;
 			action.plantMine = true;
@@ -1124,7 +1131,7 @@ void setShootingAction(
 				continue;
 			}
 
-			if (unit.playerId != me.playerId && unit.weapon == nullptr) continue;//не подрываем безоружных
+			//if (unit.playerId != me.playerId && unit.weapon == nullptr) continue;//не подрываем безоружных
 
 			const auto isShootUnit = Strategy::isMineExplosionShootUnit(me.position, game.properties.mineSize, game.properties.mineExplosionParams.radius,
 				unit.position, unit.size,
@@ -1174,12 +1181,19 @@ void setShootingAction(
 
 			isLoosingFinal = meScore <= enemyScore;
 		}
-		
-		
+
+
+		auto noWeaponEnemyCount = 0;
+		for (const auto &u : enemyKilledUnits)
+		{
+			if (u.weapon == nullptr) noWeaponEnemyCount++;
+		}
+				
 
 		if (!isLoosingFinal &&
 			meLeftCount >= enemyLeftCount && 
-			!enemyKilledUnits.empty())
+			!enemyKilledUnits.empty() &&
+			(noWeaponEnemyCount == 0 || noWeaponEnemyCount > 0 && enemyLeftCount == 0))//взрываем безоружного только при победе
 		{
 			action.velocity = 0;
 			action.plantMine = true;
@@ -1313,7 +1327,14 @@ void setShootingAction(
 				isLoosingFinal = meScore <= enemyScore;
 			}
 
-			if (!isLoosingFinal && meLeftCount >= enemyLeftCount && !enemyKilledUnits.empty())
+			auto noWeaponEnemyCount = 0;
+			for (const auto &u : enemyKilledUnits)
+			{
+				if (u.weapon == nullptr) noWeaponEnemyCount++;
+			}
+			
+			if (!isLoosingFinal && meLeftCount >= enemyLeftCount && !enemyKilledUnits.empty() &&
+				(noWeaponEnemyCount == 0 || noWeaponEnemyCount > 0 && enemyLeftCount == 0))//взрываем безоружного только при победе
 			{
 				action.plantMine = false;
 				action.aim = enemyPositions[i][0] - mePos;
