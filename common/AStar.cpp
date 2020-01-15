@@ -372,6 +372,9 @@ vector<Four> aStarSearch(
 			}
 			else
 			{
+				kNew = game.level.tiles[i - 1][j - 1] == EMPTY ||
+					game.level.tiles[i - 1][j - 1] == JUMP_PAD ?
+					maxJumpPadJumpTiles + 1 : 0;
 				lNew = 0;
 				jpJ = j;
 			}
@@ -456,6 +459,9 @@ vector<Four> aStarSearch(
 			}
 			else
 			{
+				kNew = game.level.tiles[i + 1][j - 1] == EMPTY ||
+					game.level.tiles[i + 1][j - 1] == JUMP_PAD ?
+					maxJumpPadJumpTiles + 1 : 0;
 				lNew = 0;
 				jpJ = j;
 			}
